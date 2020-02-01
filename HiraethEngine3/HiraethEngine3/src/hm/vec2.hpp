@@ -11,10 +11,10 @@ namespace hm {
         vec2() : x(0), y(0) {};
         vec2(T v) : x(v), y(v) {};
         vec2(T x, T y) : x(x), y(y) {};
-        vec2(const vec2& v) : x(v.x), y(v.y) {};
+		vec2(const vec2& v) : x(v.x), y(v.y) {};
 		template<typename T1>
 		vec2(const vec4<T1>& v) : x((T)v.x), y((T)v.y) {};
-        template<typename T1>
+		template<typename T1>
 		vec2(const vec2<T1>& v) : x((T)v.x), y((T)v.y) {};
         
         // operators
@@ -74,8 +74,8 @@ namespace hm {
 	template<typename T>
 	static vec2<T> rotate(const vec2<T>& vec, const vec2<T>& pivotPoint, const float degrees) {
 		vec2<T> relative = vec - pivotPoint;
-		float c = (float) std::cos(radians(degrees));
-		float s = (float) std::sin(radians(degrees));
+		float c = (float) std::cos(to_radians(degrees));
+		float s = (float) std::sin(to_radians(degrees));
 		float xnew = relative.x * c - relative.y * s;
 		float ynew = relative.x * s + relative.y * c;
 		return pivotPoint + vec2<T>((T) xnew, (T) ynew);
@@ -115,4 +115,5 @@ namespace hm {
 			isLeft(r2, r3, point) > 0 &&
 			isLeft(r3, r0, point) > 0;
 	};
+
 };

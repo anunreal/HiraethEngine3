@@ -5,29 +5,32 @@
 
 namespace hm {
 
+	template<typename T>
 	struct mat4 {
-		vec4f columns[4];
+		typedef vec4<T> col;
+
+		col columns[4];
 
 		mat4() { mat4(1.f); }
 		
-		mat4(const float v) {
-			columns[0] = vec4f(v, 0.f, 0.f, 0.f);
-			columns[1] = vec4f(0.f, v, 0.f, 0.f);
-			columns[2] = vec4f(0.f, 0.f, v, 0.f);
-			columns[3] = vec4f(0.f, 0.f, 0.f, v);
+		mat4(const T v) {
+			columns[0] = col(v, 0.f, 0.f, 0.f);
+			columns[1] = col(0.f, v, 0.f, 0.f);
+			columns[2] = col(0.f, 0.f, v, 0.f);
+			columns[3] = col(0.f, 0.f, 0.f, v);
 		};
 		
-		mat4(const float x0, const float y0, const float z0, const float w0,
-			const float x1, const float y1, const float z1, const float w1,
-			const float x2, const float y2, const float z2, const float w2,
-			const float x3, const float y3, const float z3, const float w3) {
-			columns[0] = vec4f(x0, y0, z0, w0);
-			columns[1] = vec4f(x1, y1, z1, w1);
-			columns[2] = vec4f(x2, y2, z2, w2);
-			columns[3] = vec4f(x3, y3, z3, w3);
+		mat4(const T x0, const T y0, const T z0, const T w0,
+			const T x1, const T y1, const T z1, const T w1,
+			const T x2, const T y2, const T z2, const T w2,
+			const T x3, const T y3, const T z3, const T w3) {
+			columns[0] = col(x0, y0, z0, w0);
+			columns[1] = col(x1, y1, z1, w1);
+			columns[2] = col(x2, y2, z2, w2);
+			columns[3] = col(x3, y3, z3, w3);
 		};
 
-		mat4(const vec4f& v0, const vec4f& v1, const vec4f& v2, const vec4f& v3) {
+		mat4(const col& v0, const col& v1, const col& v2, const col& v3) {
 			columns[0] = v0;
 			columns[1] = v1;
 			columns[2] = v2;
@@ -37,7 +40,7 @@ namespace hm {
 
 		// accessors
 
-		const vec4f& operator[](const unsigned int index) const {
+		const col& operator[](const unsigned int index) const {
 			if (index < 4)
 				return columns[index];
 			
@@ -46,7 +49,7 @@ namespace hm {
 			return columns[0];
 		};
 
-		vec4f& operator[](const unsigned int index) {
+		col& operator[](const unsigned int index) {
 			if (index < 4)
 				return columns[index];
 
@@ -59,15 +62,15 @@ namespace hm {
 		// operators
 
 		mat4 operator*(const mat4& matrix) const {
-			const vec4f ia0 = columns[0];
-			const vec4f ia1 = columns[1];
-			const vec4f ia2 = columns[2];
-			const vec4f ia3 = columns[3];
+			const col ia0 = columns[0];
+			const col ia1 = columns[1];
+			const col ia2 = columns[2];
+			const col ia3 = columns[3];
 
-			const vec4f ib0 = matrix[0];
-			const vec4f ib1 = matrix[1];
-			const vec4f ib2 = matrix[2];
-			const vec4f ib3 = matrix[3];
+			const col ib0 = matrix[0];
+			const col ib1 = matrix[1];
+			const col ib2 = matrix[2];
+			const col ib3 = matrix[3];
 
 			mat4 result;
 			result[0] = ia0 * ib0[0] + ia1 * ib0[1] + ia2 * ib0[2] + ia3 * ib0[3];
@@ -95,13 +98,19 @@ namespace hm {
 		};
 	};
 
-	static inline mat4 translate(const mat4& matrix, const vec3f& position) {
+	typedef mat4<int> mat4i;
+	typedef mat4<float> mat4f;
+	typedef mat4<double> mat4d;
+	
+	template<typename T>
+	static inline mat4<T> translate(const mat4<T>& matrix, const vec3<T>& position) {
 		mat4 m = matrix;
 		m[3] = matrix.columns[0] * position.x + matrix.columns[1] * position.y + matrix.columns[2] * position.z + matrix.columns[3];
 		return m;
 	};
 
-	static inline mat4 scale(const mat4& mat, const vec3f& factor) {
+	template<typename T>
+	static inline mat4<T> scale(const mat4<T>& mat, const vec3<T>& factor) {
 		mat4 mr = mat;
 		mr[0] = mr[0] * factor.x;
 		mr[1] = mr[1] * factor.y;
@@ -109,7 +118,8 @@ namespace hm {
 		return mr;
 	};
 
-	static mat4 rotate(const mat4& matrix, const float angle, const vec3f& axisVector) {
+	template<typename T>
+	static mat4<T> rotate(const mat4<T>& matrix, const T angle, const vec3<T>& axisVector) {
 		const float c = (float) std::cos(radians(angle));
 		const float s = (float) std::sin(radians(angle));
 		const float c1 = 1.0f - c;
@@ -132,7 +142,7 @@ namespace hm {
 	};
 
 	template<typename T>
-	static mat4 createOrthographic(const vec2<T>& size, const vec2<T>& center, const T depth) {
+	static mat4<T> createOrthographic(const vec2<T>& size, const vec2<T>& center, const T depth) {
 		
 		T size2x = size.x / 2;
 		T size2y = size.y / 2;
@@ -157,4 +167,5 @@ namespace hm {
 
 		return orthoMat;
 	};
+
 };

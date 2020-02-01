@@ -98,16 +98,6 @@ struct HeTexture {
 	int channels = 0;
 };
 
-
-// maps a pointer to a texture in the texture pool to the content of the file it was loaded from
-// this is only used if the texture was loaded from a side-thread (not the thread the window was created in)
-typedef std::map<HeTexture*, unsigned char*> HeThreadLoader;
-
-namespace HeAssets {
-	extern HeThreadLoader threadLoader;
-};
-
-
 // --- Shaders
 
 // loads a shader from given shader files
@@ -131,7 +121,7 @@ extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::stri
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const float value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const double value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const uint32_t value);
-extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat4& value);
+extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat4f& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec2f& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec4f& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::colour& value);
@@ -224,10 +214,3 @@ extern HE_API void heBlendMode(const int mode);
 extern HE_API void heBufferBlendMode(const int attachmentIndex, const int mode);
 // en- or disables depth testing
 extern HE_API void heEnableDepth(const bool depth);
-
-
-// --- ThreadLoader
-
-// loads all resources in the thread loader into gl and clears the loader afterwards. This must be called from the 
-// thread the window was created in (the main thread)
-extern HE_API void heUpdateThreadLoader();

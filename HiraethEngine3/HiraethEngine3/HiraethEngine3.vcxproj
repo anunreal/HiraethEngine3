@@ -162,12 +162,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\heAssets.h" />
+    <ClInclude Include="src\heD3.h" />
     <ClInclude Include="src\heGlLayer.h" />
     <ClInclude Include="src\heTypes.h" />
     <ClInclude Include="src\heWindow.h" />
     <ClInclude Include="src\hm\colour.hpp" />
     <ClInclude Include="src\hm\hm.hpp" />
     <ClInclude Include="src\hm\mat4.hpp" />
+    <ClInclude Include="src\hm\quat.hpp" />
     <ClInclude Include="src\hm\setup.hpp" />
     <ClInclude Include="src\hm\vec2.hpp" />
     <ClInclude Include="src\hm\vec3.hpp" />
@@ -175,6 +178,7 @@
     <ClInclude Include="src\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\heAssets.cpp" />
     <ClCompile Include="src\heGlLayer.cpp" />
     <ClCompile Include="src\heWindow.cpp" />
     <ClCompile Include="src\main.cpp" />

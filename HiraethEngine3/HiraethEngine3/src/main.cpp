@@ -1,5 +1,17 @@
 #include "heWindow.h"
 #include "heGlLayer.h"
+#include "heAssets.h"
+#include <thread>
+
+
+void load_world() {
+	std::cout << "Loading..." << std::endl;
+
+	std::cout << "Done" << std::endl;
+}
+
+
+
 
 int main() {
 	HeWindow window;
@@ -15,21 +27,30 @@ int main() {
 	HeVao vao;
 	heCreateVao(&vao);
 	heBindVao(&vao);
-	heAddVaoData(&vao, { -1, 1, 1, 1, -1, -1 }, 2);
+	heAddVaoData(&vao, { -1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, -1 }, 2);
 	heBindVao(&vao);
 
-	HeShaderProgram shader;
-	heLoadShader(&shader, "res/shaders/def_v.glsl", "res/shaders/def_f.glsl");
-	heBindShader(&shader);
+	HeShaderProgram* shader = heGetShader("def");
+	heBindShader(shader);
+	heGetShaderSamplerLocation(shader, "u_texture", 0);
+
+	HeTexture* tex = heGetTexture("res/textures/test.JPG");
+	heBindTexture(tex, 0);
 
 	while (!window.shouldClose) {
+		if (heThreadLoader.updateRequested)
+			heUpdateThreadLoader();
+
 		heUpdateWindow(&window);
-		
+
 		heRenderVao(&vao);
 
 		heSwapWindow(&window);
 		heSyncToFps(&window);
 	}
 
+	heDestroyTexture(tex);
+	heDestroyShader(shader);
+	heDestroyVao(&vao);
 	heDestroyWindow(&window);
 }

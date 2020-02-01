@@ -8,7 +8,7 @@ namespace hm {
 	constexpr double PI = 3.14159265358979323846;
 
 	template<typename T>
-	inline double radians(const T value) {
+	inline double to_radians(const T value) {
 		return value / 180. * PI;
 	};
 

@@ -4,6 +4,7 @@
 #include "vec3.hpp"
 #include "vec4.hpp"
 #include "mat4.hpp"
+#include "quat.hpp"
 #include "colour.hpp"
 #include <string>
 #include <iostream>
@@ -26,7 +27,8 @@ namespace hm {
         return "colour{" + std::to_string(col.r) + ", " + std::to_string(col.g) + ", " + std::to_string(col.b) + ", " + std::to_string(col.a) + "}";
     };
 
-	inline std::string to_string(const mat4& mat) {
+	template<typename T>
+	inline std::string to_string(const mat4<T>& mat) {
 		return "mat4{" + 
 			std::to_string(mat[0][0]) + ", " + std::to_string(mat[0][1]) + ", " + std::to_string(mat[0][2]) + ", " + std::to_string(mat[0][3]) + ",\n" +
 			std::to_string(mat[1][0]) + ", " + std::to_string(mat[1][1]) + ", " + std::to_string(mat[1][2]) + ", " + std::to_string(mat[1][3]) + ",\n" +
@@ -34,7 +36,12 @@ namespace hm {
 			std::to_string(mat[3][0]) + ", " + std::to_string(mat[3][1]) + ", " + std::to_string(mat[3][2]) + ", " + std::to_string(mat[3][3]) + "}";
 
 	};
-    
+
+	template<typename T>
+	inline std::string to_string(const quat<T>& quat) {
+		return "quat{" + std::to_string(quat.x) + ", " + std::to_string(quat.y) + ", " + std::to_string(quat.z) + ", " + std::to_string(quat.w) + "}";
+	};
+     
     
     // operator <<
     
@@ -55,8 +62,15 @@ namespace hm {
         return os;
     };
     
-	inline std::ostream& operator<<(std::ostream& os, const mat4& mat) {
+	template<typename T>
+	inline std::ostream& operator<<(std::ostream& os, const mat4<T>& mat) {
 		os << to_string(mat);
+		return os;
+	};
+
+	template<typename T>
+	inline std::ostream& operator<<(std::iostream& os, const quat<T>& quat) {
+		os << to_string(quat);
 		return os;
 	};
 

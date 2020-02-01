@@ -1,4 +1,5 @@
 #include "heGlLayer.h"
+#include "heAssets.h"
 #include "GLEW/glew.h"
 #include "GLEW/wglew.h"
 #include <fstream>
@@ -6,9 +7,6 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
-HeThreadLoader HeAssets::threadLoader;
-
 
 // --- Shaders
 
@@ -176,7 +174,7 @@ void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformNam
 
 };
 
-void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat4& value) {
+void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat4f& value) {
 
 	int location = heGetShaderUniformLocation(program, uniformName);
 	glUniformMatrix4fv(location, 1, false, &value[0][0]);
@@ -387,7 +385,7 @@ void heBindFbo(HeFbo* fbo) {
 	// enable draw buffers
 	int count = std::max<int>((int)fbo->colourBuffers.size(), (int)fbo->colourTextures.size());
 	std::vector<unsigned int> drawBuffers;
-	for (unsigned int i = 0; i < count; ++i)
+	for (int i = 0; i < count; ++i)
 		drawBuffers.emplace_back(GL_COLOR_ATTACHMENT0 + i);
 
 	glDrawBuffers(count, drawBuffers.data());
@@ -458,7 +456,8 @@ void heLoadTexture(HeTexture* texture, const std::string& fileName) {
 		heCreateTexture(buffer, &texture->textureId, texture->width, texture->height, texture->channels);
 	else
 		// no context in the current thread, add it to the thread loader
-		HeAssets::threadLoader[texture] = buffer;
+		heRequestTexture(texture, buffer);
+		//heThreadLoader.textures[texture] = buffer;
 
 };
 
@@ -612,16 +611,3 @@ void heEnableDepth(const bool depth) {
 		glDisable(GL_DEPTH_TEST);
 
 }
-
-
-// --- ThreadLoader
-
-void heUpdateThreadLoader() {
-
-	for (auto& all : HeAssets::threadLoader) {
-		heCreateTexture(all.second, &all.first->textureId, all.first->width, all.first->height, all.first->channels);
-	};
-
-	HeAssets::threadLoader.clear();
-
-};

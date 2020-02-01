@@ -1,4 +1,5 @@
 #pragma once
+#include "setup.hpp"
 
 namespace hm {
 
@@ -34,4 +35,10 @@ namespace hm {
 	typedef vec3<int> vec3i;
 	typedef vec3<float> vec3f;
 	typedef vec3<double> vec3d;
+
+	template<typename T>
+	static inline vec3<T> to_radians(const vec3<T> vector) {
+		return vec3<T>(to_radians(vector.x), to_radians(vector.y), to_radians(vector.z));
+	};
+
 };
