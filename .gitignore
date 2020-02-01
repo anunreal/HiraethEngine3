@@ -33,3 +33,6 @@
 bin-int/
 /HiraethEngine3/.vs/HiraethEngine3/v16
 /.vs
+*.exp
+*.ilk
+*.pdb
