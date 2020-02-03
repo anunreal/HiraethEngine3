@@ -120,8 +120,8 @@ namespace hm {
 
 	template<typename T>
 	static mat4<T> rotate(const mat4<T>& matrix, const T angle, const vec3<T>& axisVector) {
-		const float c = (float) std::cos(radians(angle));
-		const float s = (float) std::sin(radians(angle));
+		const float c = (float) std::cos(to_radians(angle));
+		const float s = (float) std::sin(to_radians(angle));
 		const float c1 = 1.0f - c;
 
 		mat4 mr(0.0f);
@@ -139,33 +139,6 @@ namespace hm {
 		mr[2][2] = axisVector.z * axisVector.z * c1 + c;
 		
 		return matrix * mr;
-	};
-
-	template<typename T>
-	static mat4<T> createOrthographic(const vec2<T>& size, const vec2<T>& center, const T depth) {
-		
-		T size2x = size.x / 2;
-		T size2y = size.y / 2;
-
-		// create projection matrix bounding box
-		// right, left, top, bottom, far, near
-		const float 
-			r = (center.x + size2x) - 1.0f,
-			l = center.x - size2x,
-			b = (center.y + size2y) - 1.0f,
-			t = center.y - size2y,
-			f = depth,
-			n = -1.0f;
-
-		hm::mat4 orthoMat = hm::mat4(1.0f);
-		orthoMat[0][0] = 2.0f / (r - l);
-		orthoMat[1][1] = 2.0f / (t - b);
-		orthoMat[2][2] = 2.0f / (f - n);
-		orthoMat[3][0] = -(r + l) / (r - l);
-		orthoMat[3][1] = -(t + b) / (t - b);
-		orthoMat[3][2] = -(f + n) / (f - n);
-
-		return orthoMat;
 	};
 
 };

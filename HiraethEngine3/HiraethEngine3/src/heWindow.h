@@ -17,8 +17,10 @@ struct HeWindowInfo {
 };
 
 struct HeMouseInfo {
-	// in pixels
+	// in pixels, with (0|0) at top left
 	hm::vec2i mousePosition;
+	// pixels the mouse moved during the last frame. Positive if the mouse moved down/right
+	hm::vec2i deltaMousePosition;
 	bool leftButtonDown = false;
 	bool rightButtonDown = false;
 };
@@ -38,6 +40,7 @@ struct HeWindow {
 	HeWindowInfo   windowInfo;
 	HeMouseInfo    mouseInfo;
 	bool           shouldClose = false;
+	bool		   active = false; // is this the topmost window?
 
 	// opengl stuff
 	HGLRC        context = nullptr;
@@ -73,5 +76,10 @@ extern HE_API hm::vec2i heCalculateWindowBorderSize(const HeWindow* window);
 // This simply searches the vector of keys pressed of the window's keyboardInfo for key
 extern inline HE_API bool heKeyWasPressed(const HeWindow* window, const HeKeyCode key);
 
+// sets the mouse to the given position relative to the window.
+// The position can either be in pixels (positive), or as a percentage (negative) meaning
+// that -0.5 will be have the current window size
+extern HE_API void heSetMousePosition(HeWindow* window, const hm::vec2f& position);
+
 // the windows class instance
-extern HINSTANCE classInstance;
+extern HINSTANCE classInstance;								

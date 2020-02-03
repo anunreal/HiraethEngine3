@@ -6,6 +6,7 @@
 #include "mat4.hpp"
 #include "quat.hpp"
 #include "colour.hpp"
+#include "matrixmath.hpp"
 #include <string>
 #include <iostream>
 
@@ -17,6 +18,11 @@ namespace hm {
     inline std::string to_string(const vec2<T>& vec) {
         return "vec2{" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + "}";
     };
+
+	template<typename T>
+	inline std::string to_string(const vec3<T>& vec) {
+		return "vec3{" + std::to_string(vec.x) + ", " + std::to_string(vec.y) + ", " + std::to_string(vec.z) + "}";
+	}; 
 
 	template<typename T>
 	inline std::string to_string(const vec4<T>& vec) {

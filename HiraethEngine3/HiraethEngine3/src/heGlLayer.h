@@ -41,6 +41,7 @@ struct HeShaderProgram {
 	// maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the texture
 	// slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is saved here so
 	// that we dont have to remember it 
+
 	std::map<std::string, int> samplers;
 };
 

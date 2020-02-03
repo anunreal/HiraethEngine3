@@ -15,20 +15,36 @@ namespace hm {
 
 		// operators
 
-		vec3 operator*(const vec3& v) {
+		inline vec3 operator*(const vec3& v) const {
 			return vec3(x * v.x, y * v.y, z * v.z);
 		};
 
-		vec3 operator+(const vec3& v) {
+		inline vec3 operator+(const vec3& v) const {
 			return vec3(x + v.x, y + v.y, z - v.z);
 		};
 
-		vec3 operator-(const vec3& v) {
+		inline vec3 operator-(const vec3& v) const {
 			return vec3(x - v.x, y - v.y, z - v.z);
 		};
 
-		vec3 operator/(const vec3& v) {
+		inline vec3 operator/(const vec3& v) const {
 			return vec3(x / v.x, y / v.y, z / v.z);
+		};
+
+		inline vec3 operator-() const {
+			return vec3(-x, -y, -z);
+		};
+
+		inline void operator+=(const vec3& v) {
+			x += v.x;
+			y += v.y;
+			z += v.z;
+		};
+	
+		inline void operator-=(const vec3& v) {
+			x -= v.x;
+			y -= v.y;
+			z -= v.z;
 		};
 	};
 

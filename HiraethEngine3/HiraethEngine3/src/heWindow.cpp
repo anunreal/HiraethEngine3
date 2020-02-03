@@ -1,4 +1,5 @@
 #include "heWindow.h"
+#include "heGlLayer.h"
 #include <map>
 #include <iostream>
 #include <string>
@@ -8,6 +9,15 @@
 #include "glew/glew.h"
 #include "glew/wglew.h"
 
+#ifndef HID_USAGE_PAGE_GENERIC
+#define HID_USAGE_PAGE_GENERIC         ((USHORT) 0x01)
+#endif
+#ifndef HID_USAGE_GENERIC_MOUSE
+#define HID_USAGE_GENERIC_MOUSE        ((USHORT) 0x02)
+#endif
+
+#define HE_RAW_INPUT 0
+
 HINSTANCE classInstance = NULL;
 static std::map<HWND, HeWindow*> windowMap;
 
@@ -15,12 +25,52 @@ PFNWGLCREATECONTEXTATTRIBSARBPROC _wglCreateContextAttribsARB = nullptr;
 PFNWGLCHOOSEPIXELFORMATARBPROC    _wglChoosePixelFormatARB = nullptr;
 PFNWGLSWAPINTERVALEXTPROC         _wglSwapIntervalEXT = nullptr;
 
+void registerMouseInput(HeWindow* window) {
+	const RAWINPUTDEVICE rid = { 0x01, 0x02, 0, window->handle };
+
+	if (!RegisterRawInputDevices(&rid, 1, sizeof(rid))) {
+		std::cout << "Win32: Failed to register raw input device" << std::endl;
+	}
+}
+
+/*
+bool isWindows10Version(int build) {
+	OSVERSIONINFOEXW osvi = { sizeof(osvi), 10, 0, build };
+	DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER;
+	ULONGLONG cond = VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL);
+	cond = VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
+	cond = VerSetConditionMask(cond, VER_BUILDNUMBER, VER_GREATER_EQUAL);
+	// HACK: Use RtlVerifyVersionInfo instead of VerifyVersionInfoW as the
+	//       latter lies unless the user knew to embed a non-default manifest
+	//       announcing support for Windows 10 via supportedOS GUID
+	return RtlVerifyVersionInfo(&osvi, mask, cond) == 0;
+};
+*/
+
 LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	HeWindow* window = windowMap[hwnd];
 	if (window != nullptr) {
 
 		switch (msg) {
+
+		case WM_NCCREATE: {
+			/*if (isWindows10Version(14393
+			))
+				*/
+			EnableNonClientDpiScaling(hwnd);
+			break;
+		};
+
+		case WM_SETFOCUS: {
+			window->active = true;
+			break;
+		};
+
+		case WM_KILLFOCUS: {
+			window->active = false;
+			break;
+		}
 
 		case WM_CLOSE: {
 			window->shouldClose = true;
@@ -39,11 +89,39 @@ LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpa
 			break;
 		}
 
+#if HE_RAW_INPUT
+		case WM_INPUT: {
+			UINT dwSize = 40;
+			static BYTE lpb[40];
+
+			GetRawInputData((HRAWINPUT)lparam, RID_INPUT,
+				lpb, &dwSize, sizeof(RAWINPUTHEADER));
+
+			RAWINPUT* raw = (RAWINPUT*)lpb;
+
+			if (raw->header.dwType == RIM_TYPEMOUSE) {
+				//int xPosRelative = raw->data.mouse.lLastX;
+				//int yPosRelative = raw->data.mouse.lLastY;
+				hm::vec2i pos(raw->data.mouse.lLastX, raw->data.mouse.lLastY);
+				window->mouseInfo.deltaMousePosition = pos - window->mouseInfo.mousePosition;
+				//std::cout << "Delta: " << hm::to_string(window->mouseInfo.deltaMousePosition) << std::endl;
+				window->mouseInfo.mousePosition = pos;
+			} 
+
+			break;
+		};
+#else
+
 		case WM_MOUSEMOVE: {
 			hm::vec2i pos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+			window->mouseInfo.deltaMousePosition = pos - window->mouseInfo.mousePosition;
+			//std::cout << "Delta: " << hm::to_string(window->mouseInfo.deltaMousePosition) << std::endl;
 			window->mouseInfo.mousePosition = pos;
 			break;
-		}
+		};
+
+#endif
+
 
 		case WM_LBUTTONDOWN: {
 			window->mouseInfo.leftButtonDown = true;
@@ -318,7 +396,9 @@ bool heCreateWindow(HeWindow* window) {
 	if (window->windowInfo.fpsCap == 0)
 		heEnableVsync(1);
 
+	registerMouseInput(window);
 	windowMap[window->handle] = window;
+	window->active = true;
 
 	return true;
 
@@ -328,6 +408,7 @@ void heUpdateWindow(HeWindow* window) {
 
 	window->mouseInfo.leftButtonDown = false;
 	window->mouseInfo.rightButtonDown = false;
+	window->mouseInfo.deltaMousePosition = hm::vec2i(0);
 	window->keyboardInfo.keysPressed.clear();
 
 	MSG msg;
@@ -336,8 +417,9 @@ void heUpdateWindow(HeWindow* window) {
 		DispatchMessage(&msg);
 	}
 
-	glClearColor(window->windowInfo.backgroundColour.getR(), window->windowInfo.backgroundColour.getG(), window->windowInfo.backgroundColour.getB(), 1.f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glClearColor(window->windowInfo.backgroundColour.getR(), window->windowInfo.backgroundColour.getG(), window->windowInfo.backgroundColour.getB(), 1.f);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	heClearFrame(window->windowInfo.backgroundColour, 2);
 
 };
 
@@ -414,5 +496,23 @@ hm::vec2i heCalculateWindowBorderSize(const HeWindow* window) {
 	GetWindowRect(window->handle, &w);
 	GetClientRect(window->handle, &c);
 	return hm::vec2i((w.right - w.left) - (c.right - c.left), (w.bottom - w.top) - (c.bottom - c.top));
+
+};
+
+void heSetMousePosition(HeWindow* window, const hm::vec2f& position) {
+
+	hm::vec2i abs;
+	abs.x = (position.x >= 0) ? (int)position.x : (int)(-position.x * window->windowInfo.size.x);
+	abs.y = (position.y >= 0) ? (int)position.y : (int)(-position.y * window->windowInfo.size.y);
+
+	POINT p;
+	p.x = abs.x;
+	p.y = abs.y;
+	ClientToScreen(window->handle, &p);
+	SetCursorPos(p.x, p.y);
+	GetCursorPos(&p);
+	ScreenToClient(window->handle, &p);
+	window->mouseInfo.mousePosition.x = p.x;
+	window->mouseInfo.mousePosition.y = p.y;
 
 };

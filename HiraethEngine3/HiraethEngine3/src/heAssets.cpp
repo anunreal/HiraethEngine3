@@ -13,6 +13,7 @@ HeVao* heGetMesh(const std::string& file) {
 		return &it->second;
 
 	// load model
+	return nullptr;
 
 };
 
