@@ -2,12 +2,24 @@
 #include "heGlLayer.h"
 
 
+struct HeMaterial {
+	// pointer to a shader in the asset pool
+	HeShaderProgram* shader = nullptr;
+	// name of the sampler (without the t_ prefix) and a pointer to the asset pool
+	std::map<std::string, HeTexture*> textures;
+	// name of the uniform and some data
+	std::map<std::string, HeShaderData> uniforms;
+};
+
+
 // maps the name of the mesh (usually a file) to its vao
 typedef std::map<std::string, HeVao> HeMeshPool;
 // maps the name of the file to the texture
 typedef std::map<std::string, HeTexture> HeTexturePool;
 // maps the name of a shader to the program
 typedef std::map<std::string, HeShaderProgram> HeShaderPool;
+// maps any type of materials
+typedef std::map<std::string, HeMaterial> HeMaterialPool;
 // maps a pointer to a texture in the texture pool to the content of the file it was loaded from
 // this is only used if the texture was loaded from a side-thread (not the thread the window was created in)
 typedef std::map<HeTexture*, unsigned char*> HeTextureRequests;
@@ -16,6 +28,7 @@ struct HeAssetPool {
 	HeMeshPool meshPool;
 	HeShaderPool shaderPool;
 	HeTexturePool texturePool;
+	HeMaterialPool materialPool;
 };
 
 struct HeThreadLoader {
@@ -27,6 +40,12 @@ struct HeThreadLoader {
 extern HeAssetPool heAssetPool;
 extern HeThreadLoader heThreadLoader;
 
+// --- Materials
+// creates a new pbr material if it doesnt already exists from given textures. This material will be stored in the material pool.
+// If a material with given name was already created before, that material will be returned
+extern HE_API HeMaterial* heCreatePbrMaterial(const std::string& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture);
+
+
 
 // --- Assets
 
@@ -37,6 +56,8 @@ extern HE_API HeTexture* heGetTexture(const std::string& file);
 // checks if given shader was already loaded and return it if so. Else this shader will be loaded, the filenames will be expected
 // to be name + "_v" / "_f" depending on the type and the files should be in the res/shaders/ folder
 extern HE_API HeShaderProgram* heGetShader(const std::string& name);
+// returns the material with given name from the material pool or nullptr if no material with that name was found
+extern HE_API HeMaterial* heGetMaterial(const std::string& name);
 
 
 // --- ThreadLoader

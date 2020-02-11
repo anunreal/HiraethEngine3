@@ -69,4 +69,14 @@ namespace hm {
 		return p * r * s;
 
 	};
+
+	template<typename T>
+	static mat4<T> createTransformationMatrix(const vec2<T>& position, const vec2<T>& scale) {
+
+		mat4<T> mat(1);
+		mat = hm::translate(mat, position);
+		mat = hm::scale(mat, scale);
+		return mat;
+
+	};
 };

@@ -110,12 +110,22 @@ namespace hm {
 	};
 
 	template<typename T>
+	static inline mat4<T> translate(const mat4<T>& matrix, const vec2<T>& position) {
+		return translate(matrix, vec3<T>(position.x, position.y, 0));
+	};
+
+	template<typename T>
 	static inline mat4<T> scale(const mat4<T>& mat, const vec3<T>& factor) {
 		mat4 mr = mat;
 		mr[0] = mr[0] * factor.x;
 		mr[1] = mr[1] * factor.y;
 		mr[2] = mr[2] * factor.z;
 		return mr;
+	};
+
+	template<typename T>
+	static inline mat4<T> scale(const mat4<T>& mat, const vec2<T>& factor) {
+		return scale(mat, vec3<T>(factor.x, factor.y, 1));
 	};
 
 	template<typename T>

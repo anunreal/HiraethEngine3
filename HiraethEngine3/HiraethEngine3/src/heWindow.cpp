@@ -33,34 +33,12 @@ void registerMouseInput(HeWindow* window) {
 	}
 }
 
-/*
-bool isWindows10Version(int build) {
-	OSVERSIONINFOEXW osvi = { sizeof(osvi), 10, 0, build };
-	DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER;
-	ULONGLONG cond = VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL);
-	cond = VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
-	cond = VerSetConditionMask(cond, VER_BUILDNUMBER, VER_GREATER_EQUAL);
-	// HACK: Use RtlVerifyVersionInfo instead of VerifyVersionInfoW as the
-	//       latter lies unless the user knew to embed a non-default manifest
-	//       announcing support for Windows 10 via supportedOS GUID
-	return RtlVerifyVersionInfo(&osvi, mask, cond) == 0;
-};
-*/
-
 LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	HeWindow* window = windowMap[hwnd];
 	if (window != nullptr) {
 
 		switch (msg) {
-
-		case WM_NCCREATE: {
-			/*if (isWindows10Version(14393
-			))
-				*/
-			EnableNonClientDpiScaling(hwnd);
-			break;
-		};
 
 		case WM_SETFOCUS: {
 			window->active = true;
@@ -115,7 +93,6 @@ LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpa
 		case WM_MOUSEMOVE: {
 			hm::vec2i pos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
 			window->mouseInfo.deltaMousePosition = pos - window->mouseInfo.mousePosition;
-			//std::cout << "Delta: " << hm::to_string(window->mouseInfo.deltaMousePosition) << std::endl;
 			window->mouseInfo.mousePosition = pos;
 			break;
 		};

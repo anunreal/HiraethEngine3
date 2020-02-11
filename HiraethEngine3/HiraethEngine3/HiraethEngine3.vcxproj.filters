@@ -63,6 +63,15 @@
     <ClInclude Include="src\hm\matrixmath.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\heLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\heUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\heWin32Layer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -78,6 +87,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\heRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\heD3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\heLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\heUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\heWin32Layer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

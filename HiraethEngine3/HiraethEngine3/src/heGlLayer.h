@@ -1,26 +1,9 @@
 #pragma once
-#pragma once
 #include <map>
 #include <vector>
 #include <string>
 #include "hm/hm.hpp"
 #include "heTypes.h"
-
-enum HeUniformDataType {
-	HE_SHADER_DATA_TYPE_INT,
-	HE_SHADER_DATA_TYPE_VEC2,
-	HE_SHADER_DATA_TYPE_BOOL,
-	HE_SHADER_DATA_TYPE_FLOAT,
-	HE_SHADER_DATA_TYPE_DOUBLE,
-	HE_SHADER_DATA_TYPE_COLOUR,
-};
-
-enum HeFboFlags {
-	HE_FBO_FLAG_NONE = 0,
-	HE_FBO_FLAG_HDR = 0b0001,
-	HE_FBO_FLAG_DEPTH_RENDER_BUFFER = 0b0010,
-	HE_FBO_FLAG_DEPTH_TEXTURE = 0b0100
-};
 
 struct HeShaderData {
 	HeUniformDataType type;
@@ -29,19 +12,22 @@ struct HeShaderData {
 		int _int;
 		float _float;
 		hm::vec2f _vec2;
+		hm::vec3f _vec3;
 		hm::colour _colour;
 	};
 };
 
 struct HeShaderProgram {
 	unsigned int programId = 0;
+	// a list of all files loaded for this shader. Everytime the shader is bound and hotswapping is enabled,
+	// all shader files will be checked for modification and then the shader might be reloaded
+	std::vector<std::string> files;
 	// maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
 	// be stored in the map for faster lookup.
 	std::map<std::string, int> uniforms;
 	// maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the texture
 	// slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is saved here so
 	// that we dont have to remember it 
-
 	std::map<std::string, int> samplers;
 };
 
@@ -90,9 +76,12 @@ struct HeTexture {
 	// If this texture is destroyed with heDestroyTexture, referenceCount will go down.
 	// Only if the referenceCount is 0, the texture will actually be deleted
 	unsigned int referenceCount = 0;
-
 	// the opengl texture id
 	unsigned int textureId = 0;
+	// the internal format used for storing the pixels. Can be:
+	// 0: RGBA (8bit / channel)
+	// 1: RGBA (16bit / channel)
+	HeColourFormat format = HE_COLOUR_FORMAT_NONE;
 	// dimensions of the texture
 	int width = 0, height = 0;
 	// the number of channels in this texture. Can be 3 (rgb) or 4 (rgba)
@@ -101,6 +90,8 @@ struct HeTexture {
 
 // --- Shaders
 
+// loads a compute shader from given file
+extern HE_API void heLoadComputeShader(HeShaderProgram* program, const std::string& computeShader);
 // loads a shader from given shader files
 extern HE_API void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, const std::string& fragmentShader);
 // binds given shader
@@ -109,6 +100,10 @@ extern HE_API void heBindShader(const HeShaderProgram* program);
 extern HE_API void heUnbindShader();
 // deletes the given shader
 extern HE_API void heDestroyShader(HeShaderProgram* program);
+// runs given compute shader. The number of groups in each dimension can be specified here, according to the texture this shader is operating on
+extern HE_API void heRunComputeShader(const HeShaderProgram* program, const unsigned int groupsX, const unsigned int groupsY, const unsigned int groupsZ);
+// checks if any of the shaders files were modified, and if so it reloads the program
+extern HE_API void heReloadShader(HeShaderProgram* program);
 
 // gets the location of given uniform in given shader. Once the uniform is loaded, the location is stored in program
 // for faster lookups later. If the uniform wasnt found (spelling mistake or optimized away), -1 is returned
@@ -124,6 +119,7 @@ extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::stri
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const uint32_t value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat4f& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec2f& value);
+extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec3f& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec4f& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::colour& value);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const HeShaderData* data);
@@ -181,10 +177,12 @@ extern HE_API void heResizeFbo(HeFbo* fbo, const hm::vec2i& newSize);
 // loads a new texture from given file. If given file does not exist, an error is printed and no gl texture
 // will be generated
 extern HE_API void heLoadTexture(HeTexture* texture, const std::string& fileName);
+// creates an empty texture. The details of the texture (width, height...) must already be set
+extern inline HE_API void heCreateTexture(HeTexture* texture);
 // creates an opengl texture from given information. Id will be set to the gl texture id created. This will
 // also delete the buffer
-extern HE_API void heCreateTexture(unsigned char* buffer, unsigned int* id, const int width, const int height,
-	const int channels);
+extern HE_API void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const int width, const int height, const int channels,
+	const HeColourFormat format);
 // loads a new texture from given stream. If the stream is invalid, an error is printed and no gl texture
 // will be generated
 extern HE_API void heLoadTexture(HeTexture* texture, FILE* stream);
@@ -192,10 +190,36 @@ extern HE_API void heLoadTexture(HeTexture* texture, FILE* stream);
 extern HE_API void heBindTexture(const HeTexture* texture, const int slot);
 // binds given texture id to given gl slot
 extern HE_API void heBindTexture(const unsigned int texture, const int slot);
+// binds a given texture to a shader for reading / writing, mostly used for compute shaders
+// slot is the uniform slot this shader should be bound to
+// if layer is -1, a new layered texture binding is established, else the given layer is used (layer >= 0)
+// access is the permissions required for this image, can be one of the following:
+//  0: read only
+//  1: write only
+//  2: read and write
+extern HE_API void heBindImageTexture(const HeTexture* texture, const int slot, const int layer, const HeAccessType access);
 // unbinds the currently bound texture from given gl slot
 extern HE_API void heUnbindTexture(int slot);
 // deletes given texture if its reference count is currently 1
 extern HE_API void heDestroyTexture(HeTexture* texture);
+
+// before calling any of the following functions, a texture must be bound
+
+// pixelated filter
+extern HE_API void heTextureFilterNearest();
+// smooth filter
+extern HE_API void heTextureFilterBilinear();
+// uses mipmaps
+extern HE_API void heTextureFilterTrilinear();
+// anisotropic filtering
+extern HE_API void heTextureFilterAnisotropic();
+
+// clamps to the edge (border pixels will be stretched)
+extern HE_API void heTextureClampEdge();
+// clamps to a black border around the image
+extern HE_API void heTextureClampBorder();
+// tiles the image
+extern HE_API void heTextureClampRepeat();
 
 
 // --- Utils
@@ -207,9 +231,9 @@ extern HE_API void heDestroyTexture(HeTexture* texture);
 extern HE_API void heClearFrame(const hm::colour& colour, const int type);
 // sets the gl blend mode to given mode. Possible modes:
 // -1 = disable gl blending
-// 0  = normal blending (one minus source alpha)
-// 1  = additive blending (add two colours)
-// 2  = disable blending by completely overwriting previous colour with new one
+//  0 = normal blending (one minus source alpha)
+//  1 = additive blending (add two colours)
+//  2 = disable blending by completely overwriting previous colour with new one
 extern HE_API void heBlendMode(const int mode);
 // applies a gl blend mode to only given colour attachment of a fbo. Same modes as above apply
 extern HE_API void heBufferBlendMode(const int attachmentIndex, const int mode);

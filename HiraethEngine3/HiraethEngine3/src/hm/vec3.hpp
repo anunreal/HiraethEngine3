@@ -53,8 +53,25 @@ namespace hm {
 	typedef vec3<double> vec3d;
 
 	template<typename T>
-	static inline vec3<T> to_radians(const vec3<T> vector) {
+	static inline vec3<T> length(const vec3<T>& vector) {
+		return std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+	};
+
+	template<typename T>
+	static inline vec3<T> to_radians(const vec3<T>& vector) {
 		return vec3<T>(to_radians(vector.x), to_radians(vector.y), to_radians(vector.z));
+	};
+
+	template<typename T>
+	static inline vec3<T> normalize(const vec3<T>& vector) {
+		return vector / length(vector);
+	};
+
+	template<typename T>
+	static inline vec3<T> cross(const vec3<T>& left, const vec3<T>& right) {
+		return vec3<T>(left.y * right.z - left.z * right.y,
+			left.z * right.x - left.x * right.z,
+			left.x * right.y - left.y * right.x);
 	};
 
 };

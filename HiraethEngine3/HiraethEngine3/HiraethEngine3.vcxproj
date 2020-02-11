@@ -165,8 +165,11 @@
     <ClInclude Include="src\heAssets.h" />
     <ClInclude Include="src\heD3.h" />
     <ClInclude Include="src\heGlLayer.h" />
+    <ClInclude Include="src\heLoader.h" />
     <ClInclude Include="src\heRenderer.h" />
     <ClInclude Include="src\heTypes.h" />
+    <ClInclude Include="src\heUtils.h" />
+    <ClInclude Include="src\heWin32Layer.h" />
     <ClInclude Include="src\heWindow.h" />
     <ClInclude Include="src\hm\colour.hpp" />
     <ClInclude Include="src\hm\hm.hpp" />
@@ -181,8 +184,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\heAssets.cpp" />
+    <ClCompile Include="src\heD3.cpp" />
     <ClCompile Include="src\heGlLayer.cpp" />
+    <ClCompile Include="src\heLoader.cpp" />
     <ClCompile Include="src\heRenderer.cpp" />
+    <ClCompile Include="src\heUtils.cpp" />
+    <ClCompile Include="src\heWin32Layer.cpp" />
     <ClCompile Include="src\heWindow.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
