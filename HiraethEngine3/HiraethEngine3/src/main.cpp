@@ -219,6 +219,11 @@ int main() {
     HeD3Instance* testInstance = &level.instances.emplace_back();
     testInstance->material = heCreatePbrMaterial("testMaterial", heGetTexture("res/textures/test/placeHolder.png"),
                                                  heGetTexture("res/textures/models/normal.jpg"), heGetTexture("res/textures/models/arm.jpg"));
+    
+    
+    heBindShader(testInstance->material->shader);
+    heLoadShaderUniform(testInstance->material->shader, "u_projMat", camera->projectionMatrix);
+    
     testInstance->mesh = heGetMesh("res/models/camp_fire.obj");
     testInstance->transformation.scale = hm::vec3f(5);
     

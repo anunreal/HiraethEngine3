@@ -1,4 +1,7 @@
-#include "heWin32Layer.cpp"
+#include "heWin32Layer.h"
+#include <map>
+#include <iostream>
+#include <windows.h>
 
 // move this shit into cpp prolly and then how to store last modification time?
 typedef std::map<std::string, FILETIME> HeFileTimeMap;
@@ -15,20 +18,20 @@ bool heFileModified(const std::string& file) {
     auto it = handleMap.find(file);
     if(it == handleMap.end()) {
         // file was never requested before, load now
-        HANDLE handle = heCreateFile(file.c_str(), 
-                                     GENERIC_READ, 
-                                     FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                     NULL,
-                                     OPEN_EXISTING,
-                                     FILE_ATTRIBUTE_NORMAL,
-                                     NULL);
+        HANDLE handle = CreateFile(std::wstring(file.begin(), file.end()).c_str(), 
+                                   GENERIC_READ, 
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                   NULL,
+                                   OPEN_EXISTING,
+                                   FILE_ATTRIBUTE_NORMAL,
+                                   NULL);
         
-        if(handle == INVALID_HANDLE)
+        if(handle == INVALID_HANDLE_VALUE)
             std::cout << "Error: Could not open file handle for time checking (" << file << ")" << std::endl;
         else {
             handleMap[file] = handle;
             FILETIME time;
-            GetFileTimeA(handle, nullptr, nullptr, time);
+            GetFileTime(handle, nullptr, nullptr, &time);
             timeMap[file] = time;
         }
         
@@ -36,8 +39,9 @@ bool heFileModified(const std::string& file) {
     } else {
         
         FILETIME time;
-        GetFileTimeA(handleMap[file], nullptr, nullptr, time);
-        bool wasModified = timeMap[file] == time;
+        GetFileTime(handleMap[file], nullptr, nullptr, &time);
+        const FILETIME& last = timeMap[file];
+        bool wasModified = (last.dwLowDateTime != time.dwLowDateTime || last.dwHighDateTime != time.dwHighDateTime);
         timeMap[file] = time;
         return wasModified;
         

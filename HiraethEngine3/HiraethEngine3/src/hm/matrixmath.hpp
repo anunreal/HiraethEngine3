@@ -34,7 +34,7 @@ namespace hm {
 	template<typename T>
 	static mat4<T> createPerspectiveProjectionMatrix(const T fov, const T ratio, const T nearPlane, const T farPlane) {
 
-		mat4<T> mat(0);
+		mat4<T> mat(0.0);
 		const T frustumLength = farPlane - nearPlane;
 		const T tanHalfAngle = (T)std::tan(to_radians(fov) / 2.0);
 

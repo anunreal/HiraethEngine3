@@ -89,7 +89,6 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
     if (err != GL_NO_ERROR)
         std::cout << "Error: Shader Creation: " << err << std::endl;
     
-    
     const char* vs_ptr = vs.c_str();
     const char* fs_ptr = fs.c_str();
     
@@ -142,8 +141,17 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
     
 };
 
-void heBindShader(const HeShaderProgram* program) {
+void heCreateShader(HeShaderProgram* program, const std::string& vertexShader, const std::string& fragmentShader) {
     
+    program->files.emplace_back(vertexShader);
+    program->files.emplace_back(fragmentShader);
+    heLoadShader(program, vertexShader, fragmentShader);
+    
+}; 
+
+void heBindShader(HeShaderProgram* program) {
+    
+    heReloadShader(program);
     glUseProgram(program->programId);
     
 };
@@ -158,10 +166,12 @@ void heDestroyShader(HeShaderProgram* program) {
     
     glDeleteProgram(program->programId);
     program->programId = 0;
+    program->uniforms.clear();
+    program->samplers.clear();
     
 };
 
-void heRunComputeShader(const HeShaderProgram* program, const unsigned int groupsX, const unsigned int groupsY, const unsigned int groupsZ) {
+void heRunComputeShader(HeShaderProgram* program, const unsigned int groupsX, const unsigned int groupsY, const unsigned int groupsZ) {
     
     heBindShader(program);
     glDispatchCompute(groupsX, groupsY, groupsZ);
@@ -169,6 +179,74 @@ void heRunComputeShader(const HeShaderProgram* program, const unsigned int group
 };
 
 void heReloadShader(HeShaderProgram* program) {
+    
+#ifdef HE_ENABLE_HOTSWAP_SHADER
+    bool needsReloading = false;
+    
+    for(const std::string& files : program->files) {
+        if(heFileModified(files)) {
+            needsReloading = true;
+            break;
+        }
+    }
+    
+    if(needsReloading) {
+        
+        // store current uniform values
+        struct Uniform {
+            union {
+                float fdata[16];
+                int   idata[16];
+            };
+            bool isInt = false;
+            HeUniformDataType type = HE_UNIFORM_DATA_TYPE_NONE;
+        };
+        
+        int uniformCount;
+        glGetProgramInterfaceiv(program->programId, GL_UNIFORM, GL_ACTIVE_RESOURCES, &uniformCount);
+        std::map<std::string, Uniform> uniforms; 
+        
+        std::vector<GLchar> nameData(256);
+        std::vector<GLenum> properties;
+        properties.push_back(GL_NAME_LENGTH);
+        properties.push_back(GL_TYPE);
+        properties.push_back(GL_LOCATION);
+        std::vector<GLint> values(properties.size());
+        
+        for(int i = 0; i < uniformCount; ++i) {
+            glGetProgramResourceiv(program->programId, GL_UNIFORM, i, properties.size(), &properties[0], values.size(), NULL, &values[0]); 
+            
+            nameData.resize(values[0]); // length of the name
+            glGetProgramResourceName(program->programId, GL_UNIFORM, i, nameData.size(), NULL, &nameData[0]);
+            std::string name((char*)&nameData[0], nameData.size() - 1);
+            
+            Uniform u;
+            u.type = (HeUniformDataType) values[1];
+            
+            if(u.type == HE_UNIFORM_DATA_TYPE_INT || u.type == HE_UNIFORM_DATA_TYPE_BOOL) {
+                glGetUniformiv(program->programId, values[2], &u.idata[0]);
+                u.isInt = true;
+            } else
+                glGetUniformfv(program->programId, values[2], &u.fdata[0]);
+            
+            uniforms[name] = u;
+        }
+        
+        
+        // reload shader
+        heDestroyShader(program);
+        // for now we assume that the program is a simple vertex / fragment shader
+        heLoadShader(program, program->files[0], program->files[1]); 
+        heBindShader(program);
+        
+        // upload data to it
+        for(const auto& all : uniforms)
+            heLoadShaderUniform(program, all.first, all.second.isInt ? (const void*) &all.second.idata[0] : (const void*) &all.second.fdata[0], all.second.type);
+        
+        std::cout << "Debug: Reloaded program (" << program->files[0] << ", " << program->files[1] << ")" << std::endl;
+        
+    }
+#endif
     
 };
 
@@ -202,6 +280,39 @@ int heGetShaderSamplerLocation(HeShaderProgram* program, const std::string& samp
     
 };
 
+void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const void* data, const HeUniformDataType type) {
+    
+    int location = heGetShaderUniformLocation(program, uniformName);
+    
+    switch(type) {
+        case HE_UNIFORM_DATA_TYPE_INT:
+        case HE_UNIFORM_DATA_TYPE_BOOL:
+        heLoadShaderUniform(program, uniformName, ((int*) data)[0]);
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_FLOAT:
+        heLoadShaderUniform(program, uniformName, ((float*) data)[0]);
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_VEC2:
+        heLoadShaderUniform(program, uniformName, hm::vec2f(((float*) data)[0], ((float*) data)[1]));
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_VEC3:
+        heLoadShaderUniform(program, uniformName, hm::vec3f(((float*) data)[0], ((float*) data)[1], ((float*) data)[2]));
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_VEC4:
+        heLoadShaderUniform(program, uniformName, hm::vec4f(((float*) data)[0], ((float*) data)[1], ((float*) data)[2], ((float*) data)[3]));
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_MAT4:
+        heLoadShaderUniform(program, uniformName, hm::mat4f(&((float*) data)[0]));
+        break;
+        
+    };
+    
+};
 
 void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const int value) {
     
@@ -269,19 +380,19 @@ void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformNam
 void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const HeShaderData* data) {
     
     switch (data->type) {
-        case HE_SHADER_DATA_TYPE_INT:
+        case HE_UNIFORM_DATA_TYPE_INT:
         heLoadShaderUniform(program, uniformName, data->_int);
         break;
         
-        case HE_SHADER_DATA_TYPE_FLOAT:
+        case HE_UNIFORM_DATA_TYPE_FLOAT:
         heLoadShaderUniform(program, uniformName, data->_float);
         break;
         
-        case HE_SHADER_DATA_TYPE_VEC2:
+        case HE_UNIFORM_DATA_TYPE_VEC2:
         heLoadShaderUniform(program, uniformName, data->_vec2);
         break;
         
-        case HE_SHADER_DATA_TYPE_COLOUR:
+        case HE_UNIFORM_DATA_TYPE_COLOUR:
         heLoadShaderUniform(program, uniformName, data->_colour);
         break;
     };

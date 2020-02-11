@@ -108,7 +108,7 @@ void heRenderD3Level(HeD3Level* level) {
         // load camera
         heBindShader(all.first);
         heLoadShaderUniform(all.first, "u_viewMat",   level->camera.viewMatrix);
-        heLoadShaderUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
+        //heLoadShaderUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
         heLoadShaderUniform(all.first, "u_cameraPos", level->camera.position);
         
         unsigned int lightIndex = 0;

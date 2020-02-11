@@ -124,24 +124,23 @@ void main(void) {
 	vec3 viewDirection = normalize(pass_cameraPos - pass_worldPos);
 	vec3 totalLight = vec3(0.0);
 	
-	for(int i = 0; i < lightCount; ++i) {
+	for(int i = 0; i < lightCount; ++i) { 
 		vec4 lightDirection = getLightVector(u_lights[i]);
-		
+		  
 		if(lightDirection == vec4(0))
 			// fragment is not affected by this light
-			continue;
-		 
+			continue; 
+		   
 		vec3 halfwayDirection = normalize(lightDirection.xyz + viewDirection);
 		
 		vec3 lightColour = getLightColour(normal, lightDirection.xyz, viewDirection, halfwayDirection, F0, diffuse.rgb, (u_lights[i].colour.rgb * u_lights[i].colour.w) * lightDirection.w, roughness, metallic);
 		//lightColour = vec3(1.0);
 		totalLight += lightColour; 
-	}
-	
+	} 
+	 
 	vec3 ambient = vec3(0.03) * diffuse.rgb * ao;
 	//ambient = vec3(0.0);
 	out_colour = vec4(ambient + totalLight, 1.0);
 	//out_colour = vec4(normal, 1.0);
-	out_colour = vec4(pass_normal * 0.5 + 0.5, 1.0);
-
+	out_colour = vec4(normal * 0.5 + 0.5, 1.0);
 }
