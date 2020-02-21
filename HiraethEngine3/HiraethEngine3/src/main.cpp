@@ -69,7 +69,7 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     camera->position += velocity;
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     
-}
+};
 
 void fillHeightmap() {
     for (int x = 0; x <= SIZEX; ++x) {
@@ -77,7 +77,7 @@ void fillHeightmap() {
             heightmap[x][z] = (std::rand() / (float)RAND_MAX) * 2.f;
         }
     }
-}
+};
 
 void createTestMesh() {
     std::vector<float> vertices;
@@ -177,15 +177,15 @@ void createTestMesh() {
     heAddVaoData(vao, uvs, 2);
     heAddVaoData(vao, normals, 3);
     
-}
+};
 
 int main() {
     HeWindow window;
     HeWindowInfo windowInfo;
     windowInfo.title = L"He3 Test";
-    windowInfo.backgroundColour = hm::colour(20, 20, 20);
+    windowInfo.backgroundColour = hm::colour(200, 20, 20);
     windowInfo.fpsCap = 144;
-    windowInfo.size = hm::vec2i(1366, 768);
+    windowInfo.size = hm::vec2i(1920, 1080);
     window.windowInfo = windowInfo;
     
     heCreateWindow(&window);
@@ -198,8 +198,8 @@ int main() {
     HeD3Level level;
     
     HeD3Camera* camera = &level.camera;
-    camera->position = hm::vec3f(0, 2, 0);
-    camera->rotation = hm::vec3f(90, 90, 0);
+    camera->position = hm::vec3f(0, 0, 2);
+    camera->rotation = hm::vec3f(0);
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window.windowInfo.size.x / (float)window.windowInfo.size.y, 0.1f, 1000.0f);
     
@@ -208,26 +208,24 @@ int main() {
     createTestMesh();
     
     HeD3Light* testLight = &level.lights.emplace_back();
-    testLight->colour  = hm::colour(255);
+    testLight->colour  = hm::colour(255, 255, 255, 3.f);
     testLight->type    = HE_LIGHT_TYPE_POINT;
-    testLight->vector  = hm::vec3f(0, 100, 0);
+    testLight->vector  = hm::vec3f(100, 100, 20);
     testLight->data[0] = 1.0f;
     testLight->data[1] = 0.045f;
     testLight->data[2] = 0.0075f;
     testLight->update  = true;
     
     HeD3Instance* testInstance = &level.instances.emplace_back();
-    testInstance->material = heCreatePbrMaterial("testMaterial", heGetTexture("res/textures/test/placeHolder.png"),
+    testInstance->material = heCreatePbrMaterial("testMaterial", heGetTexture("res/textures/models/diffuse.jpg"),
                                                  heGetTexture("res/textures/models/normal.jpg"), heGetTexture("res/textures/models/arm.jpg"));
-    
+    testInstance->mesh = heGetMesh("res/models/cerberus.obj");
+    testInstance->transformation.scale = hm::vec3f(5);
     
     heBindShader(testInstance->material->shader);
     heLoadShaderUniform(testInstance->material->shader, "u_projMat", camera->projectionMatrix);
     
-    testInstance->mesh = heGetMesh("res/models/camp_fire.obj");
-    testInstance->transformation.scale = hm::vec3f(5);
-    
-    HeTexture* diffuse = heGetTexture("res/textures/test/placeHolder.png");
+    HeTexture* diffuse = heGetTexture("res/textures/models/diffuse.jpg");
     heBindTexture(diffuse, 0);
     heTextureClampRepeat();
     heTextureFilterTrilinear();
@@ -246,12 +244,13 @@ int main() {
             checkWindowInput(&window, camera, (float) window.frameTime);
         }
         
-        //heRenderD3Instance(testInstance, camera, level.time);
+        hePrepareD3RenderEngine(&engine);
         heRenderD3Level(&level);
+        heEndD3RenderEngine(&engine);
         
         heSwapWindow(&window);
         heSyncToFps(&window);
     }
     
     heDestroyWindow(&window);
-}
+};

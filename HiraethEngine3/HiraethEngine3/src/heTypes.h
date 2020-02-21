@@ -103,3 +103,10 @@ typedef enum HeLightType {
     HE_LIGHT_TYPE_DIRECTIONAL,
     HE_LIGHT_TYPE_SPOT
 } HeLightType;
+
+
+// a small macro to enable bitwise operations on enums
+#define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\
+inline T operator& (T a, T b) {return (T)((int) a & (int) b);};
+
+HE_ENABLE_BIT(HeFboFlags)

@@ -31,7 +31,8 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
     hm::vec2f deltaUv1 = uvs[1] - uvs[0];
     hm::vec2f deltaUv2 = uvs[2] - uvs[0];
     
-    const float f = 1.0f / (deltaUv1.x * deltaUv2.x - deltaUv1.y * deltaUv2.x);
+    const float f = 1.0f / (deltaUv1.x * deltaUv2.y - deltaUv2.x * deltaUv1.y);
+    
     float x = f * (deltaUv2.y * edge1.x - deltaUv1.y * edge2.x);
     float y = f * (deltaUv2.y * edge1.y - deltaUv1.y * edge2.y);
     float z = f * (deltaUv2.y * edge1.z - deltaUv1.y * edge2.z);
@@ -60,13 +61,13 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
         std::vector<std::string> args = heStringSplit(string, ' ');
         if (heStringStartsWith(string, "v ")) {
             // parse vertex
-            mesh.vertices.emplace_back(std::stof(args[1]), std::stof(args[2]), std::stof(args[3]));
+            mesh.vertices.emplace_back(hm::vec3f(std::stof(args[1]), std::stof(args[2]), std::stof(args[3])));
         } else if (heStringStartsWith(string, "vt ")) {
             // parse uv
-            mesh.uvs.emplace_back(std::stof(args[1]), 1.0f - std::stof(args[2]));
+            mesh.uvs.emplace_back(hm::vec2f(std::stof(args[1]), std::stof(args[2])));
         } else if (heStringStartsWith(string, "vn ")) {
             // parse normal
-            mesh.normals.emplace_back(std::stof(args[1]), std::stof(args[2]), std::stof(args[3]));
+            mesh.normals.emplace_back(hm::vec3f(std::stof(args[1]), std::stof(args[2]), std::stof(args[3])));
         } else if (heStringStartsWith(string, "f ")) {
             // parse face
             const std::vector<std::string> vertex0 = heStringSplit(args[1], '/');
@@ -80,6 +81,8 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
             parseObjVertex(vertexId0, mesh);
             parseObjVertex(vertexId1, mesh);
             parseObjVertex(vertexId2, mesh);
+            
+            // we can probably optimize this
             
             hm::vec3f tvertices[3];
             hm::vec2f tuvs[3];
@@ -106,5 +109,36 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
     heAddVaoData(vao, mesh.normalArray, 3);
     heAddVaoData(vao, mesh.tangentArray, 3);
     return vao;
+    
+};
+
+void heLoadD3Level(HeD3Level* level, const std::string& fileName) {
+    
+    std::ifstream stream(fileName);
+    std::string line;
+    
+    std::vector<HeMaterial*> materials;
+    
+    while(std::getline(stream, line)) {
+        std::vector<std::string> args = heStringSplit(line.subtr(2), ':');
+        if(line[0] == 'm') {
+            // material
+            std::string name = fileName + "_" + std::to_string(materials.size());
+            HeMaterial* mat = heCreatePbrMaterial(name, heGetTexture(args[0]), heGetTexture(args[1]), heGetTexture(args[2]));
+            materials.emplace_back(mat);
+        } else if(line[0] == 'i') {
+            // instance
+            HeD3Instance* ins            = &level->instances.emplace_back();
+            ins->mesh                    = heGetMesh(args[0]);
+            ins->material                = materials[std::stoi(args[1])];
+            ins->transformation.position = parseVec3f(args[2]);
+            ins->transformation.rotation = parseVec3f(args[3]);
+            ins->transformation.scale    = parseVec3f(args[4]);
+        } else if(line[0] == 'l') {
+            
+        }
+    }
+    
+    stream.close();
     
 };

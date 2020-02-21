@@ -62,6 +62,18 @@ HeShaderProgram* heGetShader(const std::string& name) {
     
 };
 
+HeShaderProgram* heGetShader(const std::string& name, const std::string& vShader, const std::string& fShader) {
+    
+    auto it = heAssetPool.shaderPool.find(name);
+    if (it != heAssetPool.shaderPool.end())
+        return &it->second;
+    
+    HeShaderProgram* s = &heAssetPool.shaderPool[name];
+    heCreateShader(s, vShader, fShader);
+    return s;
+    
+};
+
 HeMaterial* heGetMaterial(const std::string& name) {
     
     auto it = heAssetPool.materialPool.find(name);

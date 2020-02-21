@@ -52,7 +52,6 @@ struct HeFbo {
     // 1. depth buffer
     unsigned int depthAttachments[2] = { 0 };
     
-    
     /* only one of the two arrays should be used, therefore a fbo should only have either colour buffers or
      * colour textures */
     
@@ -68,7 +67,7 @@ struct HeFbo {
     // should be set. Needs to be set before fbo creation
     HeFboFlags flags;
     // the size of this fbo (in pixels). Needs to be set before fbo creation
-    hm::vec2i size;
+    hm::vec2i size;;
 };
 
 struct HeTexture {
@@ -176,12 +175,17 @@ extern HE_API void heUnbindFbo();
 extern HE_API void heDestroyFbo(HeFbo* fbo);
 // resizes given fbo by destroying it and creating a new version with new size
 extern HE_API void heResizeFbo(HeFbo* fbo, const hm::vec2i& newSize);
+// draws the source fbo onto the target fbo. If the source should be drawn directly onto the screen, then a "fake" fbo must be
+// created with an id of 0 and the size of the window
+extern HE_API void heDrawFbo(HeFbo* sourceFbo, HeFbo* targetFbo);
+// renders the source fbo directly onto the window with given size
+extern HE_API void heDrawFbo(HeFbo* sourceFbo, const hm::vec2i& windowSize);
 
 
 // --- Textures
 
 // loads a new texture from given file. If given file does not exist, an error is printed and no gl texture
-// will be generated
+// will be generated. If gammaCorrect is true, the texture will be saved as srgb, which is useful for  
 extern HE_API void heLoadTexture(HeTexture* texture, const std::string& fileName);
 // creates an empty texture. The details of the texture (width, height...) must already be set
 extern inline HE_API void heCreateTexture(HeTexture* texture);

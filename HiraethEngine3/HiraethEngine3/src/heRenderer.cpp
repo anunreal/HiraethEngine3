@@ -5,6 +5,7 @@ void heCreateRenderEngine(HeRenderEngine* engine, HeWindow* window) {
     
     engine->window = window;
     engine->textureShader = heGetShader("gui_texture");
+    engine->d3FinalShader = heGetShader("d3_final", "res/shaders/quad_v.glsl", "res/shaders/d3_final_f.glsl");
     
     engine->quadVao = &heAssetPool.meshPool["quad_vao"];
     heCreateVao(engine->quadVao);
@@ -12,6 +13,24 @@ void heCreateRenderEngine(HeRenderEngine* engine, HeWindow* window) {
     heAddVaoData(engine->quadVao, { -1, 1,  1, 1,  -1, -1,  -1, -1,  1, 1,  1, -1 }, 2);
     heUnbindVao(engine->quadVao);
     
+    engine->hdrFbo.samples = 4;
+    engine->hdrFbo.size    = window->windowInfo.size;
+    engine->hdrFbo.flags   = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER; 
+    heCreateFbo(&engine->hdrFbo);
+    
+    engine->resolvedFbo.samples = 1;
+    engine->resolvedFbo.size = window->windowInfo.size;
+    engine->resolvedFbo.flags = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER;
+    heCreateFbo(&engine->resolvedFbo);
+    
+};
+
+void heResizeRenderEngine(HeRenderEngine* engine) {
+    
+    if(engine->hdrFbo.size != engine->window->windowInfo.size) {
+        heResizeFbo(&engine->hdrFbo, engine->window->windowInfo.size);
+        heResizeFbo(&engine->resolvedFbo, engine->window->windowInfo.size);
+    }
 };
 
 void heDestroyRenderEngine(HeRenderEngine* engine) {
@@ -90,11 +109,6 @@ void heRenderD3Level(HeD3Level* level) {
     
     std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
     
-    // map instances to their shader 
-    /*for(HeD3Instance* all : &level->instances) {
-        shaderMap[all->material->shader].emplace_back(all);
-    }*/
-    
     for(auto it = level->instances.begin(); it != level->instances.end(); ++it) {
         shaderMap[it->material->shader].emplace_back(&(*it));
     }
@@ -125,5 +139,25 @@ void heRenderD3Level(HeD3Level* level) {
             heRenderD3Instance(instances);
         
     }
+    
+};
+
+void hePrepareD3RenderEngine(HeRenderEngine* engine) {
+    
+    heResizeRenderEngine(engine);
+    heBindFbo(&engine->hdrFbo);
+    heClearFrame(engine->window->windowInfo.backgroundColour, 2);
+    
+};
+
+void heEndD3RenderEngine(HeRenderEngine* engine) {
+    
+    heUnbindFbo(engine->window->windowInfo.size);
+    heDrawFbo(&engine->hdrFbo, &engine->resolvedFbo);
+    
+    heBindVao(engine->quadVao);
+    heBindShader(engine->d3FinalShader);
+    heBindTexture(engine->resolvedFbo.colourTextures[0], 0);
+    heRenderVao(engine->quadVao);
     
 };

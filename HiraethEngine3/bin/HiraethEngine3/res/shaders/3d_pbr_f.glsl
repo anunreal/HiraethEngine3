@@ -100,23 +100,14 @@ vec3 getLightColour(vec3 normal, vec3 lightDirection, vec3 viewDirection, vec3 h
 }
 
 void main(void) {
-
-	//vec2 uvCoords = pass_uv;
-	//out_colour = texture2D(t_diffuse, uvCoords);
 	
 	vec3 normalRgb = texture(t_normal, pass_uv).rgb;
-	normalRgb = vec3(0, 0, 1);
 	vec3 normal = normalize(pass_tangSpace * normalize(2.0 * normalRgb - 1.0));
 	
 	vec4 diffuse = texture(t_diffuse, pass_uv);
 	float metallic = texture(t_arm, pass_uv).b;
 	float roughness = texture(t_arm, pass_uv).g;
 	float ao = texture(t_arm, pass_uv).r;
-	
-	metallic = 0.5;
-	roughness = 0.5;
-	ao = 1.0;
-	
 	
 	vec3 F0 = vec3(0.0);
 	F0 = mix(F0, diffuse.rgb, metallic);
@@ -134,13 +125,9 @@ void main(void) {
 		vec3 halfwayDirection = normalize(lightDirection.xyz + viewDirection);
 		
 		vec3 lightColour = getLightColour(normal, lightDirection.xyz, viewDirection, halfwayDirection, F0, diffuse.rgb, (u_lights[i].colour.rgb * u_lights[i].colour.w) * lightDirection.w, roughness, metallic);
-		//lightColour = vec3(1.0);
 		totalLight += lightColour; 
-	} 
+	}  
 	 
 	vec3 ambient = vec3(0.03) * diffuse.rgb * ao;
-	//ambient = vec3(0.0);
 	out_colour = vec4(ambient + totalLight, 1.0);
-	//out_colour = vec4(normal, 1.0);
-	out_colour = vec4(normal * 0.5 + 0.5, 1.0);
 }

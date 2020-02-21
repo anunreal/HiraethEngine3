@@ -29,7 +29,7 @@ vec3 getScale(mat4 transMat) {
 mat3 getTangentMatrix(mat4 tMat) {
 	vec3 norm = normalize(tMat * vec4(in_normal, 0.0)).xyz;
 	vec3 tang = normalize(tMat * vec4(in_tangent, 0.0)).xyz; 
-	tang = (tang - dot(norm, tang) * norm);
+	tang = (tang - dot(tang, norm) * norm);
 	vec3 bitang = normalize(cross(norm, tang));
 	return mat3(tang, bitang, norm);
 }  
@@ -43,6 +43,7 @@ void main(void) {
 	pass_worldPos = worldPos.xyz;
 	pass_cameraPos = (inverse(u_viewMat) * vec4(0, 0, 0, 1)).xyz;
 	pass_tangSpace = getTangentMatrix(u_transMat);
-	pass_uv = in_uv * getScale(u_transMat).xy * u_tiling;
+	//pass_uv = in_uv * getScale(u_transMat).xy * u_tiling;
+	pass_uv = in_uv * u_tiling;
 	pass_tangent = in_tangent;
 }

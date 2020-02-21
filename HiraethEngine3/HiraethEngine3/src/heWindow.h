@@ -11,9 +11,12 @@ struct HeWindowInfo {
     // the size of the window, in pixels
     hm::vec2i    size;
     // the name of the window
-    std::wstring title = L"";
+    std::wstring title   = L"";
     // maximum fps allowed. If this is set to 0, vsync will be enabled
-    unsigned int fpsCap = 0;
+    unsigned int fpsCap  = 0;
+    // samples used for one pixel. If this is left at 1, no multisampling will be used. The higher this value,
+    // the smoother the result will be at a higher performance and memory cost
+    unsigned int samples = 1;
 };
 
 struct HeMouseInfo {

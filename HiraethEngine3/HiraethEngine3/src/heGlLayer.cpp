@@ -214,7 +214,7 @@ void heReloadShader(HeShaderProgram* program) {
         std::vector<GLint> values(properties.size());
         
         for(int i = 0; i < uniformCount; ++i) {
-            glGetProgramResourceiv(program->programId, GL_UNIFORM, i, properties.size(), &properties[0], values.size(), NULL, &values[0]); 
+            glGetProgramResourceiv(program->programId, GL_UNIFORM, i, properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]); 
             
             nameData.resize(values[0]); // length of the name
             glGetProgramResourceName(program->programId, GL_UNIFORM, i, nameData.size(), NULL, &nameData[0]);
@@ -373,7 +373,7 @@ void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformNam
 void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const hm::colour& value) {
     
     int location = heGetShaderUniformLocation(program, uniformName);
-    glUniform4f(location, value.getR(), value.getG(), value.getB(), value.getA());
+    glUniform4f(location, getR(&value), getG(&value), getB(&value), getA(&value));
     
 };
 
@@ -491,7 +491,7 @@ void heCreateColourAttachment(HeFbo* fbo) {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (int)fbo->colourTextures.size(), GL_TEXTURE_2D, id, 0);
     fbo->colourTextures.emplace_back(id);
     
-}
+};
 
 void heCreateMultisampledColourAttachment(HeFbo* fbo) {
     
@@ -503,7 +503,7 @@ void heCreateMultisampledColourAttachment(HeFbo* fbo) {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (int)fbo->colourBuffers.size(), GL_RENDERBUFFER, id);
     fbo->colourBuffers.emplace_back(id);
     
-}
+};
 
 void heCreateDepthBufferAttachment(HeFbo* fbo) {
     
@@ -515,7 +515,7 @@ void heCreateDepthBufferAttachment(HeFbo* fbo) {
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, fbo->samples, GL_DEPTH_COMPONENT24, fbo->size.x, fbo->size.y);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fbo->depthAttachments[1]);
     
-}
+};
 
 void heCreateDepthTextureAttachment(HeFbo* fbo) {
     
@@ -527,7 +527,7 @@ void heCreateDepthTextureAttachment(HeFbo* fbo) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, fbo->depthAttachments[0], 0);
     
-}
+};
 
 void heCreateFbo(HeFbo* fbo) {
     
@@ -547,7 +547,9 @@ void heCreateFbo(HeFbo* fbo) {
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Error: Fbo not set up correctly (" << glGetError() << ")" << std::endl;
     
-}
+    heUnbindFbo();
+    
+};
 
 void heBindFbo(HeFbo* fbo) {
     
@@ -565,20 +567,20 @@ void heBindFbo(HeFbo* fbo) {
     
     glDrawBuffers(count, drawBuffers.data());
     
-}
+};
 
 void heUnbindFbo(const hm::vec2i& windowSize) {
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, windowSize.x, windowSize.y);
     
-}
+};
 
 void heUnbindFbo() {
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
-}
+};
 
 void heDestroyFbo(HeFbo* fbo) {
     
@@ -589,7 +591,7 @@ void heDestroyFbo(HeFbo* fbo) {
     glDeleteRenderbuffers((int)fbo->colourBuffers.size(), fbo->colourBuffers.data());
     fbo->fboId = 0;
     
-}
+};
 
 void heResizeFbo(HeFbo* fbo, const hm::vec2i& newSize) {
     
@@ -610,9 +612,27 @@ void heResizeFbo(HeFbo* fbo, const hm::vec2i& newSize) {
     for (int i = 0; i < colourBuffers; ++i)
         heCreateMultisampledColourAttachment(fbo);
     
-    
-}
+};
 
+void heDrawFbo(HeFbo* sourceFbo, HeFbo* targetFbo) {
+    
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, targetFbo->fboId);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, sourceFbo->fboId);
+    glDrawBuffer(GL_BACK);
+    glBlitFramebuffer(0, 0, sourceFbo->size.x, sourceFbo->size.y, 0, 0, targetFbo->size.x, targetFbo->size.y, 
+                      GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    heUnbindFbo();
+    
+};
+
+void heDrawFbo(HeFbo* sourceFbo, const hm::vec2i& windowSize) {
+    
+    HeFbo fake;
+    fake.fboId = 0;
+    fake.size = windowSize;
+    heDrawFbo(sourceFbo, &fake);
+    
+};
 
 
 // --- Textures
@@ -634,7 +654,6 @@ void heLoadTexture(HeTexture* texture, const std::string& fileName) {
     else
         // no context in the current thread, add it to the thread loader
         heRequestTexture(texture, buffer);
-    //heThreadLoader.textures[texture] = buffer;
     
 };
 
@@ -644,8 +663,7 @@ void heCreateTexture(HeTexture* texture) {
     
 };
 
-void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const int width, const int height, const int channels, 
-                                 const HeColourFormat format) 
+void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const int width, const int height, const int channels, const HeColourFormat format) 
 {
     
     glGenTextures(1, id);
@@ -660,7 +678,7 @@ void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const 
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(buffer);
     
-}
+};
 
 void heLoadTexture(HeTexture* texture, FILE* stream) {
     
@@ -672,24 +690,12 @@ void heLoadTexture(HeTexture* texture, FILE* stream) {
         return;
     }
     
-    /*
-    glGenTextures(1, &texture->textureId);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture->textureId);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    */
     texture->format = HE_COLOUR_FORMAT_RGBA8;
     heCreateGlTextureFromBuffer(buffer, &texture->textureId, texture->width, texture->height, texture->channels, HE_COLOUR_FORMAT_RGBA8);
     
     stbi_image_free(buffer);
     
-}
+};
 
 void heBindTexture(const HeTexture* texture, const int slot) {
     
@@ -703,7 +709,7 @@ void heBindTexture(const unsigned int texture, const int slot) {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, texture);
     
-}
+};
 
 void heBindImageTexture(const HeTexture* texture, const int slot, const int layer, const HeAccessType access) {
     
@@ -788,7 +794,7 @@ void heTextureClampRepeat() {
 
 void heClearFrame(const hm::colour& colour, const int type) {
     
-    glClearColor(colour.getR(), colour.getG(), colour.getB(), colour.getA());
+    glClearColor(getR(&colour), getG(&colour), getB(&colour), getA(&colour));
     switch (type) {
         case 0:
         glClear(GL_COLOR_BUFFER_BIT);
@@ -803,7 +809,7 @@ void heClearFrame(const hm::colour& colour, const int type) {
         break;
     }
     
-}
+};
 
 void heBlendMode(const int mode) {
     
@@ -826,7 +832,7 @@ void heBlendMode(const int mode) {
         }
     }
     
-}
+};
 
 void heBufferBlendMode(const int attachmentIndex, const int mode) {
     
@@ -849,7 +855,7 @@ void heBufferBlendMode(const int attachmentIndex, const int mode) {
         }
     }
     
-}
+};
 
 void heEnableDepth(const bool depth) {
     
@@ -858,4 +864,4 @@ void heEnableDepth(const bool depth) {
     else
         glDisable(GL_DEPTH_TEST);
     
-}
+};
