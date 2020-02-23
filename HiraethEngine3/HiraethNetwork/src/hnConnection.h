@@ -4,6 +4,12 @@
 #include <tuple> // for hnBuildPacket macro
 #include <map>
 
+#ifdef HN_EXPORTS
+#define HN_API __declspec(dllexport)
+#else
+#define HN_API __declspec(dllimport)
+#endif
+
 //#define HN_ENABLE_LOG_MSG
 #define HN_ENABLE_ERROR_MSG
 #define HN_ENABLE_DEBUG_MSG
@@ -46,11 +52,11 @@ enum HnPacketType {
 };
 
 struct HnSocket {
-    int id;
+    unsigned long long id;
     HnStatus status = HN_STATUS_READY;
     
     HnSocket() : id(0) {};
-    HnSocket(const int id) : id(id), status(HN_STATUS_CONNECTED) {};
+    HnSocket(const unsigned long long id) : id(id), status(HN_STATUS_CONNECTED) {};
 };
 
 struct HnPacket {
@@ -95,32 +101,32 @@ extern HiraethNetwork* hn;
 // sets up the HiraethNetwork api by creating a new pointer. This can be called more than once but will 
 // only have an effect on the first time. This will set up wsa. If the network could not be created,
 // status of the network will be set to 2
-extern void hnCreateNetwork();
+extern HN_API void hnCreateNetwork();
 // cleans up the HiraethNetwork api. This only has an effect if the network is currently set up
 // This must be called at the end of the program
-extern void hnDestroyNetwork();
+extern HN_API void hnDestroyNetwork();
 // sends given data over given socket. If an error occurrs, the status of the socket is updates and an 
 // error message is printed
-extern void hnSendSocketData(HnSocket* socket, const std::string& data);
+extern HN_API void hnSendSocketData(HnSocket* socket, const std::string& data);
 // sends a packet over given socket
-extern void hnSendPacket(HnSocket* socket, const HnPacket& packet);
+extern HN_API void hnSendPacket(HnSocket* socket, const HnPacket& packet);
 
 // returns the variables data formatted into a string. This depends on the variables type.
 // Multiple arguments of the data (vec2...) will be split by a forward dash (/)
-extern std::string hnVariableDataToString(const HnVariableInfo* variable);
+extern HN_API std::string hnVariableDataToString(const HnVariableInfo* variable);
 // parses the data from given string and updates the data pointer, depending on the requested type
-extern void hnParseVariableString(void* ptr, const std::string& dataString, const HnDataType type);
+extern HN_API void hnParseVariableString(void* ptr, const std::string& dataString, const HnDataType type);
 
 // builds a new packet with given arguments. numargs is the number of parameters of the packet (...),
 // type is the type of the packet (see HnPacketType)
-extern HnPacket hnBuildPacketFromParameters(int numargs, const unsigned int type, ...);
+extern HN_API HnPacket hnBuildPacketFromParameters(int numargs, const unsigned int type, ...);
 // decodes a string recieved over a socket into a packet. This will cut the string after the packet ('!') 
-extern HnPacket hnDecodePacket(std::string& message);
+extern HN_API HnPacket hnDecodePacket(std::string& message);
 // decodes all packets read in this string. If the string does not end in the last packet (unfinished 
 // packet), that rest will be left in message
-extern std::vector<HnPacket> hnDecodePackets(std::string& message);
+extern HN_API std::vector<HnPacket> hnDecodePackets(std::string& message);
 // converts the packet to one string, with arguments split by a colon and with an exclamation mark at the end
-extern std::string hnGetPacketContent(const HnPacket& packet);
+extern HN_API std::string hnGetPacketContent(const HnPacket& packet);
 
 // builds a packet of given type from given parameters. All additional arguments must be a c style string 
 // (no std::string, numbers...)

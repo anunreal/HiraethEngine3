@@ -29,8 +29,8 @@ struct HeD3Camera {
     hm::mat4f projectionMatrix;
 };
 
-struct HeD3Light {
-    HeLightType type;
+struct HeD3LightSource {
+    HeLightSourceType type;
     // the vector of this light. For point/spot lights this is the position in world space,
     // for directional light this is the direction
     hm::vec3f vector;
@@ -54,6 +54,24 @@ struct HeD3Light {
 struct HeD3Level {
     HeD3Camera camera;
     std::list<HeD3Instance> instances;
-    std::list<HeD3Light> lights;
+    std::list<HeD3LightSource> lights;
     double time = 0.0;
 };
+
+
+// sets all important information for a directional light for a new light source in level.
+// direction should be normalized and in world space
+extern HeD3LightSource* heCreateDirectionalLight(HeD3Level* level, const hm::vec3f& direction, const hm::colour& colour);
+// sets all important information for a spot light for a new light source in level.
+// position is in world space
+// direction of the light is in world space
+// inAngle and outAngle are the angles in degrees that light is spreaded. In the inner circle, everything will
+// be lit with full light, and then its interpolated to zero to outAngle.
+extern HeD3LightSource* heCreateSpotLight(HeD3Level* level, const hm::vec3f& position, const hm::vec3f& direction, const float inAngle, const float outAngle,  const hm::colour& colour);
+// sets all important information for a point light for a new source in level.
+// position is in world space
+// the three light values control how the light acts over distance.
+// the constLightValue should always be 1
+// the linear value controls the normal decay, can be around 0.045
+// the quadratic value controls the light in far distance, can be around 0.0075
+extern HeD3LightSource* heCreatePointLight(HeD3Level* level, const hm::vec3f& position, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour);

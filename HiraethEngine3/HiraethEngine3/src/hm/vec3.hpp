@@ -1,5 +1,6 @@
 #pragma once
 #include "setup.hpp"
+#include <string>
 
 namespace hm {
     
@@ -74,9 +75,19 @@ namespace hm {
                        left.x * right.y - left.y * right.x);
     };
     
+    // parses a vec3 from a string. The coordinates should be split by a single '/' char
     static inline vec3f parseVec3f(const std::string& input) {
-        std::vector<std::string> args = heStringSplit(input);
-        return vec3(std::stof(args[0]), std::stof(args[1]), std::stof(args[2]));
+        //std::vector<std::string> args = heStringSplit(input);
+        std::string arguments[3];
+        size_t index0 = input.find('/');
+        arguments[0] = input.substr(0, index0);
+        
+        // we need the actual offset, find will only give us the offset in the substr (add 1 for the last /)
+        size_t index1 = input.substr(index0 + 1).find('/') + index0 + 1;
+        arguments[1] = input.substr(index0 + 1, index1);
+        arguments[2] = input.substr(index1 + 1);
+        
+        return vec3(std::stof(arguments[0]), std::stof(arguments[1]), std::stof(arguments[2]));
     };
     
 };

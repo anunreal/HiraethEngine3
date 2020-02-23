@@ -50,7 +50,7 @@ void hnDisconnectClient(HnClient* client) {
 void hnUpdateClientInput(HnClient* client) {
     
     ZeroMemory(client->inputBuffer, 4096);
-    int bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
+    size_t bytes = (size_t) recv(client->socket.id, client->inputBuffer, 4096, 0);
     if (bytes > 0) {
         std::string msg = std::string(client->inputBuffer, bytes - 1);
         
@@ -250,7 +250,7 @@ HnPacket hnReadClientPacket(HnClient* client) {
     } else {
         // buffer is empty, try to read
         ZeroMemory(client->inputBuffer, 4096);
-        int bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
+        size_t bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
         if (bytes > 0) {
             std::string msg(client->inputBuffer, bytes - 1);
             msg = client->lastInput + msg;

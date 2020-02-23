@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma warning( disable : 26812 )
+
 #ifdef HE_EXPORTS
 #define HE_API __declspec(dllexport)
 #else
@@ -97,12 +99,12 @@ typedef enum HeAccessType {
     HE_ACCESS_READ_WRITE,
 } HeAccessType;
 
-typedef enum HeLightType {
-    HE_LIGHT_TYPE_NONE,
-    HE_LIGHT_TYPE_POINT,
-    HE_LIGHT_TYPE_DIRECTIONAL,
-    HE_LIGHT_TYPE_SPOT
-} HeLightType;
+typedef enum HeLightSourceType {
+    HE_LIGHT_SOURCE_TYPE_NONE,
+    HE_LIGHT_SOURCE_TYPE_POINT,
+    HE_LIGHT_SOURCE_TYPE_DIRECTIONAL,
+    HE_LIGHT_SOURCE_TYPE_SPOT
+} HeSourceLightType;
 
 
 // a small macro to enable bitwise operations on enums

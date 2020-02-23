@@ -7,10 +7,10 @@ namespace hm {
         float i; // intensity of the colour [0:inf]
         
         colour() : r(0), g(0), b(0), a(0), i(1) {};
-        colour(int v) : r(v), g(v), b(v), a(255), i(1) {};
+        colour(int v) : r(v), g(v), b(v), a(255), i(1.f) {};
         colour(int v, float i) : r(v), g(v), b(v), a(255), i(i) {};
         colour(int r, int g, int b) : r(r), g(g), b(b), a(255), i(1) {};
-        colour(int r, int g, int b, int a) : r(r), g(g), b(b), a(a) {};
+        colour(int r, int g, int b, int a) : r(r), g(g), b(b), a(a), i(1.f) {};
         colour(int r, int g, int b, float i) : r(r), g(g), b(b), a(255), i(i) {};
         colour(int r, int g, int b, int a, float i) : r(r), g(g), b(b), a(a), i(i) {};
     };

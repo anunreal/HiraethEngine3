@@ -59,7 +59,7 @@ void hnKickRemoteClient(HnRemoteClient* client) {
 
 void hnServerAcceptClients(HnServer* server) {
     
-    unsigned int socket = accept(server->serverSocket.id, nullptr, nullptr);
+    unsigned long long socket = accept(server->serverSocket.id, nullptr, nullptr);
     if (socket == INVALID_SOCKET) {
         HN_ERROR("Connected to invalid socket");
         return;
@@ -87,7 +87,7 @@ void hnUpdateServer(HnServer* server) {
     }
     
     while(server->disconnectRequests.size() > 0) {
-        unsigned int id = server->disconnectRequests[0];
+        unsigned long long id = server->disconnectRequests[0];
         
         HnRemoteClient* cl = &server->clients[id];
         cl->thread.detach();
@@ -110,7 +110,7 @@ void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
     
     while(client->socket.status == HN_STATUS_CONNECTED) {
         ZeroMemory(buffer, 4096);
-        int bytes = recv(client->socket.id, buffer, 4096, 0);
+        size_t bytes = (size_t) recv(client->socket.id, buffer, 4096, 0);
         
         if(bytes > 0) {
             // input
@@ -241,5 +241,9 @@ HnPacket hnGetCustomPacket(HnRemoteClient* client) {
     HnPacket packet = client->customPackets[0];
     client->customPackets.erase(client->customPackets.begin());
     return packet;
+    
+}
+
+void hnHookVariable(HnServer* server, HnRemoteClient* client, const std::string& variable, void* ptr) {
     
 }

@@ -51,7 +51,7 @@ void heLoadMaterialToShader(HeShaderProgram* shader, const HeMaterial* material)
     
 };
 
-void heLoadLightToShader(HeShaderProgram* program, const HeD3Light* light, const int index) {
+void heLoadLightToShader(HeShaderProgram* program, const HeD3LightSource* light, const int index) {
     
     std::string uniformName;
     if (index == -1)
@@ -69,16 +69,18 @@ void heLoadLightToShader(HeShaderProgram* program, const HeD3Light* light, const
 
 void heRenderD3Instance(HeD3Instance* instance) {
     
-    // load instance data
-    heLoadShaderUniform(instance->material->shader, "u_transMat", hm::createTransformationMatrix(instance->transformation.position,
-                                                                                                 instance->transformation.rotation, instance->transformation.scale));
-    
-    // load material
-    heLoadMaterialToShader(instance->material->shader, instance->material);
-    
-    heBindVao(instance->mesh);
-    heRenderVao(instance->mesh);
-    
+    if (instance->mesh != nullptr) {
+        // load instance data
+        heLoadShaderUniform(instance->material->shader, "u_transMat", hm::createTransformationMatrix(instance->transformation.position,
+            instance->transformation.rotation, instance->transformation.scale));
+
+        // load material
+        heLoadMaterialToShader(instance->material->shader, instance->material);
+
+        heBindVao(instance->mesh);
+        heRenderVao(instance->mesh);
+    }
+
 };
 
 void heRenderD2Texture(HeRenderEngine* engine, const HeTexture* texture, const hm::vec2f& position, const hm::vec2f& size) {

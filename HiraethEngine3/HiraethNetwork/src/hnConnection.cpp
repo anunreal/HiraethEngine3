@@ -34,7 +34,7 @@ void hnDestroyNetwork() {
 
 void hnSendSocketData(HnSocket* socket, const std::string& data) {
     
-    int res = send(socket->id, data.c_str(), data.size() + 1, 0);
+    int res = send(socket->id, data.c_str(), (int) data.size() + 1, 0);
     if(res <= 0) {
         HN_ERROR("Lost connection to socket");
         socket->status = HN_STATUS_ERROR;
@@ -126,7 +126,7 @@ void hnParseVariableString(void* ptr, const std::string& dataString, const HnDat
         }
         
         case HN_DATA_TYPE_VEC4: {
-            std::string arguments[3];
+            std::string arguments[4];
             size_t index0 = dataString.find('/');
             
             // we need the actual offset, find will only give us the offset in the substr (add 1 for the last /)

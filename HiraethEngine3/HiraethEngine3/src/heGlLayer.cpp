@@ -214,10 +214,10 @@ void heReloadShader(HeShaderProgram* program) {
         std::vector<GLint> values(properties.size());
         
         for(int i = 0; i < uniformCount; ++i) {
-            glGetProgramResourceiv(program->programId, GL_UNIFORM, i, properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]); 
+            glGetProgramResourceiv(program->programId, GL_UNIFORM, i, (GLsizei) properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]); 
             
             nameData.resize(values[0]); // length of the name
-            glGetProgramResourceName(program->programId, GL_UNIFORM, i, nameData.size(), NULL, &nameData[0]);
+            glGetProgramResourceName(program->programId, GL_UNIFORM, i, (GLsizei) nameData.size(), NULL, &nameData[0]);
             std::string name((char*)&nameData[0], nameData.size() - 1);
             
             Uniform u;
@@ -671,10 +671,13 @@ void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const 
     glBindTexture(GL_TEXTURE_2D, *id);
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);*/
+    heTextureFilterTrilinear();
+    heTextureFilterAnisotropic();
+    heTextureClampRepeat();
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(buffer);
     

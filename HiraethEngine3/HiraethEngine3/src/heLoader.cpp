@@ -51,6 +51,11 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
 HeVao* heLoadD3Obj(const std::string& fileName) {
     
     std::ifstream stream(fileName);
+    if (!stream.good()) {
+        std::cout << "Error: Could not load model file [" << fileName << "]" << std::endl;
+        return nullptr;
+    }
+
     std::string string;
     HeD3MeshBuilder mesh;
     
@@ -97,7 +102,7 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
         }
     }
     
-    std::cout << "Finished obj loading" << std::endl;
+    std::cout << "Finished obj loading " << mesh.verticesArray.size() << std::endl;
     
     stream.close();
     
@@ -120,7 +125,7 @@ void heLoadD3Level(HeD3Level* level, const std::string& fileName) {
     std::vector<HeMaterial*> materials;
     
     while(std::getline(stream, line)) {
-        std::vector<std::string> args = heStringSplit(line.subtr(2), ':');
+        std::vector<std::string> args = heStringSplit(line.substr(2), ':');
         if(line[0] == 'm') {
             // material
             std::string name = fileName + "_" + std::to_string(materials.size());
@@ -131,9 +136,9 @@ void heLoadD3Level(HeD3Level* level, const std::string& fileName) {
             HeD3Instance* ins            = &level->instances.emplace_back();
             ins->mesh                    = heGetMesh(args[0]);
             ins->material                = materials[std::stoi(args[1])];
-            ins->transformation.position = parseVec3f(args[2]);
-            ins->transformation.rotation = parseVec3f(args[3]);
-            ins->transformation.scale    = parseVec3f(args[4]);
+            ins->transformation.position = hm::parseVec3f(args[2]);
+            ins->transformation.rotation = hm::fromEuler(hm::parseVec3f(args[3]));
+            ins->transformation.scale    = hm::parseVec3f(args[4]);
         } else if(line[0] == 'l') {
             
         }

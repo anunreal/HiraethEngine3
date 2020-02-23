@@ -1,7 +1,5 @@
 #pragma once
-#include <vector>
-#include "hm/hm.hpp"
-#include "heGlLayer.h"
+#include "heD3.h"
 
 struct HeD3MeshBuilder {
     /* a list of all  */

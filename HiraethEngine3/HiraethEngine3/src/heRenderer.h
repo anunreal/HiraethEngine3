@@ -18,7 +18,7 @@ struct HeRenderEngine {
     // an 16 bit fbo used for post-process image manipulation 
     HeFbo resolvedFbo;
     // used for rendering the hdr fbo onto the screen with some final colour corrections etc
-    HeShaderProgram* d3FinalShader;
+    HeShaderProgram* d3FinalShader = nullptr;
 };
 
 
@@ -33,7 +33,7 @@ extern HE_API void heLoadMaterialToShader(HeShaderProgram* shader, const HeMater
 // loads a 3d light source to given shader. If index is -1, the shader is assumed to only have one light as a uniform 
 // called u_light. If index is greater or equal to 0, the shader is assumed to have an array of lights, called 
 // u_lights[]
-extern HE_API void heLoadLightToShader(HeShaderProgram* program, const HeD3Light* light, const int index);
+extern HE_API void heLoadLightToShader(HeShaderProgram* program, const HeD3LightSource* light, const int index);
 // renders a single 3d instance using the instances mesh and material. Make sure that a shader is bound and
 // set up before this is called (camera and lights)
 extern HE_API void heRenderD3Instance(HeD3Instance* instance);
