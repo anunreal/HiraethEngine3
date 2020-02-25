@@ -1,5 +1,6 @@
 #include "heAssets.h"
 #include "heLoader.h"
+#include "heWindow.h"
 
 HeAssetPool heAssetPool;
 HeThreadLoader heThreadLoader;
@@ -89,8 +90,19 @@ HeMaterial* heGetMaterial(const std::string& name) {
 
 void heRequestTexture(HeTexture* texture, unsigned char* buffer) {
     
-    heThreadLoader.textures[texture] = buffer;
-    heThreadLoader.updateRequested = true;
+    if(!heIsMainThread()) {
+        heThreadLoader.textures[texture] = buffer;
+        heThreadLoader.updateRequested = true;
+    }
+    
+};
+
+void heRequestVao(HeVao* vao) {
+    
+    if(!heIsMainThread()) {
+        heThreadLoader.vaos.emplace_back(vao);
+        heThreadLoader.updateRequested = true;
+    }
     
 };
 
@@ -100,7 +112,20 @@ void heUpdateThreadLoader() {
         heCreateGlTextureFromBuffer(all.second, &all.first->textureId, all.first->width, all.first->height, all.first->channels, 
                                     all.first->format);
     
+    for(auto all : heThreadLoader.vaos) {
+        heCreateVao(all);
+        heBindVao(all);
+        all->verticesCount = all->vbos[0].data.size() / all->vbos[0].dimensions;
+        
+        unsigned int counter = 0;
+        for(auto& vbos : all->vbos)
+            heAddVboData(&vbos, counter++);
+        
+        heUnbindVao(all);
+    }
+    
     heThreadLoader.textures.clear();
+    heThreadLoader.vaos.clear();
     heThreadLoader.updateRequested = false;
     
 };

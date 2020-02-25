@@ -83,7 +83,8 @@ extern inline HE_API bool heKeyWasPressed(const HeWindow* window, const HeKeyCod
 // The position can either be in pixels (positive), or as a percentage (negative) meaning
 // that -0.5 will be have the current window size
 extern HE_API void heSetMousePosition(HeWindow* window, const hm::vec2f& position);
-
+// returns true if there is a valid rendering context in the current thread
+extern HE_API bool heIsMainThread();
 // the windows class instance
 extern HINSTANCE classInstance;								
 

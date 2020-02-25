@@ -1,6 +1,7 @@
 #include "heLoader.h"
 #include "heAssets.h"
 #include "heUtils.h"
+#include "heWindow.h"
 #include <fstream>
 
 
@@ -55,7 +56,7 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
         std::cout << "Error: Could not load model file [" << fileName << "]" << std::endl;
         return nullptr;
     }
-
+    
     std::string string;
     HeD3MeshBuilder mesh;
     
@@ -106,13 +107,22 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
     
     stream.close();
     
+    bool isMainThread = heIsMainThread();
+    
     HeVao* vao = &heAssetPool.meshPool[fileName];
-    heCreateVao(vao);
-    heBindVao(vao);
+    if(isMainThread) {
+        heCreateVao(vao);
+        heBindVao(vao);
+    }
+    
     heAddVaoData(vao, mesh.verticesArray, 3);
     heAddVaoData(vao, mesh.uvArray, 2);
     heAddVaoData(vao, mesh.normalArray, 3);
     heAddVaoData(vao, mesh.tangentArray, 3);
+    
+    if(!isMainThread)
+        heRequestVao(vao);
+    
     return vao;
     
 };

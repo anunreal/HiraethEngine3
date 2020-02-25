@@ -112,7 +112,7 @@ void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
         ZeroMemory(buffer, 4096);
         size_t bytes = (size_t) recv(client->socket.id, buffer, 4096, 0);
         
-        if(bytes > 0) {
+        if(bytes > 0 && bytes < INFINITY) {
             // input
             std::string msg = std::string(buffer, bytes - 1);
             

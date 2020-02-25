@@ -2,6 +2,7 @@
 #include "heAssets.h"
 #include "GLEW/glew.h"
 #include "GLEW/wglew.h"
+#include "heWindow.h"
 #include "heWin32Layer.h"
 #include <fstream>
 #include <algorithm>
@@ -425,9 +426,17 @@ void heCreateVao(HeVao* vao) {
     
 };
 
+void heAddVboData(HeVbo* vbo, const unsigned int attributeIndex) {
+    
+    heCreateVbo(vbo, vbo->data);
+    glVertexAttribPointer(attributeIndex, vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+    vbo->data.clear();
+    
+};
+
 void heAddVbo(HeVao* vao, HeVbo* vbo) {
     
-    glVertexAttribPointer((unsigned int)vao->vbos.size(), vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+    glVertexAttribPointer((unsigned int) vao->vbos.size(), vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
     vao->vbos.emplace_back(*vbo);
     if (vao->vbos.size() == 1)
         vao->verticesCount = vbo->verticesCount;
@@ -436,10 +445,16 @@ void heAddVbo(HeVao* vao, HeVbo* vbo) {
 
 void heAddVaoData(HeVao* vao, const std::vector<float>& data, const unsigned int dimensions) {
     
-    HeVbo vbo;
-    vbo.dimensions = dimensions;
-    heCreateVbo(&vbo, data);
-    heAddVbo(vao, &vbo);
+    if(heIsMainThread()) {
+        HeVbo vbo;
+        vbo.dimensions = dimensions;
+        heCreateVbo(&vbo, data);
+        heAddVbo(vao, &vbo);
+    } else {
+        HeVbo* vbo = &vao->vbos.emplace_back();
+        vbo->data = data;
+        vbo->dimensions = dimensions;
+    }
     
 };
 
@@ -648,7 +663,7 @@ void heLoadTexture(HeTexture* texture, const std::string& fileName) {
     }
     
     texture->format = HE_COLOUR_FORMAT_RGBA8;
-    if (wglGetCurrentContext() != NULL)
+    if (heIsMainThread())
         // we are in some context thread, load it right now
         heCreateGlTextureFromBuffer(buffer, &texture->textureId, texture->width, texture->height, texture->channels, HE_COLOUR_FORMAT_RGBA8);
     else
@@ -702,8 +717,11 @@ void heLoadTexture(HeTexture* texture, FILE* stream) {
 
 void heBindTexture(const HeTexture* texture, const int slot) {
     
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, texture->textureId);
+    if(texture != nullptr) {
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_2D, texture->textureId);
+    } else
+        heBindTexture((unsigned int) 0, slot);
     
 };
 
@@ -716,7 +734,8 @@ void heBindTexture(const unsigned int texture, const int slot) {
 
 void heBindImageTexture(const HeTexture* texture, const int slot, const int layer, const HeAccessType access) {
     
-    glBindImageTexture(slot, texture->textureId, 0, (layer == -1) ? GL_TRUE : GL_FALSE, layer, access, texture->format);
+    if(texture != nullptr)
+        glBindImageTexture(slot, texture->textureId, 0, (layer == -1) ? GL_TRUE : GL_FALSE, layer, access, texture->format);
     
 };
 

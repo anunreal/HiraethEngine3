@@ -10,6 +10,10 @@ struct HeMaterial {
     std::map<std::string, HeShaderData> uniforms;
 };
 
+struct HeThreadLoaderVao {
+    std::vector<unsigned int> dimensions;
+    std::vector<std::vector<float>> data;
+};
 
 // maps the name of the mesh (usually a file) to its vao
 typedef std::map<std::string, HeVao> HeMeshPool;
@@ -22,6 +26,11 @@ typedef std::map<std::string, HeMaterial> HeMaterialPool;
 // maps a pointer to a texture in the texture pool to the content of the file it was loaded from
 // this is only used if the texture was loaded from a side-thread (not the thread the window was created in)
 typedef std::map<HeTexture*, unsigned char*> HeTextureRequests;
+// a list of pointers in the mesh pool of vaos that need to be loaded. The vao can be set up normally (via
+// heAddVaoData...), the data will be stored in the HeVbos of the vao. Once the thread loader loads this vao,
+// the data will be uploaded to gl and deleted
+//typedef std::map<HeVao*, HeThreadLoaderVao> HeVaoRequests;
+typedef std::vector<HeVao*> HeVaoRequests;
 
 struct HeAssetPool {
     HeMeshPool meshPool;
@@ -32,6 +41,7 @@ struct HeAssetPool {
 
 struct HeThreadLoader {
     HeTextureRequests textures;
+    HeVaoRequests vaos;
     
     bool updateRequested = false;
 };
@@ -73,6 +83,10 @@ extern HE_API HeMaterial* heGetMaterial(const std::string& name);
 // the thread loader
 // and request an update for the heThreadLoader
 extern HE_API void heRequestTexture(HeTexture* texture, unsigned char* buffer);
+// creates a new request for given vao. If this is called from the main thread (with a valid gl context), this function
+// does nothing. Else a new request will be created and the requestUpdate of the thread loader is set to true. All
+// data should already uploaded to the vao at this point
+extern HE_API void heRequestVao(HeVao* vao);
 // loads all resources in the thread loader into gl and clears the loader afterwards. This must be called from the 
 // thread the window was created in (the main thread)
 extern HE_API void heUpdateThreadLoader();

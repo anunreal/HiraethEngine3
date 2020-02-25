@@ -102,13 +102,17 @@ vec3 getLightColour(vec3 normal, vec3 lightDirection, vec3 viewDirection, vec3 h
 void main(void) {
 	
 	vec3 normalRgb = texture(t_normal, pass_uv).rgb;
+	if(normalRgb == vec3(0))
+		// probably no normal map found, use "default" normal
+		normalRgb = vec3(0.5, 0.5, 1.0);
+
 	vec3 normal = normalize(pass_tangSpace * normalize(2.0 * normalRgb - 1.0));
 	
 	vec4 diffuse = texture(t_diffuse, pass_uv);
 	float metallic = texture(t_arm, pass_uv).b;
 	float roughness = texture(t_arm, pass_uv).g;
 	float ao = texture(t_arm, pass_uv).r;
-	
+
 	vec3 F0 = vec3(0.0);
 	F0 = mix(F0, diffuse.rgb, metallic);
 

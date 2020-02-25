@@ -35,6 +35,7 @@ struct HeVbo {
     unsigned int vboId = 0;
     unsigned int dimensions = 0;
     unsigned int verticesCount = 0;
+    std::vector<float> data;
 };
 
 struct HeVao {
@@ -63,11 +64,12 @@ struct HeFbo {
     // the amount of samples in this fbo (multisampling). Must be either 4, 8, 16. More samplers mean smoother
     // results but higher memory usage. Needs to be set before fbo creation
     unsigned int samples = 1;
-    // flags of this fbo. More flags can be set, but only one of HE_FBO_FLAG_DEPTH_RENDER_BUFFER and HE_FBO_FLAG_DEPTH_TEXTURE
+    // flags of this fbo. More flags can be set, but only one of HE_FBO_FLAG_DEPTH_RENDER_BUFFER and 
+    // HE_FBO_FLAG_DEPTH_TEXTURE
     // should be set. Needs to be set before fbo creation
     HeFboFlags flags;
     // the size of this fbo (in pixels). Needs to be set before fbo creation
-    hm::vec2i size;;
+    hm::vec2i size;
 };
 
 struct HeTexture {
@@ -141,6 +143,9 @@ extern HE_API void heDestroyVbo(HeVbo* vbo);
 
 // creates a new empty vao
 extern HE_API void heCreateVao(HeVao* vao);
+// simply uploads the data stored in the vbo onto the currently bound vao. This will clear the data stored in the vbo
+// attributeIndex is the index of this vbo in the vao
+extern HE_API void heAddVboData(HeVbo* vbo, const unsigned int attributeIndex);
 // adds an existing vbo to given vao. Both vao and vbo need to be created beforehand, and the vao needs
 // to be bound before this call. If this is the first vbo for the given vao, the verticesCount 
 // of the vao is calculated 

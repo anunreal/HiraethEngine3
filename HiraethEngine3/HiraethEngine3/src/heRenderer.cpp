@@ -22,6 +22,7 @@ void heCreateRenderEngine(HeRenderEngine* engine, HeWindow* window) {
     engine->resolvedFbo.size = window->windowInfo.size;
     engine->resolvedFbo.flags = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER;
     heCreateFbo(&engine->resolvedFbo);
+    heEnableDepth(1);
     
 };
 
@@ -72,15 +73,15 @@ void heRenderD3Instance(HeD3Instance* instance) {
     if (instance->mesh != nullptr) {
         // load instance data
         heLoadShaderUniform(instance->material->shader, "u_transMat", hm::createTransformationMatrix(instance->transformation.position,
-            instance->transformation.rotation, instance->transformation.scale));
-
+                                                                                                     instance->transformation.rotation, instance->transformation.scale));
+        
         // load material
         heLoadMaterialToShader(instance->material->shader, instance->material);
-
+        
         heBindVao(instance->mesh);
         heRenderVao(instance->mesh);
     }
-
+    
 };
 
 void heRenderD2Texture(HeRenderEngine* engine, const HeTexture* texture, const hm::vec2f& position, const hm::vec2f& size) {
@@ -112,7 +113,8 @@ void heRenderD3Level(HeD3Level* level) {
     std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
     
     for(auto it = level->instances.begin(); it != level->instances.end(); ++it) {
-        shaderMap[it->material->shader].emplace_back(&(*it));
+        if(it->material != nullptr)
+            shaderMap[it->material->shader].emplace_back(&(*it));
     }
     
     
