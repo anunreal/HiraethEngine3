@@ -42,3 +42,18 @@ HeD3LightSource* heCreatePointLight(HeD3Level* level, const hm::vec3f& position,
     return light;
     
 };
+
+void heRemoveD3Instance(HeD3Level* level, HeD3Instance* instance) {
+    
+    unsigned int index = 0;
+    for(HeD3Instance& all : level->instances) {
+        if(&all == instance)
+            break;
+        index++;
+    }
+    
+    auto it = level->instances.begin();
+    std::advance(it, index);
+    level->instances.erase(it);
+    
+};

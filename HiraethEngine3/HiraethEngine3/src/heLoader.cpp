@@ -103,8 +103,6 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
         }
     }
     
-    std::cout << "Finished obj loading " << mesh.verticesArray.size() << std::endl;
-    
     stream.close();
     
     bool isMainThread = heIsMainThread();
@@ -147,7 +145,7 @@ void heLoadD3Level(HeD3Level* level, const std::string& fileName) {
             ins->mesh                    = heGetMesh(args[0]);
             ins->material                = materials[std::stoi(args[1])];
             ins->transformation.position = hm::parseVec3f(args[2]);
-            ins->transformation.rotation = hm::fromEuler(hm::parseVec3f(args[3]));
+            //ins->transformation.rotation = hm::fromEuler(hm::parseVec3f(args[3]));
             ins->transformation.scale    = hm::parseVec3f(args[4]);
         } else if(line[0] == 'l') {
             

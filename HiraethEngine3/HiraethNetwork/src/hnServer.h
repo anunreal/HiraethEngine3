@@ -1,5 +1,6 @@
 #pragma once
 #include "hnConnection.h"
+#include "hnCallbacks.h"
 #include <map>
 #include <thread>
 
@@ -31,6 +32,7 @@ struct HnServer {
     // handled in the server update 
     std::vector<unsigned long long> disconnectRequests;
     
+    HnServerCallbacks callbacks;
     HnVariableInfoMap variableInfo;
     HnVariableLookupMap variableNames;
     // counts the number of variables requested in order to keep ids unique

@@ -1,0 +1,22 @@
+version(1);
+
+project_name = "HiraethEngine3";
+
+patterns = {
+	"*.cpp",
+	"*.h",
+	"*.hpp",
+	"*.4coder",
+	"*.bat"
+};
+
+blacklist_patterns = {
+".*",
+};
+
+load_paths = {
+ { { 
+	{"HiraethEngine3", .relative = true, .recursive = true, },
+	{"HiraethNetwork", .relative = true, .recursive = true, },
+	}, .os = "win" },
+};

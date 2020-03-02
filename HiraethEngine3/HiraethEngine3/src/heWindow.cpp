@@ -460,19 +460,27 @@ void heSwapWindow(const HeWindow* window) {
     
 };
 
-bool heKeyWasPressed(const HeWindow* window, const HeKeyCode key) {
-    
-    return std::find(window->keyboardInfo.keysPressed.begin(), window->keyboardInfo.keysPressed.end(), key)
-        != window->keyboardInfo.keysPressed.end();
-    
-};
-
 hm::vec2i heCalculateWindowBorderSize(const HeWindow* window) {
     
     RECT w, c;
     GetWindowRect(window->handle, &w);
     GetClientRect(window->handle, &c);
     return hm::vec2i((w.right - w.left) - (c.right - c.left), (w.bottom - w.top) - (c.bottom - c.top));
+    
+};
+
+void heToggleCursor(const bool hidden) {
+    if (hidden)
+        while (ShowCursor(false) >= 0);
+    else
+        ShowCursor(true);
+};
+
+
+bool heKeyWasPressed(const HeWindow* window, const HeKeyCode key) {
+    
+    return std::find(window->keyboardInfo.keysPressed.begin(), window->keyboardInfo.keysPressed.end(), key)
+        != window->keyboardInfo.keysPressed.end();
     
 };
 

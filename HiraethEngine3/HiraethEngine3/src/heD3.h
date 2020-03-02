@@ -6,8 +6,10 @@ struct HeD3Transformation {
     hm::vec3f position;
     hm::vec3f scale;
     hm::quatf rotation;
+    //hm::vec3f rotation;
     
     HeD3Transformation() : position(0.f), scale(1.f), rotation(0.f, 0.f, 0.f, 1.f) {};
+    //HeD3Transformation() : position(0.0f), scale(1.f), rotation(0.f) {};
 };
 
 struct HeD3Instance {
@@ -75,3 +77,6 @@ extern HeD3LightSource* heCreateSpotLight(HeD3Level* level, const hm::vec3f& pos
 // the linear value controls the normal decay, can be around 0.045
 // the quadratic value controls the light in far distance, can be around 0.0075
 extern HeD3LightSource* heCreatePointLight(HeD3Level* level, const hm::vec3f& position, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour);
+// removes the HeD3Instance that instance points to from the level, if it does exist there and instance is a
+// valid pointer.
+extern void heRemoveD3Instance(HeD3Level* level, HeD3Instance* instance);

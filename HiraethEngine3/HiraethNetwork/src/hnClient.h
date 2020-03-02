@@ -25,6 +25,7 @@ struct HnClient {
     HnVariableLookupMap variableNames;
     HnVariableInfoMap variableInfo;
     HnClientCallbacks callbacks;
+    HnCustomPackets customPackets;
     
     // this map holds data hooks that are registered before the variable is officially registered by the server
     // Once the server responds and gives an id to the variable, this pointer will be moved into the variableInfo
@@ -71,3 +72,12 @@ extern HN_API HnPacket hnReadClientPacket(HnClient* client);
 // gets the oldest custom packet sent from this client or an empty packet if no custom packet was sent since
 // the last check. This will remove the packet from the clients list
 extern HN_API HnPacket hnGetCustomPacket(HnLocalClient* client);
+// gets the oldest custom packet sent from this client (ourselves) or an empty packet if no custom packet was sent
+// since the last check. THis will remove the packet from the clients list
+extern HN_API HnPacket hnGetCustomPacket(HnClient* client);
+// returns the client with given index, NOT id. This is simply in the order of connection, as they are stored in the
+// map. Indices start at 0. If given index is too big (not enough clients), nullptr is returned
+extern HN_API HnLocalClient* hnGetClientByIndex(HnClient* client, const unsigned int index);
+// returns the pointer to the given variable of the local client. If that variable does not exist or was not
+// hooked for given local client, nullptr is returned
+extern HN_API void* hnGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& varName);

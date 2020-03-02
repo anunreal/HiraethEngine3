@@ -1,6 +1,7 @@
 #include "hnClient.h"
 #include <ws2tcpip.h>
 #include <iostream>
+#include <algorithm>
 
 void hnConnectClient(HnClient* client, const std::string& host, const unsigned int port) {
     
@@ -50,12 +51,13 @@ void hnDisconnectClient(HnClient* client) {
 void hnUpdateClientInput(HnClient* client) {
     
     ZeroMemory(client->inputBuffer, 4096);
-    size_t bytes = (size_t) recv(client->socket.id, client->inputBuffer, 4096, 0);
+    int bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
     if (bytes > 0) {
-        std::string msg = std::string(client->inputBuffer, bytes - 1);
+        std::string msg = std::string(client->inputBuffer, (size_t) (bytes - 1));
         
         //HN_LOG("Read from server [" + msg + "]");
         msg = client->lastInput + msg;
+        msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
         std::vector<HnPacket> packets = hnDecodePackets(msg);
         for (const HnPacket& all : packets)
             hnHandleClientPacket(client, all);
@@ -73,7 +75,7 @@ void hnUpdateClientVariables(HnClient* client) {
     for (auto& map : client->variableInfo) {
         HnVariableInfo* all = &map.second;
         ++all->lastSync;
-        if (all->lastSync == all->syncRate && all->data != nullptr) {
+        if (all->lastSync >= all->syncRate && all->data != nullptr) {
             // update variable to server
             HnPacket packet = hnBuildPacket(HN_PACKET_VAR_UPDATE, 
                                             std::to_string(all->id).c_str(), 
@@ -106,7 +108,7 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
         cl->id = id;
         HN_DEBUG("Connected to local client [" + std::to_string(id) + "]");
         
-        HnClientConnectCallback c = client->callbacks.clientConnect;
+        HnLocalClientConnectCallback c = client->callbacks.clientConnect;
         if(c != nullptr)
             c(client, cl);
         
@@ -117,7 +119,7 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
         // remove local client
         unsigned int id = std::stoi(packet.arguments[0]);
         
-        HnClientDisconnectCallback c = client->callbacks.clientDisconnect;
+        HnLocalClientDisconnectCallback c = client->callbacks.clientDisconnect;
         HnLocalClient* cl = &client->clients[id];
         if(c != nullptr)
             c(client, cl);
@@ -167,12 +169,6 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
     
     if(packet.type == HN_PACKET_CUSTOM) {
         unsigned int clientId = std::stoi(packet.arguments[0]);
-        if(clientId == client->id) {
-            // own custom packet
-            return;
-        }
-        
-        HnLocalClient* cl = &client->clients[clientId];
         
         // copy the contents of the original packet but without the client id
         HnPacket fakePacket;
@@ -181,7 +177,14 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
         for(size_t i = 1; i < packet.arguments.size(); ++i)
             fakePacket.arguments.emplace_back(packet.arguments[i]);
         
-        cl->customPackets.emplace_back(fakePacket);
+        if(clientId == client->id) {
+            // own custom packet
+            client->customPackets.emplace_back(fakePacket);
+        } else { 
+            // local client
+            HnLocalClient* cl = &client->clients[clientId];
+            cl->customPackets.emplace_back(fakePacket);
+        }
         return;
     }
     
@@ -250,7 +253,7 @@ HnPacket hnReadClientPacket(HnClient* client) {
     } else {
         // buffer is empty, try to read
         ZeroMemory(client->inputBuffer, 4096);
-        size_t bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
+        int bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
         if (bytes > 0) {
             std::string msg(client->inputBuffer, bytes - 1);
             msg = client->lastInput + msg;
@@ -275,5 +278,47 @@ HnPacket hnGetCustomPacket(HnLocalClient* client) {
     HnPacket packet = client->customPackets[0];
     client->customPackets.erase(client->customPackets.begin());
     return packet;
+    
+}
+
+HnPacket hnGetCustomPacket(HnClient* client) {
+    
+    if(client->customPackets.size() == 0)
+        return HnPacket();
+    
+    HnPacket packet = client->customPackets[0];
+    client->customPackets.erase(client->customPackets.begin());
+    return packet;
+    
+}
+
+HnLocalClient* hnGetClientByIndex(HnClient* client, const unsigned int index) {
+    
+    if(index >= client->clients.size())
+        return nullptr;
+    
+    HnLocalClient* localclient = nullptr;
+    unsigned int counter = 0;
+    for(auto& all : client->clients) {
+        if(counter++ == index) {
+            localclient = &all.second;
+            break;
+        }
+    }
+    
+    return localclient;
+    
+    
+}
+
+void* hnGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& variable) {
+    
+    auto it = client->variableNames.find(variable);
+    if(it == client->variableNames.end()) 
+        // no variable with that name registered
+        return nullptr;
+    
+    unsigned int id = it->second;
+    return localClient->variableData[id];
     
 }

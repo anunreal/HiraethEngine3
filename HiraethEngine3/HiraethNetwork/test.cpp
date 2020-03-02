@@ -9,14 +9,18 @@ struct vec2 {
 };
 
 struct vec3 {
-    float x = 0.0f, y = 0.0f, z = 0.0f;
+    float x, y, z;
+};
+
+struct vec4 {
+    float x = 0.0f, y = 0.0f, z = 0.0f, w = 0.0f;
 };
 
 struct Player {
     std::string name;
     HnLocalClient* client;
     float testvar;
-    vec3 position;
+    vec4 position;
 };
 
 // maps id to player
@@ -38,31 +42,27 @@ void _hnClientDisconnect(HnClient* client, HnLocalClient* local) {
     
 };
 
+
 int inputThread(HnClient* client) {
     while (client->socket.status == HN_STATUS_CONNECTED) {
         hnUpdateClientInput(client);
-        
-        for(auto& all : client->clients) {
-            Player* p = &players[all.first];
-            HnPacket customPacket = hnGetCustomPacket(&all.second);
-            
-            while(customPacket.type != 0) {
-                if(customPacket.arguments[0] == "name") {
-                    p->name = customPacket.arguments[1];
-                    std::cout << "Set player name of [" << all.first << "] to " << p->name << std::endl;
-                }
-                
-                customPacket = hnGetCustomPacket(&all.second);
-            }
-        }
     }
     
     return 0;
 };
 
 
-float testvar = 0.f;
+void stressTest(HnSocket* serversocket) {
+    
+    for (int i = 0; i < 100; ++i) {
+        hnSendPacket(serversocket, hnBuildCustomPacket(true, std::to_string(i).c_str()));
+    }
+    
+}
+
+
 vec3 position;
+vec4 rotation;
 
 int main() {
     
@@ -74,39 +74,42 @@ int main() {
     
     hnConnectClient(&client, "localhost", 9876);
     hnSyncClient(&client);
+    stressTest(&client.socket);
     
     std::thread in(inputThread, &client);
     
-    hnCreateVariable(&client, "testvar", HN_DATA_TYPE_FLOAT, 60);
-    hnCreateVariable(&client, "position", HN_DATA_TYPE_VEC3, 10);
-    hnHookVariable(&client, "testvar", &testvar);
+    hnCreateVariable(&client, "position", HN_DATA_TYPE_VEC3, 1);
+    hnCreateVariable(&client, "rotation", HN_DATA_TYPE_VEC4, 1);
     hnHookVariable(&client, "position", &position);
-    
-    hnSendPacket(&client.socket, hnBuildCustomPacket(true, "Yoo server bro"));
-    hnSendPacket(&client.socket, hnBuildCustomPacket(false, "Yoo client bro"));
+    hnHookVariable(&client, "rotation", &rotation);
     
     std::cout << "Entering main loop" << std::endl;
     
     while (client.socket.status == HN_STATUS_CONNECTED) {
-        //std::string line;
-        //std::getline(std::cin, line);
-        //hnSendPacket(&client.socket, hnBuildCustomPacket(false, "name", line.c_str()));
-        testvar += 0.1f;
         position.x += 0.5f;
         
         if(position.x >= 10.f) {
             position.y++;
             position.x = 0.f;
-            position.z-=2;
+            position.z -= 2;
         }
         
-        //std::cout << "Local testvar: " << testvar << std::endl;
+        rotation.y += 0.1f;
+        rotation.z += 2.f;
+
+        {
+            
+            // print other clients variables
+            for(auto& all : client.clients) {
+                std::cout << "Client(" << all.first << ": " << hnVariableDataToString(hnGetLocalClientVariable(&client, &all.second, "position"),
+                    HN_DATA_TYPE_VEC4) << std::endl;
+            }
+            
+        }
+        
+        
         hnUpdateClientVariables(&client);
         Sleep(16);
-        
-        for(const auto& all : players)
-            std::cout << "ClientPos: " << all.second.position.x << ", " << all.second.position.y << ", " << all.second.position.z << std::endl;
-        
     }
     
     in.detach();
@@ -118,7 +121,6 @@ int main() {
 
 #ifdef HN_TEST_SERVER
 #include "src/hnServer.h"
-
 
 void serverThread(HnServer* server) {
     

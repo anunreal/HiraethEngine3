@@ -2,6 +2,7 @@
 #include "hnConnection.h"
 #include <ws2tcpip.h>
 #include <iostream>
+#include <algorithm>
 
 void hnCreateServer(HnServer* server, const unsigned int port) {
     
@@ -75,6 +76,7 @@ void hnUpdateServer(HnServer* server) {
     while(server->connectionRequests.size() > 0) {
         unsigned int id = ++server->clientCounter;
         
+        HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
         // send connect packet before new client is on list
         hnBroadcastPacket(server, hnBuildPacket(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
         
@@ -82,7 +84,10 @@ void hnUpdateServer(HnServer* server) {
         client->id = id;
         client->socket = HnSocket(server->connectionRequests[0]);
         client->thread = std::thread(hnRemoteClientThread, server, client);
-        HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
+        
+        if(server->callbacks.clientConnect != nullptr)
+            server->callbacks.clientConnect(server, client);
+        
         server->connectionRequests.erase(server->connectionRequests.begin());
     }
     
@@ -90,6 +95,10 @@ void hnUpdateServer(HnServer* server) {
         unsigned long long id = server->disconnectRequests[0];
         
         HnRemoteClient* cl = &server->clients[id];
+        
+        if(server->callbacks.clientDisconnect != nullptr)
+            server->callbacks.clientDisconnect(server, cl);
+        
         cl->thread.detach();
         server->clients.erase(server->clients.find(id));
         cl = nullptr;
@@ -110,15 +119,14 @@ void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
     
     while(client->socket.status == HN_STATUS_CONNECTED) {
         ZeroMemory(buffer, 4096);
-        size_t bytes = (size_t) recv(client->socket.id, buffer, 4096, 0);
+        int bytes = recv(client->socket.id, buffer, 4096, 0);
         
-        if(bytes > 0 && bytes < INFINITY) {
+        if(bytes > 0) {
             // input
-            std::string msg = std::string(buffer, bytes - 1);
-            
-            HN_LOG("Read from client [" + msg + "]");
+            std::string msg = std::string(buffer, (size_t) (bytes - 1));
             
             msg = lastInput + msg;
+            msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
             std::vector<HnPacket> packets = hnDecodePackets(msg);
             for(const HnPacket& all : packets)
                 hnHandleServerPacket(server, client, all);
@@ -135,6 +143,8 @@ void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
 }
 
 void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPacket& packet) {
+    
+    HN_LOG("Handling remote client (" + std::to_string(sender->id) + ") packet [" + hnGetPacketContent(packet) + "]");
     
     if(packet.type == HN_PACKET_VAR_NEW) {
         // request new variable
@@ -187,14 +197,12 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
                                                         std::to_string(all.second).c_str(),       // id
                                                         all.first.c_str(),                        // name
                                                         std::to_string(info->type).c_str(),       // type
-                                                        std::to_string(info->syncRate).c_str())); // sync rate
-            
-            for (const auto& all : server->clients)
-                if (&all.second != sender)
-                hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_CLIENT_CONNECT, std::to_string(all.first).c_str()));
-            
-            
+                                                        std::to_string(info->syncRate).c_str())); // sync rate 
         }
+        
+        for (const auto& all : server->clients)
+            if (&all.second != sender)
+				hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_CLIENT_CONNECT, std::to_string(all.first).c_str()));
         
         // finish sync
         hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_SYNC_REQUEST));
@@ -217,7 +225,6 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
         }
         
         sender->customPackets.emplace_back(packet);
-        
         return;
         
     }

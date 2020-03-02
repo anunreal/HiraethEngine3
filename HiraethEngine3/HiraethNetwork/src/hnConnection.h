@@ -111,9 +111,10 @@ extern HN_API void hnSendSocketData(HnSocket* socket, const std::string& data);
 // sends a packet over given socket
 extern HN_API void hnSendPacket(HnSocket* socket, const HnPacket& packet);
 
+extern HN_API std::string hnVariableDataToString(const void* ptr, const HnDataType dataType);
 // returns the variables data formatted into a string. This depends on the variables type.
 // Multiple arguments of the data (vec2...) will be split by a forward dash (/)
-extern HN_API std::string hnVariableDataToString(const HnVariableInfo* variable);
+extern HN_API inline std::string hnVariableDataToString(const HnVariableInfo* variable);
 // parses the data from given string and updates the data pointer, depending on the requested type
 extern HN_API void hnParseVariableString(void* ptr, const std::string& dataString, const HnDataType type);
 
@@ -127,6 +128,8 @@ extern HN_API HnPacket hnDecodePacket(std::string& message);
 extern HN_API std::vector<HnPacket> hnDecodePackets(std::string& message);
 // converts the packet to one string, with arguments split by a colon and with an exclamation mark at the end
 extern HN_API std::string hnGetPacketContent(const HnPacket& packet);
+// writes given message with the prefix into cout
+extern HN_API void hnLogCout(const std::string& message, const std::string& prefix);
 
 // builds a packet of given type from given parameters. All additional arguments must be a c style string 
 // (no std::string, numbers...)
@@ -137,19 +140,24 @@ extern HN_API std::string hnGetPacketContent(const HnPacket& packet);
 #define hnBuildCustomPacket(isPrivate, ...) (hnBuildPacketFromParameters(std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value + 1, HN_PACKET_CUSTOM, isPrivate ? "1" : "0", __VA_ARGS__))
 
 #ifdef HN_ENABLE_DEBUG_MSG
-#define HN_DEBUG(msg) std::cout << "[DEBUG]: " << msg << std::endl
+//#define HN_DEBUG(msg) { msg.push_back('\n'); std::cout << "[DEBUG]: " << msg; std::cout.flush(); }
+#define HN_DEBUG(msg) hnLogCout(msg, "[DEBUG]: ");
 #else
 #define HN_DEBUG(msg) {}
 #endif
 
+
 #ifdef HN_ENABLE_LOG_MSG
-#define HN_LOG(msg) std::cout << "[LOG  ]: " << msg << std::endl;
+//#define HN_LOG(msg) { msg.push_back('\n'); std::cout << "[LOG  ]: " << msg; std::cout.flush(); }  
+#define HN_LOG(msg) hnLogCout(msg, "[LOG  ]: ");
 #else
 #define HN_LOG(msg) {}
 #endif
 
+
 #ifdef HN_ENABLE_ERROR_MSG
-#define HN_ERROR(msg) std::cout << "[ERROR]: " << msg << std::endl;
+//#define HN_ERROR(msg) { msg.push_back('\n'); std::cout << "[ERROR]: " << msg; std::cout.flush(); }
+#define HN_ERROR(msg) hnLogCout(msg, "[ERROR]: ");
 #else
 #define HN_ERROR(msg) {}
 #endif

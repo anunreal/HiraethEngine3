@@ -74,6 +74,8 @@ extern HE_API void heEnableVsync(unsigned int timestamp);
 extern HE_API void heSwapWindow(const HeWindow* window);
 // calculates the window border sizes (caption bar...) 
 extern HE_API hm::vec2i heCalculateWindowBorderSize(const HeWindow* window);
+// switches the state of the cursor between visible and hidden
+extern HE_API void heToggleCursor(const bool hidden);
 
 // returns true if given key was pressed during the last frame on given window.
 // This simply searches the vector of keys pressed of the window's keyboardInfo for key

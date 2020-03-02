@@ -48,45 +48,54 @@ void hnSendPacket(HnSocket* socket, const HnPacket& packet) {
         return;
     
     hnSendSocketData(socket, hnGetPacketContent(packet));
-    
-    HN_LOG("Send Packet [" + hnGetPacketContent(packet) + "]");
+    if(packet.type != HN_PACKET_VAR_UPDATE)
+        HN_LOG("Send Packet [" + hnGetPacketContent(packet) + "]");
     
 }
 
 
-std::string hnVariableDataToString(const HnVariableInfo* info) {
+std::string hnVariableDataToString(const void* ptr, const HnDataType dataType) {
+    
+    if(ptr == nullptr)
+        return "";
     
     std::string data;
     
-    switch(info->type) {
+    switch(dataType) {
         
         case HN_DATA_TYPE_INT:
-        data = std::to_string(*((int*)info->data));
+        data = std::to_string(*((int*)ptr));
         break;
         
         case HN_DATA_TYPE_FLOAT:
-        data = std::to_string(*((float*)info->data));
+        data = std::to_string(*((float*)ptr));
         break;
         
         case HN_DATA_TYPE_VEC2:
-        data = std::to_string(((float*)info->data)[0]) + '/' + std::to_string(((float*)info->data)[1]);
+        data = std::to_string(((float*)ptr)[0]) + '/' + std::to_string(((float*)ptr)[1]);
         break;
         
         case HN_DATA_TYPE_VEC3:
-        data = std::to_string(((float*)info->data)[0]) + '/' + std::to_string(((float*)info->data)[1]) + '/' +
-            std::to_string(((float*)info->data)[2]);
+        data = std::to_string(((float*)ptr)[0]) + '/' + std::to_string(((float*)ptr)[1]) + '/' +
+            std::to_string(((float*)ptr)[2]);
         break;
         
         case HN_DATA_TYPE_VEC4:
-        data = std::to_string(((float*)info->data)[0]) + '/' + std::to_string(((float*)info->data)[1]) + '/' +
-            std::to_string(((float*)info->data)[2]) + '/' + std::to_string(((float*)info->data)[3]);
+        data = std::to_string(((float*)ptr)[0]) + '/' + std::to_string(((float*)ptr)[1]) + '/' +
+            std::to_string(((float*)ptr)[2]) + '/' + std::to_string(((float*)ptr)[3]);
         break;
         
     }
     
     return data;
     
-}
+};
+
+std::string hnVariableDataToString(const HnVariableInfo* info) {
+    
+    return hnVariableDataToString(info->data, info->type);
+    
+};
 
 void hnParseVariableString(void* ptr, const std::string& dataString, const HnDataType type) {
     
@@ -128,6 +137,7 @@ void hnParseVariableString(void* ptr, const std::string& dataString, const HnDat
         case HN_DATA_TYPE_VEC4: {
             std::string arguments[4];
             size_t index0 = dataString.find('/');
+            arguments[0] = dataString.substr(0, index0);
             
             // we need the actual offset, find will only give us the offset in the substr (add 1 for the last /)
             size_t index1 = dataString.substr(index0 + 1).find('/') + index0 + 1;
@@ -218,5 +228,17 @@ std::string hnGetPacketContent(const HnPacket& packet) {
     
     data += "!";
     return data;
+    
+}
+
+void hnLogCout(const std::string& message, const std::string& prefix) {
+    
+    std::string output;
+    output.reserve(message.length() + 9);
+    output.append(prefix);
+    output.append(message);
+    output.push_back('\n');
+    std::cout << output;
+    std::cout.flush();
     
 }

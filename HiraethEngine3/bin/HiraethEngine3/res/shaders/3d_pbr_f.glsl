@@ -1,7 +1,7 @@
 #version 330 core
 
 const float pi = 3.14159;
-const int lightCount = 1;
+const int lightCount = 2;
 
 struct Light {
 	vec3 vector;
@@ -32,7 +32,7 @@ vec4 getLightVector(Light light) {
 		vec3 dir = normalize(light.vector - pass_worldPos);
 		float dist = length(dir);
 		float attenuation = 1.0 / (light.data1.x + light.data1.y * dist + light.data1.z * (dist * dist));    
-		return vec4(dir, 1.0);		
+		return vec4(dir, attenuation);		
 	}
 	
 	if(light.type == 2)
