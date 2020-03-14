@@ -1,4 +1,5 @@
 #include "heWin32Layer.h"
+#include "heCore.h"
 #include <map>
 #include <iostream>
 #include <windows.h>
@@ -27,7 +28,7 @@ bool heFileModified(const std::string& file) {
                                    NULL);
         
         if(handle == INVALID_HANDLE_VALUE)
-            std::cout << "Error: Could not open file handle for time checking (" << file << ")" << std::endl;
+            HE_ERROR("Could not open file handle for time checking (" + file + ")");
         else {
             handleMap[file] = handle;
             FILETIME time;

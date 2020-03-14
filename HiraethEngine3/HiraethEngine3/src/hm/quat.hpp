@@ -50,10 +50,9 @@ namespace hm {
         return result;
     };
     
-    // creates a quaternion from euler angles (in degrees)
+    // creates a quaternion from euler angles (in radians)
     template<typename T>
-        static quat<T> fromEuler(const vec3<T>& euler) {
-        vec3<T> radians = to_radians(euler);
+        static quat<T> fromEulerRadians(const vec3<T>& radians) {
         
         T cx = (T)std::cos(radians.x * 0.5);
         T cy = (T)std::cos(radians.y * 0.5);
@@ -62,17 +61,17 @@ namespace hm {
         T sy = (T)std::sin(radians.y * 0.5);
         T sz = (T)std::sin(radians.z * 0.5);
         
-        /*return quat<T>(cy * cx * sz + sy * sx * cz,
-                       sy * cx * cz + cy * sx * sz,
-                       cy * sx * cz - sy * cx * sz,
-                       cy * cx * cz - sy * sx * sz);
-*/
-        
         return quat<T>(sx * cy * cz - cx * sy * sz,
                        cx * sy * cz + sx * cy * sz,
                        cx * cy * sz - sx * sy * cz,
                        cx * cy * cz + sx * sy * sz);
     };
+    
+    // creates a quaternion from euler angles (in degrees)
+    template<typename T>
+        static inline quat<T> fromEulerDegrees(const vec3<T>& euler) {
+        return fromEulerRadians(to_radians(euler));
+    }
     
     // calculates the euler angles from this quaternion (in degrees)
     template<typename T>

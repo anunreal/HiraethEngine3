@@ -1,5 +1,6 @@
 #include "heWindow.h"
 #include "heGlLayer.h"
+#include "heCore.h"
 #include <map>
 #include <iostream>
 #include <string>
@@ -29,7 +30,7 @@ void registerMouseInput(HeWindow* window) {
     const RAWINPUTDEVICE rid = { 0x01, 0x02, 0, window->handle };
     
     if (!RegisterRawInputDevices(&rid, 1, sizeof(rid))) {
-        std::cout << "Win32: Failed to register raw input device" << std::endl;
+        HE_ERROR("Win32: Failed to register raw input device");
     }
 }
 
@@ -152,7 +153,7 @@ bool heCreateWindowHandle(HeWindow* window) {
     
     if (window->handle == NULL) {
         MessageBox(NULL, L"Window Creation Failed!", L"Error!", MB_ICONEXCLAMATION | MB_OK);
-        std::cout << "Error: Could not create window instance: " << GetLastError() << std::endl;
+        HE_ERROR("Could not create window instance: " + std::to_string(GetLastError()));
         return false;
     }
     
@@ -242,7 +243,7 @@ bool heCreateWindowContext(HeWindow* window) {
     
     int glew = glewInit();
     if (glew != GLEW_OK) {
-        std::cout << "Error: Could not setup GLEW (" << glew << ")" << std::endl;
+        HE_ERROR("Could not setup GLEW (" + std::to_string(glew) + ")");
         return false;
     }
     
@@ -270,7 +271,7 @@ bool heSetupClassInstance() {
         wex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
         wex.lpszClassName = L"Hiraeth2D";
         if (!RegisterClassEx(&wex)) {
-            std::cout << "Error: Could not setup windows class: " << GetLastError() << std::endl;
+            HE_ERROR("Could not setup windows class: " + std::to_string(GetLastError()));
             return false;
         }
         
@@ -298,7 +299,7 @@ void heCreateDummyContext() {
                                         0);
     
     if (!dummy_window) {
-        std::cout << "Error: Failed to create dummy OpenGL window." << std::endl;
+        HE_ERROR("Failed to create dummy OpenGL window");
         return;
     }
     
@@ -326,26 +327,26 @@ void heCreateDummyContext() {
     int pixel_format = ChoosePixelFormat(dummy_dc, &pfd);
     if (!pixel_format) {
         //HeLogger::log(HE_LOG_ERROR, "Failed to find a suitable pixel format.");
-        std::cout << "Error: Failed to activate dummy OpenGl rendering context" << std::endl;
+        HE_ERROR("Failed to activate dummy OpenGl rendering context");
         return;
     }
     
     if (!SetPixelFormat(dummy_dc, pixel_format, &pfd)) {
         //HeLogger::log(HE_LOG_ERROR, "Failed to set the pixel format.");
-        std::cout << "Error: Failed to activate dummy OpenGl rendering context" << std::endl;
+        HE_ERROR("Failed to activate dummy OpenGl rendering context");
         return;
     }
     
     HGLRC dummy_context = wglCreateContext(dummy_dc);
     if (!dummy_context) {
         //HeLogger::log(HE_LOG_ERROR, "Failed to create a dummy OpenGL rendering context.");
-        std::cout << "Error: Failed to activate dummy OpenGl rendering context" << std::endl;
+        HE_ERROR("Failed to activate dummy OpenGl rendering context");
         return;
     }
     
     if (!wglMakeCurrent(dummy_dc, dummy_context)) {
         //HeLogger::log(HE_LOG_ERROR, "Failed to activate dummy OpenGL rendering context.");
-        std::cout << "Error: Failed to activate dummy OpenGl rendering context" << std::endl;
+        HE_ERROR("Failed to activate dummy OpenGl rendering context");
         return;
     }
     
@@ -451,7 +452,7 @@ void heEnableVsync(unsigned int timestamp) {
     if (_wglSwapIntervalEXT)
         _wglSwapIntervalEXT(1);
     else
-        std::cout << "Error: Could not enable vsync" << std::endl;
+        HE_ERROR("Could not enable vsync");
 }
 
 void heSwapWindow(const HeWindow* window) {

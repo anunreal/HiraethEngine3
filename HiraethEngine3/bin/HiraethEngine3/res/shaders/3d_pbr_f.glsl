@@ -1,7 +1,7 @@
 #version 330 core
 
 const float pi = 3.14159;
-const int lightCount = 2;
+const int lightCount = 1;
 
 struct Light {
 	vec3 vector;

@@ -183,7 +183,10 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
         } else { 
             // local client
             HnLocalClient* cl = &client->clients[clientId];
-            cl->customPackets.emplace_back(fakePacket);
+            
+            HnLocalClientCustomPacketCallback callback = client->callbacks.customPacket;
+            if(callback == nullptr || !callback(client, cl, fakePacket))
+                cl->customPackets.emplace_back(fakePacket);
         }
         return;
     }

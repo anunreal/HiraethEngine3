@@ -107,8 +107,11 @@ extern HE_API void heUnbindShader();
 extern HE_API void heDestroyShader(HeShaderProgram* program);
 // runs given compute shader. The number of groups in each dimension can be specified here, according to the texture this shader is operating on
 extern HE_API void heRunComputeShader(HeShaderProgram* program, const unsigned int groupsX, const unsigned int groupsY, const unsigned int groupsZ);
-// checks if any of the shaders files were modified, and if so it reloads the program
+// reloads given shader
 extern HE_API void heReloadShader(HeShaderProgram* program);
+// checks if any of the shaders files were modified (and shader hotswapping is enabled), and if so it 
+// reloads the program
+extern HE_API void heCheckReloadShader(HeShaderProgram* program);
 
 // gets the location of given uniform in given shader. Once the uniform is loaded, the location is stored in program
 // for faster lookups later. If the uniform wasnt found (spelling mistake or optimized away), -1 is returned

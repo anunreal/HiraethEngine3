@@ -10,7 +10,7 @@
 #define HN_API __declspec(dllimport)
 #endif
 
-//#define HN_ENABLE_LOG_MSG
+#define HN_ENABLE_LOG_MSG
 #define HN_ENABLE_ERROR_MSG
 #define HN_ENABLE_DEBUG_MSG
 

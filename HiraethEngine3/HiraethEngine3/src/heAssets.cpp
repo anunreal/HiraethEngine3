@@ -115,7 +115,7 @@ void heUpdateThreadLoader() {
     for(auto all : heThreadLoader.vaos) {
         heCreateVao(all);
         heBindVao(all);
-        all->verticesCount = all->vbos[0].data.size() / all->vbos[0].dimensions;
+        all->verticesCount = (unsigned int) (all->vbos[0].data.size()) / all->vbos[0].dimensions;
         
         unsigned int counter = 0;
         for(auto& vbos : all->vbos)

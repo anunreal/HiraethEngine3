@@ -10,6 +10,9 @@ struct HeRenderEngine {
     // the window this engine operates on
     HeWindow* window = nullptr;
     
+    // a map of render properties. The name of the property (%name%, without the %) will be replaced
+    // in every shader with the value stored (can be an int as string...)
+    std::map<std::string, std::string> renderProperties;
     
     /* 3d stuff */
     
@@ -47,3 +50,7 @@ extern HE_API void heRenderD3Level(HeD3Level* level);
 extern HE_API void hePrepareD3RenderEngine(HeRenderEngine* engine);
 // ends the render engine by drawing the fbo onto the screen
 extern HE_API void heEndD3RenderEngine(HeRenderEngine* engine);
+
+// updates a (or adds a new) render property for given engine. This should be done before the shaders are loaded.
+// If a property is updated after the shaders are loaded, you can reload specific shaders manually
+extern HE_API void heSetRenderProperty(HeRenderEngine* engine, const std::string& name, const int value);

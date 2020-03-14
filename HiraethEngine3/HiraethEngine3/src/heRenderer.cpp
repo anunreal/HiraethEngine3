@@ -126,7 +126,7 @@ void heRenderD3Level(HeD3Level* level) {
         // load camera
         heBindShader(all.first);
         heLoadShaderUniform(all.first, "u_viewMat",   level->camera.viewMatrix);
-        //heLoadShaderUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
+        heLoadShaderUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
         heLoadShaderUniform(all.first, "u_cameraPos", level->camera.position);
         
         unsigned int lightIndex = 0;
@@ -163,5 +163,11 @@ void heEndD3RenderEngine(HeRenderEngine* engine) {
     heBindShader(engine->d3FinalShader);
     heBindTexture(engine->resolvedFbo.colourTextures[0], 0);
     heRenderVao(engine->quadVao);
+    
+};
+
+void heSetRenderProperty(HeRenderEngine* engine, const std::string& name, const int value) {
+    
+    
     
 };

@@ -6,10 +6,8 @@ struct HeD3Transformation {
     hm::vec3f position;
     hm::vec3f scale;
     hm::quatf rotation;
-    //hm::vec3f rotation;
     
     HeD3Transformation() : position(0.f), scale(1.f), rotation(0.f, 0.f, 0.f, 1.f) {};
-    //HeD3Transformation() : position(0.0f), scale(1.f), rotation(0.f) {};
 };
 
 struct HeD3Instance {
@@ -18,6 +16,10 @@ struct HeD3Instance {
     // pointer to a material in the asset pool
     HeMaterial* material = nullptr;
     HeD3Transformation transformation;
+    // a list of indices from the levels light list that apply to this instance.
+    // This list should be updated whenever a light or this instance is moved. The size of this list is
+    // determined by the light count in the render engine
+    std::vector<unsigned int> lightIndices;
 };
 
 struct HeD3Camera {
@@ -32,7 +34,7 @@ struct HeD3Camera {
 };
 
 struct HeD3LightSource {
-    HeLightSourceType type;
+    HeLightSourceType type = HE_LIGHT_SOURCE_TYPE_NONE;
     // the vector of this light. For point/spot lights this is the position in world space,
     // for directional light this is the direction
     hm::vec3f vector;
@@ -51,6 +53,7 @@ struct HeD3LightSource {
     // this should be true whenever this light is manipulated by the client. When update is true, the light
     // will be uploaded to the shader in the next frame
     bool update = false;
+    bool active = true;
 };
 
 struct HeD3Level {

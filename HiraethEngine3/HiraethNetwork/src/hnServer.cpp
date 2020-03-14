@@ -127,6 +127,7 @@ void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
             
             msg = lastInput + msg;
             msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
+            HN_LOG("Read from client: " + msg);
             std::vector<HnPacket> packets = hnDecodePackets(msg);
             for(const HnPacket& all : packets)
                 hnHandleServerPacket(server, client, all);

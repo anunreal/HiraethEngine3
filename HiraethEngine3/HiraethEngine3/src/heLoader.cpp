@@ -2,6 +2,7 @@
 #include "heAssets.h"
 #include "heUtils.h"
 #include "heWindow.h"
+#include "heCore.h"
 #include <fstream>
 
 
@@ -49,11 +50,44 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
     
 };
 
+bool parseFloatFixedWidth(std::ifstream& stream, float* result) {
+    
+    char c;
+    stream.get(c);
+    if(c == '\n')
+        return false;
+    
+    int sign = (c == '-') ? -1 : 1;
+    *result = 0;
+    
+    // 0 = 2;
+    // 1 = 1;
+    // 2 = 0;
+    // 3 = -1
+    // 4 = -2
+    // 5 = -3
+    
+    for(int i = 0; i < 6; ++i) {
+        stream.get(c);
+        int exp = -(i - 3) - 1;
+        int ch = (int) (c - '0');
+        *result = *result + (float) (ch * std::pow(10, exp));
+        
+        if(i == 2)
+            stream.get(c); // skip .
+    }
+    
+    *result *= sign;
+    return true;
+    
+};
+
+
 HeVao* heLoadD3Obj(const std::string& fileName) {
     
     std::ifstream stream(fileName);
     if (!stream.good()) {
-        std::cout << "Error: Could not load model file [" << fileName << "]" << std::endl;
+        HE_ERROR("Could not load model file [" + fileName + "]");
         return nullptr;
     }
     
@@ -148,6 +182,142 @@ void heLoadD3Level(HeD3Level* level, const std::string& fileName) {
             //ins->transformation.rotation = hm::fromEuler(hm::parseVec3f(args[3]));
             ins->transformation.scale    = hm::parseVec3f(args[4]);
         } else if(line[0] == 'l') {
+            
+        }
+    }
+    
+    stream.close();
+    
+};
+
+
+
+void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
+    
+    std::ifstream stream(fileName);
+    if(!stream) {
+        HE_ERROR("Could not find asset file [" + fileName + "]");
+        return;
+    }
+    
+    
+    std::string line;
+    std::getline(stream, line);
+    
+    std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
+    
+    if(instance->material == nullptr)
+        instance->material = &heAssetPool.materialPool[assetName];
+    
+    HeMaterial* material = instance->material;
+    material->shader = heGetShader(line);
+    
+    std::getline(stream, line);
+    while(!line.empty()) {
+        // parse texture to material
+        size_t pos = line.find('=');
+        std::string name = line.substr(0, pos);
+        std::string tex = line.substr(pos + 1);
+        material->textures[name] = heGetTexture("res/textures/assets/" + tex);
+        std::getline(stream, line);
+    }
+    
+    HeD3MeshBuilder builder;
+    
+    // parse vertices
+    {
+        float result = 0.f;
+        while(parseFloatFixedWidth(stream, &result))
+            builder.verticesArray.emplace_back(result);
+    }
+    
+    // parse uvs
+    {
+        float result = 0.f;
+        while(parseFloatFixedWidth(stream, &result))
+            builder.uvArray.emplace_back(result);
+    }
+    
+    // parse normals
+    {
+        float result = 0.f;
+        while(parseFloatFixedWidth(stream, &result))
+            builder.normalArray.emplace_back(result);
+    }
+    
+    // parse tangents
+    {
+        float result = 0.f;
+        while(parseFloatFixedWidth(stream, &result))
+            builder.tangentArray.emplace_back(result);
+    }
+    
+    stream.close();
+    
+    
+    bool isMainThread = heIsMainThread();
+    
+    HeVao* vao = &heAssetPool.meshPool[fileName];
+    if(isMainThread) {
+        heCreateVao(vao);
+        heBindVao(vao);
+    }
+    
+    heAddVaoData(vao, builder.verticesArray, 3);
+    heAddVaoData(vao, builder.uvArray, 2);
+    heAddVaoData(vao, builder.normalArray, 3);
+    heAddVaoData(vao, builder.tangentArray, 3);
+    
+    if(!isMainThread)
+        heRequestVao(vao);
+    
+    instance->mesh = vao;
+    
+};
+
+void heLoadLevel(const std::string& fileName, HeD3Level* level) {
+    
+    std::ifstream stream(fileName);
+    if(!stream) {
+        HE_ERROR("Could not find level file [" + fileName + "]");
+        return;
+    }
+    
+    char type;
+    char c;
+    while(stream.get(type)) {
+        stream.get(c); // skip colon
+        if(type == 'i') {
+            // instance
+            std::string name = "";
+            stream.get(c);
+            while(c != ',') {
+                name += c;
+                stream.get(c);
+            }
+            
+            hm::vec3f position, rotation, scale;
+            parseFloatFixedWidth(stream, &position.x);
+            parseFloatFixedWidth(stream, &position.y);
+            parseFloatFixedWidth(stream, &position.z);
+            parseFloatFixedWidth(stream, &rotation.x);
+            parseFloatFixedWidth(stream, &rotation.y);
+            parseFloatFixedWidth(stream, &rotation.z);
+            parseFloatFixedWidth(stream, &scale.x);
+            parseFloatFixedWidth(stream, &scale.y);
+            parseFloatFixedWidth(stream, &scale.z);
+            
+            HeD3Instance* instance = &level->instances.emplace_back();
+            instance->transformation.position = position;
+            instance->transformation.rotation = hm::fromEulerRadians(rotation);
+            instance->transformation.scale = scale;
+            heLoadAsset("res/assets/" + name, instance);
+            stream.get(c); // skip next line
+        } else if(type == 'l') {
+            // light
+            HeD3LightSource* light = &level->lights.emplace_back();
+            stream.get(c);
+            light->type = c - '0';
             
         }
     }

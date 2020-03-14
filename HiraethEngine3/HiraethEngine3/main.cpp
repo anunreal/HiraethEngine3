@@ -1,6 +1,7 @@
 #include "src/heWindow.h"
 #include "src/heD3.h"
 #include "src/heRenderer.h"
+#include "src/heLoader.h"
 #include "GLEW/glew.h"
 #include <thread>
 
@@ -121,7 +122,7 @@ void createClient() {
     hnHookVariable(&client, "rotation", &cameraRotation);
     
     while(client.socket.status == HN_STATUS_CONNECTED) {
-        cameraRotation = hm::fromEuler(-level.camera.rotation);
+        cameraRotation = hm::fromEulerDegrees(-level.camera.rotation);
         hnUpdateClientInput(&client);
     };
     
@@ -141,32 +142,27 @@ void createWorld(HeWindow* window) {
     heCreatePointLight(&level, hm::vec3f(100, 100, 20), 1.0f, 0.045f, 0.0075f, hm::colour(255, 5.0f));
     heCreatePointLight(&level, hm::vec3f(-5, 6, 7), 1.0f, 0.045f, 0.0075f, hm::colour(255, 0, 0, 2.0f));
     
-    HeD3Instance* levelModel = &level.instances.emplace_back();
-    levelModel->material = heCreatePbrMaterial("level", heGetTexture("res/textures/test/placeholder.png"), nullptr, heGetTexture("res/textures/blankArm.png"));
-    levelModel->mesh = heGetMesh("res/models/level.obj");
-    levelModel->transformation.scale = hm::vec3f(1);
-    
-    HeD3Instance* lampModel = &level.instances.emplace_back();
-    lampModel->transformation.position = hm::vec3f(-5, 0, 7);
-    lampModel->mesh = heGetMesh("res/models/lamp.obj");
-    lampModel->material = heGetMaterial("level");
-    
-    HeD3Instance* thingyModel = &level.instances.emplace_back();
-    thingyModel->transformation.position = hm::vec3f(-3, 0, -5);
-    thingyModel->mesh = heGetMesh("res/models/thingy.obj");
-    thingyModel->material = heGetMaterial("level");
-    
-    heBindShader(levelModel->material->shader);
-    heLoadShaderUniform(levelModel->material->shader, "u_projMat", camera->projectionMatrix);
+    if(false) {
+        HeD3Instance* levelModel = &level.instances.emplace_back();
+        levelModel->material = heCreatePbrMaterial("level", heGetTexture("res/textures/test/placeholder.png"), nullptr, heGetTexture("res/textures/blankArm.png"));
+        levelModel->mesh = heGetMesh("res/models/level.obj");
+        levelModel->transformation.scale = hm::vec3f(1);
+        
+        HeD3Instance* lampModel = &level.instances.emplace_back();
+        lampModel->transformation.position = hm::vec3f(-5, 0, 7);
+        lampModel->mesh = heGetMesh("res/models/lamp.obj");
+        lampModel->material = heGetMaterial("level");
+        
+        HeD3Instance* thingyModel = &level.instances.emplace_back();
+        thingyModel->transformation.position = hm::vec3f(-3, 1, -5);
+        heLoadAsset("res/assets/road.h3asset", thingyModel);
+    } else {
+        heLoadLevel("res/level/level0.h3level", &level);
+    }
     
 };
 
-inline void print(const std::string& s) {
-    std::cout << s << std::endl;
-};
-
-
-#define USE_NETWORKING 1
+#define USE_NETWORKING 0
 
 int main() {
     HeWindow window;

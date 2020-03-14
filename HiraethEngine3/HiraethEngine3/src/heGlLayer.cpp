@@ -3,6 +3,7 @@
 #include "GLEW/glew.h"
 #include "GLEW/wglew.h"
 #include "heWindow.h"
+#include "heCore.h"
 #include "heWin32Layer.h"
 #include <fstream>
 #include <algorithm>
@@ -17,7 +18,7 @@ std::string heLoadShaderSource(const std::string& file) {
     
     std::ifstream stream(file);
     if (!stream) {
-        std::cout << "Error: Could not find shader file [" << file << "]" << std::endl;
+        HE_ERROR("Could not find shader file [" + file + "]");
         return "";
     }
     
@@ -37,7 +38,7 @@ void heLoadComputeShader(HeShaderProgram* program, const std::string& computeSha
     unsigned int cid = glCreateShader(GL_COMPUTE_SHADER);
     int err = glGetError();
     if (err != GL_NO_ERROR)
-        std::cout << "Error: Shader Creation: " << err << std::endl;
+        HE_ERROR("Shader Creation: " + std::to_string(err));
     
     std::string cs_src = heLoadShaderSource(computeShader);
     const char* cs_ptr = cs_src.c_str();
@@ -51,8 +52,7 @@ void heLoadComputeShader(HeShaderProgram* program, const std::string& computeSha
         char infoLog[512];
         memset(infoLog, 0, 512);
         glGetShaderInfoLog(cid, 512, NULL, infoLog);
-        std::cout << "Error: While compiling shader [" + computeShader + "]" << std::endl;
-        std::cout << std::string(infoLog) << std::endl;
+        HE_ERROR("While compiling shader [" + computeShader + "]:\n" + std::string(infoLog));
     }
     
     unsigned int programId = glCreateProgram();
@@ -65,8 +65,7 @@ void heLoadComputeShader(HeShaderProgram* program, const std::string& computeSha
         char infoLog[512];
         memset(infoLog, 0, 512);
         glGetProgramInfoLog(programId, 512, NULL, infoLog);
-        std::cout << "Error: Unable to link shader!" << std::endl;
-        std::cout << infoLog << std::endl;
+        HE_ERROR("Unable to link shader:\n" + std::string(infoLog));
     }
     
     glUseProgram(programId);
@@ -88,7 +87,7 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
     
     int err = glGetError();
     if (err != GL_NO_ERROR)
-        std::cout << "Error: Shader Creation: " << err << std::endl;
+        HE_ERROR("Shader Creation: " + std::to_string(err));
     
     const char* vs_ptr = vs.c_str();
     const char* fs_ptr = fs.c_str();
@@ -103,8 +102,7 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
         char infoLog[512];
         memset(infoLog, 0, 512);
         glGetShaderInfoLog(vid, 512, NULL, infoLog);
-        std::cout << "Error: While compiling shader [" + vertexShader + "]" << std::endl;
-        std::cout << std::string(infoLog) << std::endl;
+        HE_ERROR("While compiling shader [" + vertexShader + "]:\n" + std::string(infoLog));
     }
     
     glShaderSource(fid, 1, &fs_ptr, NULL);
@@ -115,8 +113,7 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
         char infoLog[512];
         memset(infoLog, 0, 512);
         glGetShaderInfoLog(fid, 512, NULL, infoLog);
-        std::cout << "Error: While compiling shader [" + fragmentShader + "]" << std::endl;
-        std::cout << std::string(infoLog) << std::endl;
+        HE_ERROR("While compiling shader [" + fragmentShader + "]:\n" + std::string(infoLog));
     }
     
     unsigned int programId = glCreateProgram();
@@ -130,8 +127,7 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
         char infoLog[512];
         memset(infoLog, 0, 512);
         glGetProgramInfoLog(programId, 512, NULL, infoLog);
-        std::cout << "Error: Unable to link shader!" << std::endl;
-        std::cout << infoLog << std::endl;
+        HE_ERROR("Unable to link shader:\n" + std::string(infoLog));
     }
     
     glUseProgram(0);
@@ -181,6 +177,63 @@ void heRunComputeShader(HeShaderProgram* program, const unsigned int groupsX, co
 
 void heReloadShader(HeShaderProgram* program) {
     
+    // store current uniform values
+    struct Uniform {
+        union {
+            float fdata[16];
+            int   idata[16];
+        };
+        bool isInt = false;
+        HeUniformDataType type = HE_UNIFORM_DATA_TYPE_NONE;
+    };
+    
+    int uniformCount;
+    glGetProgramInterfaceiv(program->programId, GL_UNIFORM, GL_ACTIVE_RESOURCES, &uniformCount);
+    std::map<std::string, Uniform> uniforms; 
+    
+    std::vector<GLchar> nameData(256);
+    std::vector<GLenum> properties;
+    properties.push_back(GL_NAME_LENGTH);
+    properties.push_back(GL_TYPE);
+    properties.push_back(GL_LOCATION);
+    std::vector<GLint> values(properties.size());
+    
+    for(int i = 0; i < uniformCount; ++i) {
+        glGetProgramResourceiv(program->programId, GL_UNIFORM, i, (GLsizei) properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]); 
+        
+        nameData.resize(values[0]); // length of the name
+        glGetProgramResourceName(program->programId, GL_UNIFORM, i, (GLsizei) nameData.size(), NULL, &nameData[0]);
+        std::string name((char*)&nameData[0], nameData.size() - 1);
+        
+        Uniform u;
+        u.type = (HeUniformDataType) values[1];
+        
+        if(u.type == HE_UNIFORM_DATA_TYPE_INT || u.type == HE_UNIFORM_DATA_TYPE_BOOL) {
+            glGetUniformiv(program->programId, values[2], &u.idata[0]);
+            u.isInt = true;
+        } else
+            glGetUniformfv(program->programId, values[2], &u.fdata[0]);
+        
+        uniforms[name] = u;
+    }
+    
+    
+    // reload shader
+    heDestroyShader(program);
+    // for now we assume that the program is a simple vertex / fragment shader
+    heLoadShader(program, program->files[0], program->files[1]); 
+    heBindShader(program);
+    
+    // upload data to it
+    for(const auto& all : uniforms)
+        heLoadShaderUniform(program, all.first, all.second.isInt ? (const void*) &all.second.idata[0] : (const void*) &all.second.fdata[0], all.second.type);
+    
+    HE_DEBUG("Reloaded program (" + program->files[0] + ", " + program->files[1] + ")");
+    
+};
+
+void heCheckReloadShader(HeShaderProgram* program) {
+    
 #ifdef HE_ENABLE_HOTSWAP_SHADER
     bool needsReloading = false;
     
@@ -191,62 +244,8 @@ void heReloadShader(HeShaderProgram* program) {
         }
     }
     
-    if(needsReloading) {
-        
-        // store current uniform values
-        struct Uniform {
-            union {
-                float fdata[16];
-                int   idata[16];
-            };
-            bool isInt = false;
-            HeUniformDataType type = HE_UNIFORM_DATA_TYPE_NONE;
-        };
-        
-        int uniformCount;
-        glGetProgramInterfaceiv(program->programId, GL_UNIFORM, GL_ACTIVE_RESOURCES, &uniformCount);
-        std::map<std::string, Uniform> uniforms; 
-        
-        std::vector<GLchar> nameData(256);
-        std::vector<GLenum> properties;
-        properties.push_back(GL_NAME_LENGTH);
-        properties.push_back(GL_TYPE);
-        properties.push_back(GL_LOCATION);
-        std::vector<GLint> values(properties.size());
-        
-        for(int i = 0; i < uniformCount; ++i) {
-            glGetProgramResourceiv(program->programId, GL_UNIFORM, i, (GLsizei) properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]); 
-            
-            nameData.resize(values[0]); // length of the name
-            glGetProgramResourceName(program->programId, GL_UNIFORM, i, (GLsizei) nameData.size(), NULL, &nameData[0]);
-            std::string name((char*)&nameData[0], nameData.size() - 1);
-            
-            Uniform u;
-            u.type = (HeUniformDataType) values[1];
-            
-            if(u.type == HE_UNIFORM_DATA_TYPE_INT || u.type == HE_UNIFORM_DATA_TYPE_BOOL) {
-                glGetUniformiv(program->programId, values[2], &u.idata[0]);
-                u.isInt = true;
-            } else
-                glGetUniformfv(program->programId, values[2], &u.fdata[0]);
-            
-            uniforms[name] = u;
-        }
-        
-        
-        // reload shader
-        heDestroyShader(program);
-        // for now we assume that the program is a simple vertex / fragment shader
-        heLoadShader(program, program->files[0], program->files[1]); 
-        heBindShader(program);
-        
-        // upload data to it
-        for(const auto& all : uniforms)
-            heLoadShaderUniform(program, all.first, all.second.isInt ? (const void*) &all.second.idata[0] : (const void*) &all.second.fdata[0], all.second.type);
-        
-        std::cout << "Debug: Reloaded program (" << program->files[0] << ", " << program->files[1] << ")" << std::endl;
-        
-    }
+    if(needsReloading)
+        heReloadShader(program);
 #endif
     
 };
@@ -560,7 +559,7 @@ void heCreateFbo(HeFbo* fbo) {
         heCreateDepthTextureAttachment(fbo);
     
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "Error: Fbo not set up correctly (" << glGetError() << ")" << std::endl;
+        HE_ERROR("Fbo not set up correctly (" + std::to_string(glGetError()) + ")");
     
     heUnbindFbo();
     
@@ -657,7 +656,7 @@ void heLoadTexture(HeTexture* texture, const std::string& fileName) {
     stbi_set_flip_vertically_on_load(true);
     unsigned char* buffer = stbi_load(fileName.c_str(), &texture->width, &texture->height, &texture->channels, 4);
     if (buffer == nullptr) {
-        std::cout << "Error: Could not open texture [" << fileName << "]!" << std::endl;
+        HE_ERROR("Could not open texture [" + fileName + "]!");
         texture->textureId = 0;
         return;
     }
@@ -703,7 +702,7 @@ void heLoadTexture(HeTexture* texture, FILE* stream) {
     stbi_set_flip_vertically_on_load(true);
     unsigned char* buffer = stbi_load_from_file(stream, &texture->width, &texture->height, &texture->channels, 4);
     if (buffer == nullptr) {
-        std::cout << "Error: Could not open texture from FILE!" << std::endl;
+        HE_ERROR("Could not open texture from FILE!");
         texture->textureId = 0;
         return;
     }
