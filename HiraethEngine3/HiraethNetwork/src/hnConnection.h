@@ -47,6 +47,8 @@ enum HnPacketType {
     HN_PACKET_VAR_NEW,
     // a variable sync, either client->server or server->client
     HN_PACKET_VAR_UPDATE,
+    // sent from the server to the client (and is then returned) to check if the connection is still active
+    HN_PACKET_PING_CHECK,
     // a custom packet message
     HN_PACKET_CUSTOM
 };
@@ -111,6 +113,7 @@ extern HN_API void hnSendSocketData(HnSocket* socket, const std::string& data);
 // sends a packet over given socket
 extern HN_API void hnSendPacket(HnSocket* socket, const HnPacket& packet);
 
+// returns the data represented in a string, multiple arguments of the variable (vec2, ...) will be split by a forward dash ('/')
 extern HN_API std::string hnVariableDataToString(const void* ptr, const HnDataType dataType);
 // returns the variables data formatted into a string. This depends on the variables type.
 // Multiple arguments of the data (vec2...) will be split by a forward dash (/)
@@ -130,6 +133,8 @@ extern HN_API std::vector<HnPacket> hnDecodePackets(std::string& message);
 extern HN_API std::string hnGetPacketContent(const HnPacket& packet);
 // writes given message with the prefix into cout
 extern HN_API void hnLogCout(const std::string& message, const std::string& prefix);
+// returns the current time (in milliseconds) since the network was set up (hnCreateNetwork)
+extern HN_API inline long long hnGetCurrentTime();
 
 // builds a packet of given type from given parameters. All additional arguments must be a c style string 
 // (no std::string, numbers...)

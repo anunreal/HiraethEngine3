@@ -167,6 +167,11 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
         return;
     }
     
+    if(packet.type == HN_PACKET_PING_CHECK) {
+        //hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_PING_CHECK));
+        return;
+    }
+    
     if(packet.type == HN_PACKET_CUSTOM) {
         unsigned int clientId = std::stoi(packet.arguments[0]);
         

@@ -317,7 +317,7 @@ void heLoadLevel(const std::string& fileName, HeD3Level* level) {
             // light
             HeD3LightSource* light = &level->lights.emplace_back();
             stream.get(c);
-            light->type = c - '0';
+            light->type = (HeLightSourceType) (c - '0');
             
         }
     }

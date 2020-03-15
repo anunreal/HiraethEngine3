@@ -2,10 +2,12 @@
 #include <ws2tcpip.h>
 #include <iostream>
 #include <stdarg.h>
+#include <chrono>
 
 #pragma comment(lib, "Ws2_32.lib")
 
 HiraethNetwork* hn = nullptr;
+std::chrono::time_point<std::chrono::steady_clock> startTime;
 
 void hnCreateNetwork() {
     
@@ -23,7 +25,7 @@ void hnCreateNetwork() {
         }
         
         hn->status = HN_STATUS_CONNECTED; // successful start
-        
+        startTime = std::chrono::high_resolution_clock::now();
     }
     
 }
@@ -242,3 +244,10 @@ void hnLogCout(const std::string& message, const std::string& prefix) {
     std::cout.flush();
     
 }
+
+long long hnGetCurrentTime() {
+
+    auto now = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+
+};

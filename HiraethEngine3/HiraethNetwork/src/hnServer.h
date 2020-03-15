@@ -3,10 +3,11 @@
 #include "hnCallbacks.h"
 #include <map>
 #include <thread>
+#include <chrono>
 
 struct HnRemoteClient {
     // id of this client on the server
-    unsigned long long id;
+    unsigned long long id = 0;
     // socket of this client from server to client
     HnSocket socket;
     // the input thread of this client
@@ -15,6 +16,11 @@ struct HnRemoteClient {
     HnVariableDataMap variables;
     // all packets, public or private, sent by this client
     HnCustomPackets customPackets;
+    // the ping in milliseconds (server -> client -> server)
+    unsigned int ping = 0;
+    // the time the last ping check was sent (from the server) in milliseconds, since program start or -1 if there
+    // is currently no outgoing ping check
+    long long pingCheck = 0;
 };
 
 struct HnServer {
@@ -31,6 +37,16 @@ struct HnServer {
     // a vector of client ids that disconnected since the last update. Filled in the clients threads, read and
     // handled in the server update 
     std::vector<unsigned long long> disconnectRequests;
+    
+    // the time (in milliseconds) after which a connection is seen as timed out. When a ping check takes longer than
+    // this time to return, the client is assumed to be dead and disconnected
+    unsigned int timeOut = 7000;
+    // the time intervall (in milliseconds) in which a ping check is sent out
+    unsigned int pingCheckIntervall = 500;
+    // the time (in milliseconds) since the last update
+    long long updateTime = 0;
+    // stores the time point of the last server update
+    std::chrono::high_resolution_clock::time_point lastUpdate;
     
     HnServerCallbacks callbacks;
     HnVariableInfoMap variableInfo;
@@ -64,3 +80,5 @@ extern HN_API HnPacket hnGetCustomPacket(HnRemoteClient* client);
 // hooks a data pointer to a variable of a remote client. ptr must point to valid memory of the data type of
 // the variable that is hooked
 extern HN_API inline void hnHookVariable(HnServer* server, HnRemoteClient* client, const std::string& variable, void* ptr);
+// sends a ping check to given client. If no answer is recieved within two seconds, the client is assumed to be disconnected (time out).
+extern HN_API void hnPingCheck(HnRemoteClient* client);

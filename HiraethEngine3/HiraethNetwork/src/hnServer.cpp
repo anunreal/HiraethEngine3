@@ -34,6 +34,7 @@ void hnCreateServer(HnServer* server, const unsigned int port) {
     }
     
     server->serverSocket.status = HN_STATUS_CONNECTED;
+    server->lastUpdate = std::chrono::high_resolution_clock::now();
     
 }
 
@@ -51,7 +52,8 @@ void hnDestroyServer(HnServer* server) {
 
 void hnKickRemoteClient(HnRemoteClient* client) {
     
-    hnSendSocketData(&client->socket, "DIS");
+    //hnSendSocketData(&client->socket, "DIS");
+    hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_CLIENT_DISCONNECT));
     client->socket.status = HN_STATUS_DISCONNECTED;
     client->thread.detach();
     closesocket(client->socket.id);
@@ -72,6 +74,26 @@ void hnServerAcceptClients(HnServer* server) {
 
 void hnUpdateServer(HnServer* server) {
     
+    // check for timeouts
+    long long now = hnGetCurrentTime();
+    for(auto& all : server->clients) {
+        if(all.second.pingCheck > 0) {
+            if(now - all.second.pingCheck > server->timeOut) {
+                HN_LOG("Connection to RemoteClient [" + std::to_string(all.second.id) + "] timed out");
+                server->disconnectRequests.emplace_back(all.first);
+                all.second.socket.status = HN_STATUS_DISCONNECTED;
+            }
+        } else {
+            // time since last succesfull ping check is stored as negative value, pingCheckIntervall is unsigned
+            if(-all.second.pingCheck > server->pingCheckIntervall)
+                hnPingCheck(&all.second);
+            else {
+                // increase time since last ping check
+                all.second.pingCheck -= server->updateTime;
+            }
+        }
+    }
+    
     // connecting clients
     while(server->connectionRequests.size() > 0) {
         unsigned int id = ++server->clientCounter;
@@ -91,6 +113,7 @@ void hnUpdateServer(HnServer* server) {
         server->connectionRequests.erase(server->connectionRequests.begin());
     }
     
+    // disconnecting clients
     while(server->disconnectRequests.size() > 0) {
         unsigned long long id = server->disconnectRequests[0];
         
@@ -99,13 +122,18 @@ void hnUpdateServer(HnServer* server) {
         if(server->callbacks.clientDisconnect != nullptr)
             server->callbacks.clientDisconnect(server, cl);
         
-        cl->thread.detach();
+        if(cl->thread.joinable())
+            cl->thread.detach();
         server->clients.erase(server->clients.find(id));
         cl = nullptr;
         hnBroadcastPacket(server, hnBuildPacket(HN_PACKET_CLIENT_DISCONNECT, std::to_string(id).c_str()));
         HN_DEBUG("Disconnected from RemoteClient [" + std::to_string(id) + "]");
         server->disconnectRequests.erase(server->disconnectRequests.begin());
     }
+    
+    auto nowTime = std::chrono::high_resolution_clock::now();
+    server->updateTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - server->lastUpdate).count();
+    server->lastUpdate = nowTime;
     
 }
 
@@ -211,6 +239,14 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
         return;
     }
     
+    if(packet.type == HN_PACKET_PING_CHECK) {
+        long long now = hnGetCurrentTime();
+        sender->ping = (unsigned int) (now - sender->pingCheck);
+        sender->pingCheck = 0;
+        HN_DEBUG("Recieved ping");
+        return;
+    }
+    
     if(packet.type == HN_PACKET_CUSTOM) {
         
         // recieved custom packet from client
@@ -255,3 +291,11 @@ HnPacket hnGetCustomPacket(HnRemoteClient* client) {
 void hnHookVariable(HnServer* server, HnRemoteClient* client, const std::string& variable, void* ptr) {
     
 }
+
+void hnPingCheck(HnRemoteClient* client) {
+    
+    HN_DEBUG("Pinging client..");
+    client->pingCheck = hnGetCurrentTime();
+    hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_PING_CHECK));
+    
+};

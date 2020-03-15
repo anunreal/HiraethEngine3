@@ -74,7 +74,6 @@ int main() {
     
     hnConnectClient(&client, "localhost", 9876);
     hnSyncClient(&client);
-    stressTest(&client.socket);
     
     std::thread in(inputThread, &client);
     
@@ -96,17 +95,17 @@ int main() {
         
         rotation.y += 0.1f;
         rotation.z += 2.f;
-
+        
+        /*
         {
             
             // print other clients variables
             for(auto& all : client.clients) {
                 std::cout << "Client(" << all.first << ": " << hnVariableDataToString(hnGetLocalClientVariable(&client, &all.second, "position"),
-                    HN_DATA_TYPE_VEC4) << std::endl;
+                                                                                      HN_DATA_TYPE_VEC4) << std::endl;
             }
-            
-        }
-        
+    }
+            */
         
         hnUpdateClientVariables(&client);
         Sleep(16);
