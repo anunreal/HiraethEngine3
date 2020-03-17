@@ -1,60 +1,19 @@
 #include "hnConnection.h"
-#include <ws2tcpip.h>
 #include <iostream>
 #include <stdarg.h>
 #include <chrono>
 
-#pragma comment(lib, "Ws2_32.lib")
-
 HiraethNetwork* hn = nullptr;
 std::chrono::time_point<std::chrono::steady_clock> startTime;
 
-void hnCreateNetwork() {
+void hnCreateSocket(HnSocket* socket) {
     
-    if(hn == nullptr) {
-        hn = new HiraethNetwork();
-        hn->status = HN_STATUS_ERROR; // assume that something will go wrong
-        
-        // set up wsa
-        WSAData wsData;
-        WORD ver = MAKEWORD(2, 2);
-        
-        if(WSAStartup(ver, &wsData) != 0) {
-            HN_ERROR("Could not start wsa, exiting...");
-            return;
-        }
-        
-        hn->status = HN_STATUS_CONNECTED; // successful start
-        startTime = std::chrono::high_resolution_clock::now();
-    }
+    if(socket->type == HN_SOCKET_TYPE_UDP)
+        hnCreateUdpSocket(socket);
+    else if(socket->type = HN_SOCKET_TYPE_TCP)
+        hnCreateTcpSocket(socket);
     
-}
-
-void hnDestroyNetwork() {
-    WSACleanup();
-}
-
-void hnSendSocketData(HnSocket* socket, const std::string& data) {
-    
-    int res = send(socket->id, data.c_str(), (int) data.size() + 1, 0);
-    if(res <= 0) {
-        HN_ERROR("Lost connection to socket");
-        socket->status = HN_STATUS_ERROR;
-    }
-    
-}
-
-void hnSendPacket(HnSocket* socket, const HnPacket& packet) {
-    
-    if (socket->status != HN_STATUS_CONNECTED)
-        return;
-    
-    hnSendSocketData(socket, hnGetPacketContent(packet));
-    if(packet.type != HN_PACKET_VAR_UPDATE)
-        HN_LOG("Send Packet [" + hnGetPacketContent(packet) + "]");
-    
-}
-
+};
 
 std::string hnVariableDataToString(const void* ptr, const HnDataType dataType) {
     
@@ -96,6 +55,18 @@ std::string hnVariableDataToString(const void* ptr, const HnDataType dataType) {
 std::string hnVariableDataToString(const HnVariableInfo* info) {
     
     return hnVariableDataToString(info->data, info->type);
+    
+};
+
+
+void hnSendPacket(HnSocket* socket, const HnPacket& packet) {
+    
+    if (socket->status != HN_STATUS_CONNECTED)
+        return;
+    
+    hnSendSocketData(socket, hnGetPacketContent(packet));
+    if(packet.type != HN_PACKET_VAR_UPDATE)
+        HN_LOG("Send Packet [" + hnGetPacketContent(packet) + "]");
     
 };
 
@@ -157,7 +128,7 @@ void hnParseVariableString(void* ptr, const std::string& dataString, const HnDat
         }
     }
     
-}
+};
 
 
 
@@ -173,7 +144,7 @@ HnPacket hnBuildPacketFromParameters(int numargs, const unsigned int type, ...) 
     
     return packet;
     
-}
+};
 
 HnPacket hnDecodePacket(std::string& message) {
     
@@ -209,7 +180,7 @@ HnPacket hnDecodePacket(std::string& message) {
     
     return packet;
     
-}
+};
 
 std::vector<HnPacket> hnDecodePackets(std::string& message) {
     
@@ -219,7 +190,7 @@ std::vector<HnPacket> hnDecodePackets(std::string& message) {
     
     return packets;
     
-}
+};
 
 std::string hnGetPacketContent(const HnPacket& packet) {
     
@@ -231,7 +202,8 @@ std::string hnGetPacketContent(const HnPacket& packet) {
     data += "!";
     return data;
     
-}
+};
+
 
 void hnLogCout(const std::string& message, const std::string& prefix) {
     
@@ -243,11 +215,11 @@ void hnLogCout(const std::string& message, const std::string& prefix) {
     std::cout << output;
     std::cout.flush();
     
-}
+};
 
 long long hnGetCurrentTime() {
-
+    
     auto now = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
-
+    
 };

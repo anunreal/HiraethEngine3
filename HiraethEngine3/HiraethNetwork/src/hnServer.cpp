@@ -1,10 +1,9 @@
 #include "hnServer.h"
 #include "hnConnection.h"
-#include <ws2tcpip.h>
 #include <iostream>
 #include <algorithm>
 
-void hnCreateServer(HnServer* server, const unsigned int port) {
+void hnCreateServer(HnServer* server, const unsigned int port, const HnSocketType type) {
     
     if(server->serverSocket.status) {
         HN_ERROR("Server already started");
@@ -12,67 +11,40 @@ void hnCreateServer(HnServer* server, const unsigned int port) {
     }
     
     hnCreateNetwork(); // make sure wsa is started
+    server->serverSocket.type = type;
+    hnCreateServerSocket(&server->serverSocket, port);
     
-    server->serverSocket.id = socket(AF_INET, SOCK_STREAM, 0);
-    if(server->serverSocket.id == INVALID_SOCKET) {
-        server->serverSocket.status = HN_STATUS_ERROR;
-        HN_ERROR("Could not create socket");
-        return;
-    }
-    
-    sockaddr_in hint;
-    hint.sin_family = AF_INET;
-    hint.sin_port = htons(port);
-    hint.sin_addr.S_un.S_addr = INADDR_ANY;
-    
-    bind(server->serverSocket.id, (sockaddr*) &hint, sizeof(hint));
-    
-    if(listen(server->serverSocket.id, SOMAXCONN) != 0) {
-        server->serverSocket.status = HN_STATUS_ERROR;
-        HN_ERROR("Port already in use");
-        return;
-    }
-    
-    server->serverSocket.status = HN_STATUS_CONNECTED;
     server->lastUpdate = std::chrono::high_resolution_clock::now();
     
-}
+};
 
 void hnDestroyServer(HnServer* server) {
     
     for(auto& all : server->clients)
         hnKickRemoteClient(&all.second);
     
-    if(server->serverSocket.id != 0)
-        closesocket(server->serverSocket.id);
+    hnDestroySocket(&server->serverSocket);
     server->clients.clear();
     server->serverSocket.status = HN_STATUS_DISCONNECTED;
     
-}
+};
 
 void hnKickRemoteClient(HnRemoteClient* client) {
     
-    //hnSendSocketData(&client->socket, "DIS");
     hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_CLIENT_DISCONNECT));
     client->socket.status = HN_STATUS_DISCONNECTED;
     client->thread.detach();
-    closesocket(client->socket.id);
+    hnDestroySocket(&client->socket);
     
-}
+};
 
 void hnServerAcceptClients(HnServer* server) {
     
-    unsigned long long socket = accept(server->serverSocket.id, nullptr, nullptr);
-    if (socket == INVALID_SOCKET) {
-        HN_ERROR("Connected to invalid socket");
-        return;
-    }
+    server->connectionRequests.emplace_back(hnServerAcceptClient(&server->serverSocket));
     
-    server->connectionRequests.emplace_back(socket);
-    
-}
+};
 
-void hnUpdateServer(HnServer* server) {
+void hnUpdateServerTcp(HnServer* server) {
     
     // check for timeouts
     long long now = hnGetCurrentTime();
@@ -104,7 +76,7 @@ void hnUpdateServer(HnServer* server) {
         
         HnRemoteClient* client = &server->clients[id];
         client->id = id;
-        client->socket = HnSocket(server->connectionRequests[0]);
+        client->socket = HnSocket(server->connectionRequests[0], HN_SOCKET_TYPE_UDP);
         client->thread = std::thread(hnRemoteClientThread, server, client);
         
         if(server->callbacks.clientConnect != nullptr)
@@ -135,9 +107,9 @@ void hnUpdateServer(HnServer* server) {
     server->updateTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - server->lastUpdate).count();
     server->lastUpdate = nowTime;
     
-}
+};
 
-void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
+void hnRemoteClientThreadTcp(HnServer* server, HnRemoteClient* client) {
     
     // input buffer for current message
     char buffer[4096];
@@ -146,30 +118,20 @@ void hnRemoteClientThread(HnServer* server, HnRemoteClient* client) {
     std::string lastInput;
     
     while(client->socket.status == HN_STATUS_CONNECTED) {
-        ZeroMemory(buffer, 4096);
-        int bytes = recv(client->socket.id, buffer, 4096, 0);
+        std::string msg = hnReadFromSocket(&client->socket, buffer, 4096);
+        msg = lastInput + msg;
+        msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
         
-        if(bytes > 0) {
-            // input
-            std::string msg = std::string(buffer, (size_t) (bytes - 1));
-            
-            msg = lastInput + msg;
-            msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
-            HN_LOG("Read from client: " + msg);
-            std::vector<HnPacket> packets = hnDecodePackets(msg);
-            for(const HnPacket& all : packets)
-                hnHandleServerPacket(server, client, all);
-            lastInput = msg;
-        } else {
-            // lost connection
-            client->socket.status = HN_STATUS_DISCONNECTED;
-        }
+        std::vector<HnPacket> packets = hnDecodePackets(msg);
+        for(const HnPacket& all : packets)
+            hnHandleServerPacket(server, client, all);
+        lastInput = msg;
     }
     
     HN_DEBUG("Lost connection to remote client [" + std::to_string(client->id) + "]");
     server->disconnectRequests.emplace_back(client->id);
     
-}
+};
 
 void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPacket& packet) {
     
@@ -243,7 +205,6 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
         long long now = hnGetCurrentTime();
         sender->ping = (unsigned int) (now - sender->pingCheck);
         sender->pingCheck = 0;
-        HN_DEBUG("Recieved ping");
         return;
     }
     
@@ -268,14 +229,14 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
     
     HN_DEBUG("Recieved invalid packet: " + hnGetPacketContent(packet));
     
-}
+};
 
 void hnBroadcastPacket(HnServer* server, const HnPacket& packet) {
     
     for(auto& all : server->clients)
         hnSendPacket(&all.second.socket, packet);
     
-}
+};
 
 HnPacket hnGetCustomPacket(HnRemoteClient* client) {
     
@@ -286,15 +247,14 @@ HnPacket hnGetCustomPacket(HnRemoteClient* client) {
     client->customPackets.erase(client->customPackets.begin());
     return packet;
     
-}
+};
 
 void hnHookVariable(HnServer* server, HnRemoteClient* client, const std::string& variable, void* ptr) {
     
-}
+};
 
 void hnPingCheck(HnRemoteClient* client) {
     
-    HN_DEBUG("Pinging client..");
     client->pingCheck = hnGetCurrentTime();
     hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_PING_CHECK));
     

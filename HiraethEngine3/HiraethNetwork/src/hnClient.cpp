@@ -1,74 +1,36 @@
 #include "hnClient.h"
-#include <ws2tcpip.h>
 #include <iostream>
 #include <algorithm>
 
 void hnConnectClient(HnClient* client, const std::string& host, const unsigned int port) {
     
     hnCreateNetwork(); // make sure wsa is started
-    client->socket.id = socket(AF_INET, SOCK_STREAM, 0);
-    client->socket.status = HN_STATUS_ERROR; // assume something will go wrong
-    if(client->socket.id == INVALID_SOCKET) {
-        HN_ERROR("Could not create client socket");
-        return;
-    }
+    hnCreateClientSocket(&client->socket, host, port);
     
-    struct addrinfo* ip = NULL, *ptr = NULL, hints;
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    
-    int connResult = getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &ip);
-    if(connResult != 0) {
-        HN_ERROR("Could not resolve server domain!");
-        return;
-    }
-    
-    ptr = ip;
-    connResult = connect(client->socket.id, ptr->ai_addr, (int)ptr->ai_addrlen);
-    if(connResult == SOCKET_ERROR) {
-        HN_ERROR("Could not connect to server [" + host + ":" + std::to_string(port) + "]");
-        closesocket(client->socket.id);
-        return;
-    }
-    
-    client->socket.status = HN_STATUS_CONNECTED;
-    
-}
+};
 
 void hnDisconnectClient(HnClient* client) {
     
-    closesocket(client->socket.id);
-    client->socket.id = 0;
-    client->socket.status = HN_STATUS_DISCONNECTED;
+    hnDestroySocket(&client->socket);
     client->clients.clear();
     client->variableNames.clear();
     client->variableInfo.clear();
     
-}
+};
 
 void hnUpdateClientInput(HnClient* client) {
     
-    ZeroMemory(client->inputBuffer, 4096);
-    int bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
-    if (bytes > 0) {
-        std::string msg = std::string(client->inputBuffer, (size_t) (bytes - 1));
-        
-        //HN_LOG("Read from server [" + msg + "]");
+    std::string msg = hnReadFromSocket(&client->socket, client->inputBuffer, 4096);
+    if(msg.size() > 0) {
         msg = client->lastInput + msg;
         msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
         std::vector<HnPacket> packets = hnDecodePackets(msg);
         for (const HnPacket& all : packets)
             hnHandleClientPacket(client, all);
         client->lastInput = msg;
-    } else {
-        client->socket.status = HN_STATUS_DISCONNECTED;
-        client->socket.id = 0;
-        HN_ERROR("Lost connection to server");
     }
     
-}
+};
 
 void hnUpdateClientVariables(HnClient* client) {
     
@@ -88,7 +50,7 @@ void hnUpdateClientVariables(HnClient* client) {
         }
     }
     
-}
+};
 
 void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
     
@@ -198,7 +160,7 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
     
     HN_DEBUG("Recieved invalid packet of type [" + std::to_string(packet.type) + "]");
     
-}
+};
 
 void hnCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const unsigned int tickRate) {
     
@@ -212,7 +174,7 @@ void hnCreateVariable(HnClient* client, const std::string& name, const HnDataTyp
                                     std::to_string(tickRate).c_str());
     hnSendPacket(&client->socket, packet);
     
-}
+};
 
 void hnSyncClient(HnClient* client) {
     
@@ -228,26 +190,24 @@ void hnSyncClient(HnClient* client) {
     // sync end
     HN_LOG("Successfully finished client sync");
     
-}
+};
 
 void hnHookVariable(HnClient* client, const std::string& name, void* data) {
     
     // this can only work if the variable is already registered locally. The server might not respond that fast
-    
     auto it = client->variableNames.find(name);
     if(it != client->variableNames.end())
         client->variableInfo[it->second].data = data;
     else
         client->temporaryDataHooks[name] = data;
     
-    
-}
+};
 
 void hnHookVariable(HnClient* client, HnLocalClient* localclient, const std::string& name, void* data) {
     
     localclient->variableData[client->variableNames[name]] = data;
     
-}
+};
 
 HnPacket hnReadClientPacket(HnClient* client) {
     
@@ -257,26 +217,19 @@ HnPacket hnReadClientPacket(HnClient* client) {
     if(index != std::string::npos) {
         // we still have input in the buffer
         packet = hnDecodePacket(client->lastInput);
-        //client->lastInput = client->lastInput.substr(index); this is done in the decode packet method
     } else {
         // buffer is empty, try to read
-        ZeroMemory(client->inputBuffer, 4096);
-        int bytes = recv(client->socket.id, client->inputBuffer, 4096, 0);
-        if (bytes > 0) {
-            std::string msg(client->inputBuffer, bytes - 1);
+        std::string msg = hnReadFromSocket(&client->socket, client->inputBuffer, 4096); 
+        if (msg.size() > 0) {
             msg = client->lastInput + msg;
             packet = hnDecodePacket(msg);
             client->lastInput = msg;
-        } else {
-            client->socket.status = HN_STATUS_DISCONNECTED;
-            client->socket.id = 0;
-            HN_ERROR("Lost connection to server");
         }
     }
     
     return packet;
     
-}
+};
 
 HnPacket hnGetCustomPacket(HnLocalClient* client) {
     
@@ -287,7 +240,7 @@ HnPacket hnGetCustomPacket(HnLocalClient* client) {
     client->customPackets.erase(client->customPackets.begin());
     return packet;
     
-}
+};
 
 HnPacket hnGetCustomPacket(HnClient* client) {
     
@@ -298,7 +251,7 @@ HnPacket hnGetCustomPacket(HnClient* client) {
     client->customPackets.erase(client->customPackets.begin());
     return packet;
     
-}
+};
 
 HnLocalClient* hnGetClientByIndex(HnClient* client, const unsigned int index) {
     
@@ -316,8 +269,7 @@ HnLocalClient* hnGetClientByIndex(HnClient* client, const unsigned int index) {
     
     return localclient;
     
-    
-}
+};
 
 void* hnGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& variable) {
     
@@ -329,4 +281,4 @@ void* hnGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, con
     unsigned int id = it->second;
     return localClient->variableData[id];
     
-}
+};

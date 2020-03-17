@@ -55,8 +55,9 @@ struct HnServer {
     unsigned int variableCounter = 0;
 };
 
-// sets up a new server on given port
-extern HN_API void hnCreateServer(HnServer* server, const unsigned int port);
+// sets up a new server on given port. Type (the protocol of the connections) must be the same for clients and the 
+// server.
+extern HN_API void hnCreateServer(HnServer* server, const unsigned int port, const HnSocketType type);
 // closes the server and deletes all associated data
 extern HN_API void hnDestroyServer(HnServer* server);
 // sends the client a disconnect message and updates its status
@@ -64,11 +65,13 @@ extern HN_API void hnKickRemoteClient(HnRemoteClient* client);
 // Accepts an incoming client connection. This should be called in an external thread as it will
 // block until a new client connects.
 extern HN_API void hnServerAcceptClients(HnServer* server);
+
 // updates the server by synchronizing data and running requests. Should be called from the main thread
-extern HN_API void hnUpdateServer(HnServer* server);
+extern HN_API void hnUpdateServerTcp(HnServer* server);
 // the input thread of any given remote client. Created when the client connects, runs until the clients
 // socket is closed
-extern HN_API void hnRemoteClientThread(HnServer* server, HnRemoteClient* client);
+extern HN_API void hnRemoteClientThreadTcp(HnServer* server, HnRemoteClient* client);
+
 // handles an incoming packet from a client to the server. If this is a custom packet, it is added to
 // the clients packet queue, else it will be handled internally (syncing...)
 extern HN_API void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPacket& packet);

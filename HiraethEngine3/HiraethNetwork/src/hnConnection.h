@@ -53,12 +53,19 @@ enum HnPacketType {
     HN_PACKET_CUSTOM
 };
 
+enum HnSocketType {
+    HN_SOCKET_TYPE_NONE,
+    HN_SOCKET_TYPE_UDP,
+    HN_SOCKET_TYPE_TCP
+};
+
 struct HnSocket {
     unsigned long long id;
-    HnStatus status = HN_STATUS_READY;
+    HnSocketType type;
+    HnStatus status;
     
-    HnSocket() : id(0) {};
-    HnSocket(const unsigned long long id) : id(id), status(HN_STATUS_CONNECTED) {};
+    HnSocket() : id(0), type(HN_SOCKET_TYPE_NONE), status(HN_STATUS_READY) {};
+    HnSocket(const unsigned long long id, const HnSocketType type) : id(id), type(type), status(HN_STATUS_CONNECTED) {};
 };
 
 struct HnPacket {
@@ -100,6 +107,9 @@ struct HiraethNetwork {
 
 extern HiraethNetwork* hn;
 
+
+/* PLATFORM DEPENDANT, see abstractions */
+
 // sets up the HiraethNetwork api by creating a new pointer. This can be called more than once but will 
 // only have an effect on the first time. This will set up wsa. If the network could not be created,
 // status of the network will be set to 2
@@ -110,10 +120,35 @@ extern HN_API void hnDestroyNetwork();
 // sends given data over given socket. If an error occurrs, the status of the socket is updates and an 
 // error message is printed
 extern HN_API void hnSendSocketData(HnSocket* socket, const std::string& data);
-// sends a packet over given socket
-extern HN_API void hnSendPacket(HnSocket* socket, const HnPacket& packet);
+// creates a new udp socket (for both server and clients). If this fails, the status of the socket is set to error
+extern HN_API void hnCreateUdpSocket(HnSocket* hnSocket);
+// creates a new tcp socket (for both server and clients). If this fails, the status of the socket is set to error
+extern HN_API void hnCreateTcpSocket(HnSocket* hnSocket);
+// closes given socket and sets its status to disconnected
+extern HN_API void hnDestroySocket(HnSocket* socket);
+// sets up a server on given socket. If this fails (port already in use?), the status of the socket is set to error
+extern HN_API void hnCreateServerSocket(HnSocket* socket, const unsigned int port);
+// tries to connect given socket to given server. If the connection fails, the status of the socket is set to error.
+// This will create a new udp socket
+extern HN_API void hnCreateClientSocket(HnSocket* socket, const std::string& host, const unsigned int port);
+// waits for an incoming connection on given server socket and returns the incoming sockets id. If an error occurs,
+// an error message is printed, the server sockets status is set to error and 0 is returned
+extern HN_API unsigned long long hnServerAcceptClient(HnSocket* serverSocket);
+// tries to read from given socket. If the connection is interrupted, an empty string will be returned, else
+// the read message will be returned as a string (with any null chars removed). You can pass a buffer to avoid
+// reallocation it every time this function is called or nullptr when this function should create its own buffer.
+// maxSize is the maximum number of bytes read at once (if buffer is not nullptr, maxSize should be the length of given
+// buffer. If buffer is nullptr, a new buffer will be created with length maxSize)
+extern HN_API std::string hnReadFromSocket(HnSocket* socket, char* buffer, const int maxSize);
 
-// returns the data represented in a string, multiple arguments of the variable (vec2, ...) will be split by a forward dash ('/')
+
+/* PLATFORM INDEPENDANT */
+
+// creates a new socket depending on the type set in the socket
+extern HN_API void hnCreateSocket(HnSocket* hnSocket);
+
+// returns the data represented in a string, multiple arguments of the variable (vec2, ...) will be split by a 
+// forward dash ('/')
 extern HN_API std::string hnVariableDataToString(const void* ptr, const HnDataType dataType);
 // returns the variables data formatted into a string. This depends on the variables type.
 // Multiple arguments of the data (vec2...) will be split by a forward dash (/)
@@ -121,6 +156,8 @@ extern HN_API inline std::string hnVariableDataToString(const HnVariableInfo* va
 // parses the data from given string and updates the data pointer, depending on the requested type
 extern HN_API void hnParseVariableString(void* ptr, const std::string& dataString, const HnDataType type);
 
+// sends a packet over given socket
+extern HN_API void hnSendPacket(HnSocket* socket, const HnPacket& packet);
 // builds a new packet with given arguments. numargs is the number of parameters of the packet (...),
 // type is the type of the packet (see HnPacketType)
 extern HN_API HnPacket hnBuildPacketFromParameters(int numargs, const unsigned int type, ...);
@@ -131,6 +168,7 @@ extern HN_API HnPacket hnDecodePacket(std::string& message);
 extern HN_API std::vector<HnPacket> hnDecodePackets(std::string& message);
 // converts the packet to one string, with arguments split by a colon and with an exclamation mark at the end
 extern HN_API std::string hnGetPacketContent(const HnPacket& packet);
+
 // writes given message with the prefix into cout
 extern HN_API void hnLogCout(const std::string& message, const std::string& prefix);
 // returns the current time (in milliseconds) since the network was set up (hnCreateNetwork)
@@ -145,24 +183,19 @@ extern HN_API inline long long hnGetCurrentTime();
 #define hnBuildCustomPacket(isPrivate, ...) (hnBuildPacketFromParameters(std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value + 1, HN_PACKET_CUSTOM, isPrivate ? "1" : "0", __VA_ARGS__))
 
 #ifdef HN_ENABLE_DEBUG_MSG
-//#define HN_DEBUG(msg) { msg.push_back('\n'); std::cout << "[DEBUG]: " << msg; std::cout.flush(); }
-#define HN_DEBUG(msg) hnLogCout(msg, "[DEBUG]: ");
+#define HN_DEBUG(msg) hnLogCout(msg, "[DEBUG]: ")
 #else
 #define HN_DEBUG(msg) {}
 #endif
 
-
 #ifdef HN_ENABLE_LOG_MSG
-//#define HN_LOG(msg) { msg.push_back('\n'); std::cout << "[LOG  ]: " << msg; std::cout.flush(); }  
-#define HN_LOG(msg) hnLogCout(msg, "[LOG  ]: ");
+#define HN_LOG(msg) hnLogCout(msg, "[LOG  ]: ")
 #else
 #define HN_LOG(msg) {}
 #endif
 
-
 #ifdef HN_ENABLE_ERROR_MSG
-//#define HN_ERROR(msg) { msg.push_back('\n'); std::cout << "[ERROR]: " << msg; std::cout.flush(); }
-#define HN_ERROR(msg) hnLogCout(msg, "[ERROR]: ");
+#define HN_ERROR(msg) hnLogCout(msg, "[ERROR]: ")
 #else
 #define HN_ERROR(msg) {}
 #endif
