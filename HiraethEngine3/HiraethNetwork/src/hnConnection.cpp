@@ -6,12 +6,12 @@
 HiraethNetwork* hn = nullptr;
 std::chrono::time_point<std::chrono::steady_clock> startTime;
 
-void hnCreateSocket(HnSocket* socket) {
+void hnSocketCreate(HnSocket* socket) {
     
     if(socket->type == HN_SOCKET_TYPE_UDP)
-        hnCreateUdpSocket(socket);
-    else if(socket->type = HN_SOCKET_TYPE_TCP)
-        hnCreateTcpSocket(socket);
+        hnSocketCreateUdp(socket);
+    else if(socket->type == HN_SOCKET_TYPE_TCP)
+        hnSocketCreateTcp(socket);
     
 };
 
@@ -58,19 +58,7 @@ std::string hnVariableDataToString(const HnVariableInfo* info) {
     
 };
 
-
-void hnSendPacket(HnSocket* socket, const HnPacket& packet) {
-    
-    if (socket->status != HN_STATUS_CONNECTED)
-        return;
-    
-    hnSendSocketData(socket, hnGetPacketContent(packet));
-    if(packet.type != HN_PACKET_VAR_UPDATE)
-        HN_LOG("Send Packet [" + hnGetPacketContent(packet) + "]");
-    
-};
-
-void hnParseVariableString(void* ptr, const std::string& dataString, const HnDataType type) {
+void hnVariableParseFromString(void* ptr, const std::string& dataString, const HnDataType type) {
     
     switch(type) {
         case HN_DATA_TYPE_INT:
@@ -130,9 +118,19 @@ void hnParseVariableString(void* ptr, const std::string& dataString, const HnDat
     
 };
 
+void hnSocketSendPacket(HnSocket* socket, const HnPacket& packet) {
+    
+    if (socket->status != HN_STATUS_CONNECTED)
+        return;
+    
+    hnSocketSendDataTcp(socket, hnPacketGetContent(packet));
+    // TODO(Victor): Add UDP sending 
+    if(packet.type != HN_PACKET_VAR_UPDATE)
+        HN_LOG("Send Packet [" + hnPacketGetContent(packet) + "]");
+    
+};
 
-
-HnPacket hnBuildPacketFromParameters(int numargs, const unsigned int type, ...) {
+HnPacket hnPacketBuildFromParameters(int numargs, const unsigned int type, ...) {
     
     HnPacket packet(type);
     va_list ap;
@@ -146,7 +144,7 @@ HnPacket hnBuildPacketFromParameters(int numargs, const unsigned int type, ...) 
     
 };
 
-HnPacket hnDecodePacket(std::string& message) {
+HnPacket hnPacketDecodeFromString(std::string& message) {
     
     HnPacket packet;
     std::string current;
@@ -182,17 +180,17 @@ HnPacket hnDecodePacket(std::string& message) {
     
 };
 
-std::vector<HnPacket> hnDecodePackets(std::string& message) {
+std::vector<HnPacket> hnPacketDecodeAllFromString(std::string& message) {
     
     std::vector<HnPacket> packets;
     while(message.find('!') != std::string::npos)
-        packets.emplace_back(hnDecodePacket(message));
+        packets.emplace_back(hnPacketDecodeFromString(message));
     
     return packets;
     
 };
 
-std::string hnGetPacketContent(const HnPacket& packet) {
+std::string hnPacketGetContent(const HnPacket& packet) {
     
     std::string data = std::to_string(packet.type);
     

@@ -3,48 +3,30 @@
 #include <iostream>
 #include <algorithm>
 
-void hnCreateServer(HnServer* server, const unsigned int port, const HnSocketType type) {
+void hnServerCreate(HnServer* server, const unsigned int port, const HnSocketType type) {
     
-    if(server->serverSocket.status) {
+    if(server->socket.status) {
         HN_ERROR("Server already started");
         return;
     }
     
-    hnCreateNetwork(); // make sure wsa is started
-    server->serverSocket.type = type;
-    hnCreateServerSocket(&server->serverSocket, port);
+    hnNetworkCreate(); // make sure wsa is started
+    server->socket.type = type;
+    hnSocketCreateServer(&server->socket, port);
     
     server->lastUpdate = std::chrono::high_resolution_clock::now();
     
 };
 
-void hnDestroyServer(HnServer* server) {
+void hnServerDestroy(HnServer* server) {
     
-    for(auto& all : server->clients)
-        hnKickRemoteClient(&all.second);
-    
-    hnDestroySocket(&server->serverSocket);
+    hnSocketDestroy(&server->socket);
     server->clients.clear();
-    server->serverSocket.status = HN_STATUS_DISCONNECTED;
+    server->socket.status = HN_STATUS_DISCONNECTED;
     
 };
 
-void hnKickRemoteClient(HnRemoteClient* client) {
-    
-    hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_CLIENT_DISCONNECT));
-    client->socket.status = HN_STATUS_DISCONNECTED;
-    client->thread.detach();
-    hnDestroySocket(&client->socket);
-    
-};
-
-void hnServerAcceptClients(HnServer* server) {
-    
-    server->connectionRequests.emplace_back(hnServerAcceptClient(&server->serverSocket));
-    
-};
-
-void hnUpdateServerTcp(HnServer* server) {
+void hnServerHandleRequests(HnServer* server) {
     
     // check for timeouts
     long long now = hnGetCurrentTime();
@@ -58,7 +40,7 @@ void hnUpdateServerTcp(HnServer* server) {
         } else {
             // time since last succesfull ping check is stored as negative value, pingCheckIntervall is unsigned
             if(-all.second.pingCheck > server->pingCheckIntervall)
-                hnPingCheck(&all.second);
+                hnRemoteClientPingCheck(&all.second);
             else {
                 // increase time since last ping check
                 all.second.pingCheck -= server->updateTime;
@@ -72,12 +54,12 @@ void hnUpdateServerTcp(HnServer* server) {
         
         HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
         // send connect packet before new client is on list
-        hnBroadcastPacket(server, hnBuildPacket(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
+        hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
         
         HnRemoteClient* client = &server->clients[id];
         client->id = id;
         client->socket = HnSocket(server->connectionRequests[0], HN_SOCKET_TYPE_UDP);
-        client->thread = std::thread(hnRemoteClientThread, server, client);
+        client->thread = std::thread(hnRemoteClientThreadTcp, server, client);
         
         if(server->callbacks.clientConnect != nullptr)
             server->callbacks.clientConnect(server, client);
@@ -98,7 +80,7 @@ void hnUpdateServerTcp(HnServer* server) {
             cl->thread.detach();
         server->clients.erase(server->clients.find(id));
         cl = nullptr;
-        hnBroadcastPacket(server, hnBuildPacket(HN_PACKET_CLIENT_DISCONNECT, std::to_string(id).c_str()));
+        hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_DISCONNECT, std::to_string(id).c_str()));
         HN_DEBUG("Disconnected from RemoteClient [" + std::to_string(id) + "]");
         server->disconnectRequests.erase(server->disconnectRequests.begin());
     }
@@ -106,6 +88,13 @@ void hnUpdateServerTcp(HnServer* server) {
     auto nowTime = std::chrono::high_resolution_clock::now();
     server->updateTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - server->lastUpdate).count();
     server->lastUpdate = nowTime;
+    
+};
+
+
+void hnServerUpdateTcp(HnServer* server) {
+    
+    server->connectionRequests.emplace_back(hnServerAcceptClientTcp(&server->socket));
     
 };
 
@@ -118,13 +107,13 @@ void hnRemoteClientThreadTcp(HnServer* server, HnRemoteClient* client) {
     std::string lastInput;
     
     while(client->socket.status == HN_STATUS_CONNECTED) {
-        std::string msg = hnReadFromSocket(&client->socket, buffer, 4096);
+        std::string msg = hnSocketReadTcp(&client->socket, buffer, 4096);
         msg = lastInput + msg;
         msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
         
-        std::vector<HnPacket> packets = hnDecodePackets(msg);
+        std::vector<HnPacket> packets = hnPacketDecodeAllFromString(msg);
         for(const HnPacket& all : packets)
-            hnHandleServerPacket(server, client, all);
+            hnRemoteClientHandlePacket(server, client, all);
         lastInput = msg;
     }
     
@@ -133,9 +122,22 @@ void hnRemoteClientThreadTcp(HnServer* server, HnRemoteClient* client) {
     
 };
 
-void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPacket& packet) {
+
+void hnServerUpdateUdp(HnServer* server) {
     
-    HN_LOG("Handling remote client (" + std::to_string(sender->id) + ") packet [" + hnGetPacketContent(packet) + "]");
+};
+
+
+void hnServerBroadcastPacket(HnServer* server, const HnPacket& packet) {
+    
+    for(auto& all : server->clients)
+        hnSocketSendPacket(&all.second.socket, packet);
+    
+};
+
+void hnRemoteClientHandlePacket(HnServer* server, HnRemoteClient* sender, const HnPacket& packet) {
+    
+    HN_LOG("Handling remote client (" + std::to_string(sender->id) + ") packet [" + hnPacketGetContent(packet) + "]");
     
     if(packet.type == HN_PACKET_VAR_NEW) {
         // request new variable
@@ -144,11 +146,11 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
         if (server->variableNames.find(name) != server->variableNames.end()) {
             // variable was already registered before
             unsigned int id = server->variableNames[name];
-            hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_VAR_NEW,
-                                                        std::to_string(id).c_str(), 
-                                                        name.c_str(),
-                                                        packet.arguments[1].c_str(),
-                                                        std::to_string(server->variableInfo[id].syncRate).c_str()));
+            hnSocketSendPacket(&sender->socket, hnPacketBuild(HN_PACKET_VAR_NEW,
+                                                              std::to_string(id).c_str(), 
+                                                              name.c_str(),
+                                                              packet.arguments[1].c_str(),
+                                                              std::to_string(server->variableInfo[id].syncRate).c_str()));
         } else {
             // new variable
             unsigned int id = ++server->variableCounter;
@@ -158,45 +160,45 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
             info->syncRate       = std::stoi(packet.arguments[2]);
             info->type           = (HnDataType) std::stoi(packet.arguments[1]);
             
-            hnBroadcastPacket(server, hnBuildPacket(HN_PACKET_VAR_NEW, 
-                                                    std::to_string(id).c_str(),    // id of the variable
-                                                    name.c_str(),                  // name of the variable
-                                                    packet.arguments[1].c_str(),   // type
-                                                    packet.arguments[2].c_str())); // tick rate
+            hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_VAR_NEW, 
+                                                          std::to_string(id).c_str(),    // id of the variable
+                                                          name.c_str(),                  // name of the variable
+                                                          packet.arguments[1].c_str(),   // type
+                                                          packet.arguments[2].c_str())); // tick rate
         }
         
         return;
     }
     
     if(packet.type == HN_PACKET_VAR_UPDATE) {
-        hnBroadcastPacket(server, hnBuildPacket(HN_PACKET_VAR_UPDATE,
-                                                std::to_string(sender->id).c_str(),
-                                                packet.arguments[0].c_str(),
-                                                packet.arguments[1].c_str()));
+        hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_VAR_UPDATE,
+                                                      std::to_string(sender->id).c_str(),
+                                                      packet.arguments[0].c_str(),
+                                                      packet.arguments[1].c_str()));
         return;
     }
     
     if (packet.type == HN_PACKET_SYNC_REQUEST) {
         // sync client, send all important data
-        hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_CLIENT_DATA, std::to_string(sender->id).c_str()));
+        hnSocketSendPacket(&sender->socket, hnPacketBuild(HN_PACKET_CLIENT_DATA, std::to_string(sender->id).c_str()));
         
         // first send vars then clients so we can hook vars to clients
         
         for (const auto& all : server->variableNames) {
             const HnVariableInfo* info = &server->variableInfo[all.second];
-            hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_VAR_NEW, 
-                                                        std::to_string(all.second).c_str(),       // id
-                                                        all.first.c_str(),                        // name
-                                                        std::to_string(info->type).c_str(),       // type
-                                                        std::to_string(info->syncRate).c_str())); // sync rate 
+            hnSocketSendPacket(&sender->socket, hnPacketBuild(HN_PACKET_VAR_NEW, 
+                                                              std::to_string(all.second).c_str(),       // id
+                                                              all.first.c_str(),                        // name
+                                                              std::to_string(info->type).c_str(),       // type
+                                                              std::to_string(info->syncRate).c_str())); // sync rate 
         }
         
         for (const auto& all : server->clients)
             if (&all.second != sender)
-				hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_CLIENT_CONNECT, std::to_string(all.first).c_str()));
+				hnSocketSendPacket(&sender->socket, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(all.first).c_str()));
         
         // finish sync
-        hnSendPacket(&sender->socket, hnBuildPacket(HN_PACKET_SYNC_REQUEST));
+        hnSocketSendPacket(&sender->socket, hnPacketBuild(HN_PACKET_SYNC_REQUEST));
         HN_LOG("Synced with client");
         return;
     }
@@ -219,7 +221,7 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
             newPacket.arguments.emplace_back(std::to_string(sender->id));
             for(size_t i = 1; i < packet.arguments.size(); ++i)
                 newPacket.arguments.emplace_back(packet.arguments[i]);
-            hnBroadcastPacket(server, newPacket);
+            hnServerBroadcastPacket(server, newPacket);
         }
         
         sender->customPackets.emplace_back(packet);
@@ -227,18 +229,22 @@ void hnHandleServerPacket(HnServer* server, HnRemoteClient* sender, const HnPack
         
     }
     
-    HN_DEBUG("Recieved invalid packet: " + hnGetPacketContent(packet));
+    HN_DEBUG("Recieved invalid packet: " + hnPacketGetContent(packet));
     
 };
 
-void hnBroadcastPacket(HnServer* server, const HnPacket& packet) {
-    
-    for(auto& all : server->clients)
-        hnSendPacket(&all.second.socket, packet);
+void hnRemoteClientHookVariable(HnServer* server, HnRemoteClient* client, const std::string& variable, void* ptr) {
     
 };
 
-HnPacket hnGetCustomPacket(HnRemoteClient* client) {
+void hnRemoteClientPingCheck(HnRemoteClient* client) {
+    
+    client->pingCheck = hnGetCurrentTime();
+    hnSocketSendPacket(&client->socket, hnPacketBuild(HN_PACKET_PING_CHECK));
+    
+};
+
+HnPacket hnRemoteClientGetCustomPacket(HnRemoteClient* client) {
     
     if(client->customPackets.size() == 0)
         return HnPacket();
@@ -246,16 +252,5 @@ HnPacket hnGetCustomPacket(HnRemoteClient* client) {
     HnPacket packet = client->customPackets[0];
     client->customPackets.erase(client->customPackets.begin());
     return packet;
-    
-};
-
-void hnHookVariable(HnServer* server, HnRemoteClient* client, const std::string& variable, void* ptr) {
-    
-};
-
-void hnPingCheck(HnRemoteClient* client) {
-    
-    client->pingCheck = hnGetCurrentTime();
-    hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_PING_CHECK));
     
 };

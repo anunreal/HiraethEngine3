@@ -2,48 +2,49 @@
 #include <iostream>
 #include <algorithm>
 
-void hnConnectClient(HnClient* client, const std::string& host, const unsigned int port) {
+void hnClientConnect(HnClient* client, const std::string& host, const unsigned int port, const HnSocketType type) {
     
-    hnCreateNetwork(); // make sure wsa is started
-    hnCreateClientSocket(&client->socket, host, port);
+    hnNetworkCreate(); // make sure wsa is started
+    client->socket.type = type;
+    hnSocketCreateClient(&client->socket, host, port);
     
 };
 
-void hnDisconnectClient(HnClient* client) {
+void hnClientDisconnect(HnClient* client) {
     
-    hnDestroySocket(&client->socket);
+    hnSocketDestroy(&client->socket);
     client->clients.clear();
     client->variableNames.clear();
     client->variableInfo.clear();
     
 };
 
-void hnUpdateClientInput(HnClient* client) {
+void hnClientUpdateInputTcp(HnClient* client) {
     
-    std::string msg = hnReadFromSocket(&client->socket, client->inputBuffer, 4096);
+    std::string msg = hnSocketReadTcp(&client->socket, client->inputBuffer, 4096);
     if(msg.size() > 0) {
         msg = client->lastInput + msg;
         msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
-        std::vector<HnPacket> packets = hnDecodePackets(msg);
+        std::vector<HnPacket> packets = hnPacketDecodeAllFromString(msg);
         for (const HnPacket& all : packets)
-            hnHandleClientPacket(client, all);
+            hnClientHandlePacket(client, all);
         client->lastInput = msg;
     }
     
 };
 
-void hnUpdateClientVariables(HnClient* client) {
+void hnClientUpdateVariables(HnClient* client) {
     
     for (auto& map : client->variableInfo) {
         HnVariableInfo* all = &map.second;
         ++all->lastSync;
         if (all->lastSync >= all->syncRate && all->data != nullptr) {
             // update variable to server
-            HnPacket packet = hnBuildPacket(HN_PACKET_VAR_UPDATE, 
+            HnPacket packet = hnPacketBuild(HN_PACKET_VAR_UPDATE, 
                                             std::to_string(all->id).c_str(), 
                                             hnVariableDataToString(all).c_str());
             
-            hnSendPacket(&client->socket, packet);
+            hnSocketSendPacket(&client->socket, packet);
             
             // reset last sync
             all->lastSync = 0;
@@ -52,9 +53,9 @@ void hnUpdateClientVariables(HnClient* client) {
     
 };
 
-void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
+void hnClientHandlePacket(HnClient* client, const HnPacket& packet) {
     
-    HN_LOG("Handling packet from server [" + hnGetPacketContent(packet) + "]");
+    HN_LOG("Handling packet from server [" + hnPacketGetContent(packet) + "]");
     
     if(packet.type == HN_PACKET_CLIENT_DATA) {
         // general client data
@@ -123,14 +124,14 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
             
             HnLocalClient* cl = &client->clients[cid];
             if(cl->variableData[vid] != nullptr)
-                hnParseVariableString(cl->variableData[vid], data, client->variableInfo[vid].type);
+                hnVariableParseFromString(cl->variableData[vid], data, client->variableInfo[vid].type);
         }
         
         return;
     }
     
     if(packet.type == HN_PACKET_PING_CHECK) {
-        //hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_PING_CHECK));
+        hnSocketSendPacket(&client->socket, hnPacketBuild(HN_PACKET_PING_CHECK));
         return;
     }
     
@@ -162,29 +163,29 @@ void hnHandleClientPacket(HnClient* client, const HnPacket& packet) {
     
 };
 
-void hnCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const unsigned int tickRate) {
+void hnClientCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const unsigned int tickRate) {
     
     if (client->variableNames.find(name) != client->variableNames.end())
         // variable already registered
         return;
     
-    HnPacket packet = hnBuildPacket(HN_PACKET_VAR_NEW, 
+    HnPacket packet = hnPacketBuild(HN_PACKET_VAR_NEW, 
                                     name.c_str(), 
                                     std::to_string(type).c_str(), 
                                     std::to_string(tickRate).c_str());
-    hnSendPacket(&client->socket, packet);
+    hnSocketSendPacket(&client->socket, packet);
     
 };
 
-void hnSyncClient(HnClient* client) {
+void hnClientSync(HnClient* client) {
     
     HN_LOG("Syncing client...");
-    hnSendPacket(&client->socket, hnBuildPacket(HN_PACKET_SYNC_REQUEST));
+    hnSocketSendPacket(&client->socket, hnPacketBuild(HN_PACKET_SYNC_REQUEST));
     
-    HnPacket incoming = hnReadClientPacket(client);
+    HnPacket incoming = hnClientReadPacket(client);
     while (incoming.type != HN_PACKET_SYNC_REQUEST) {
-        hnHandleClientPacket(client, incoming);
-        incoming = hnReadClientPacket(client);
+        hnClientHandlePacket(client, incoming);
+        incoming = hnClientReadPacket(client);
     }
     
     // sync end
@@ -192,7 +193,7 @@ void hnSyncClient(HnClient* client) {
     
 };
 
-void hnHookVariable(HnClient* client, const std::string& name, void* data) {
+void hnClientHookVariable(HnClient* client, const std::string& name, void* data) {
     
     // this can only work if the variable is already registered locally. The server might not respond that fast
     auto it = client->variableNames.find(name);
@@ -203,26 +204,26 @@ void hnHookVariable(HnClient* client, const std::string& name, void* data) {
     
 };
 
-void hnHookVariable(HnClient* client, HnLocalClient* localclient, const std::string& name, void* data) {
+void hnLocalClientHookVariable(HnClient* client, HnLocalClient* localclient, const std::string& name, void* data) {
     
     localclient->variableData[client->variableNames[name]] = data;
     
 };
 
-HnPacket hnReadClientPacket(HnClient* client) {
+HnPacket hnClientReadPacket(HnClient* client) {
     
     HnPacket packet;
     
     size_t index = client->lastInput.find('!');
     if(index != std::string::npos) {
         // we still have input in the buffer
-        packet = hnDecodePacket(client->lastInput);
+        packet = hnPacketDecodeFromString(client->lastInput);
     } else {
         // buffer is empty, try to read
-        std::string msg = hnReadFromSocket(&client->socket, client->inputBuffer, 4096); 
+        std::string msg = hnSocketReadTcp(&client->socket, client->inputBuffer, 4096); 
         if (msg.size() > 0) {
             msg = client->lastInput + msg;
-            packet = hnDecodePacket(msg);
+            packet = hnPacketDecodeFromString(msg);
             client->lastInput = msg;
         }
     }
@@ -231,7 +232,7 @@ HnPacket hnReadClientPacket(HnClient* client) {
     
 };
 
-HnPacket hnGetCustomPacket(HnLocalClient* client) {
+HnPacket hnLocalClientGetCustomPacket(HnLocalClient* client) {
     
     if(client->customPackets.size() == 0)
         return HnPacket();
@@ -242,7 +243,7 @@ HnPacket hnGetCustomPacket(HnLocalClient* client) {
     
 };
 
-HnPacket hnGetCustomPacket(HnClient* client) {
+HnPacket hnClientGetCustomPacket(HnClient* client) {
     
     if(client->customPackets.size() == 0)
         return HnPacket();
@@ -253,7 +254,7 @@ HnPacket hnGetCustomPacket(HnClient* client) {
     
 };
 
-HnLocalClient* hnGetClientByIndex(HnClient* client, const unsigned int index) {
+HnLocalClient* hnClientGetLocalClientByIndex(HnClient* client, const unsigned int index) {
     
     if(index >= client->clients.size())
         return nullptr;
@@ -271,7 +272,7 @@ HnLocalClient* hnGetClientByIndex(HnClient* client, const unsigned int index) {
     
 };
 
-void* hnGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& variable) {
+void* hnClientGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& variable) {
     
     auto it = client->variableNames.find(variable);
     if(it == client->variableNames.end()) 

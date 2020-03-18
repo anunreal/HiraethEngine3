@@ -7,7 +7,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 
-void hnCreateNetwork() {
+void hnNetworkCreate() {
     
     if(hn == nullptr) {
         hn = new HiraethNetwork();
@@ -28,7 +28,7 @@ void hnCreateNetwork() {
     
 };
 
-void hnDestroyNetwork() {
+void hnNetworkDestroy() {
     
     WSACleanup();
     if(hn != nullptr)
@@ -36,17 +36,8 @@ void hnDestroyNetwork() {
     
 };
 
-void hnSendSocketData(HnSocket* socket, const std::string& data) {
-    
-    int res = send(socket->id, data.c_str(), (int) data.size() + 1, 0);
-    if(res <= 0) {
-        HN_ERROR("Lost connection to socket");
-        socket->status = HN_STATUS_ERROR;
-    }
-    
-};
 
-void hnCreateUdpSocket(HnSocket* hnSocket) {
+void hnSocketCreateUdp(HnSocket* hnSocket) {
     
     hnSocket->status = HN_STATUS_ERROR;
     hnSocket->id     = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -58,7 +49,7 @@ void hnCreateUdpSocket(HnSocket* hnSocket) {
     
 };
 
-void hnCreateTcpSocket(HnSocket* hnSocket) {
+void hnSocketCreateTcp(HnSocket* hnSocket) {
     
     hnSocket->status = HN_STATUS_ERROR;
     hnSocket->id     = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -70,18 +61,36 @@ void hnCreateTcpSocket(HnSocket* hnSocket) {
     
 };
 
-void hnDestroySocket(HnSocket* socket) {
+void hnSocketCreateClient(HnSocket* socket, const std::string& host, const unsigned int port) {
     
-    closesocket(socket->id);
-    socket->id = 0;
-    socket->status = HN_STATUS_DISCONNECTED;
+    hnSocketCreate(socket);
+    if(socket->status != HN_STATUS_ERROR) {
+        struct addrinfo* ip = NULL, *ptr = NULL, hints;
+        ZeroMemory(&hints, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+        
+        int connResult = getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &ip);
+        if(connResult != 0) {
+            HN_ERROR("Could not resolve server domain!");
+            hnSocketDestroy(socket);
+        } else {
+            ptr = ip;
+            connResult = connect(socket->id, ptr->ai_addr, (int)ptr->ai_addrlen);
+            if(connResult == SOCKET_ERROR) {
+                HN_ERROR("Could not connect to server [" + host + ":" + std::to_string(port) + "]");
+                hnSocketDestroy(socket);
+            }
+        }
+        
+    }
     
 };
 
-void hnCreateServerSocket(HnSocket* socket, const unsigned int port) {
+void hnSocketCreateServer(HnSocket* socket, const unsigned int port) {
     
-    hnCreateSocket(socket);
-    
+    hnSocketCreate(socket);
     if(socket->status != HN_STATUS_ERROR) {
         sockaddr_in hint;
         hint.sin_family = AF_INET;
@@ -90,7 +99,7 @@ void hnCreateServerSocket(HnSocket* socket, const unsigned int port) {
         
         if(bind(socket->id, (sockaddr*) &hint, sizeof(hint)) == SOCKET_ERROR) {
             HN_ERROR("Could not bind server socket: [" + std::to_string(WSAGetLastError()) + "]");
-            hnDestroySocket(socket);
+            hnSocketDestroy(socket);
             socket->status = HN_STATUS_ERROR;
         } else {
             if(socket->type == HN_SOCKET_TYPE_TCP) {
@@ -105,47 +114,26 @@ void hnCreateServerSocket(HnSocket* socket, const unsigned int port) {
     
 };
 
-void hnCreateClientSocket(HnSocket* socket, const std::string& host, const unsigned int port) {
+void hnSocketDestroy(HnSocket* socket) {
     
-    hnCreateUdpSocket(socket);
-    if(socket->status != HN_STATUS_ERROR) {
-        struct addrinfo* ip = NULL, *ptr = NULL, hints;
-        ZeroMemory(&hints, sizeof(hints));
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP;
-        
-        int connResult = getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &ip);
-        if(connResult != 0) {
-            HN_ERROR("Could not resolve server domain!");
-            hnDestroySocket(socket);
-        } else {
-            ptr = ip;
-            connResult = connect(socket->id, ptr->ai_addr, (int)ptr->ai_addrlen);
-            if(connResult == SOCKET_ERROR) {
-                HN_ERROR("Could not connect to server [" + host + ":" + std::to_string(port) + "]");
-                hnDestroySocket(socket);
-            }
-        }
-        
+    closesocket(socket->id);
+    socket->id = 0;
+    socket->status = HN_STATUS_DISCONNECTED;
+    
+};
+
+
+void hnSocketSendDataTcp(HnSocket* socket, const std::string& data) {
+    
+    int res = send(socket->id, data.c_str(), (int) data.size() + 1, 0);
+    if(res <= 0) {
+        HN_ERROR("Lost connection to socket");
+        socket->status = HN_STATUS_ERROR;
     }
     
 };
 
-unsigned long long hnServerAcceptClient(HnSocket* serverSocket) {
-    
-    unsigned long long socket = accept(serverSocket->id, nullptr, nullptr);
-    if (socket == INVALID_SOCKET) {
-        HN_ERROR("Connected to invalid socket");
-        serverSocket->status = HN_STATUS_ERROR;
-        socket = 0;
-    }
-    
-    return socket;
-    
-};
-
-std::string hnReadFromSocket(HnSocket* socket, char* buffer, const int maxSize) {
+std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const int maxSize) {
     
     bool customBuffer = (buffer == nullptr);
     if(customBuffer)
@@ -165,6 +153,19 @@ std::string hnReadFromSocket(HnSocket* socket, char* buffer, const int maxSize) 
         free(buffer);
     
     return msg;
+    
+};
+
+unsigned long long hnServerAcceptClientTcp(HnSocket* serverSocket) {
+    
+    unsigned long long socket = accept(serverSocket->id, nullptr, nullptr);
+    if (socket == INVALID_SOCKET) {
+        HN_ERROR("Connected to invalid socket");
+        serverSocket->status = HN_STATUS_ERROR;
+        socket = 0;
+    }
+    
+    return socket;
     
 };
 
