@@ -8,12 +8,34 @@ std::chrono::time_point<std::chrono::steady_clock> startTime;
 
 void hnSocketCreate(HnSocket* socket) {
     
-    if(socket->type == HN_SOCKET_TYPE_UDP)
+    if(socket->type == HN_PROTOCOL_UDP)
         hnSocketCreateUdp(socket);
-    else if(socket->type == HN_SOCKET_TYPE_TCP)
+    else if(socket->type == HN_PROTOCOL_TCP)
         hnSocketCreateTcp(socket);
     
 };
+
+void hnSocketSend(HnSocket* socket, const std::string& msg) {
+    
+    if(socket->type == HN_PROTOCOL_UDP)
+        hnSocketSendDataUdp(socket, msg);
+    else if(socket->type == HN_PROTOCOL_TCP)
+        hnSocketSendDataTcp(socket, msg);
+    
+};
+
+std::string hnSocketRead(HnSocket* socket, char* buffer, const uint32_t maxSize) {
+    
+    std::string msg;
+    if(socket->type == HN_PROTOCOL_UDP)
+        msg = hnSocketReadUdp(socket, buffer, maxSize, nullptr);
+    else if(socket->type == HN_PROTOCOL_TCP)
+        msg = hnSocketReadTcp(socket, buffer, maxSize);
+    
+    return msg;
+    
+};
+
 
 std::string hnVariableDataToString(const void* ptr, const HnDataType dataType) {
     
@@ -123,14 +145,13 @@ void hnSocketSendPacket(HnSocket* socket, const HnPacket& packet) {
     if (socket->status != HN_STATUS_CONNECTED)
         return;
     
-    hnSocketSendDataTcp(socket, hnPacketGetContent(packet));
-    // TODO(Victor): Add UDP sending 
+    hnSocketSend(socket, hnPacketGetContent(packet));
     if(packet.type != HN_PACKET_VAR_UPDATE)
         HN_LOG("Send Packet [" + hnPacketGetContent(packet) + "]");
     
 };
 
-HnPacket hnPacketBuildFromParameters(int numargs, const unsigned int type, ...) {
+HnPacket hnPacketBuildFromParameters(uint8_t numargs, const uint8_t type, ...) {
     
     HnPacket packet(type);
     va_list ap;
@@ -215,9 +236,15 @@ void hnLogCout(const std::string& message, const std::string& prefix) {
     
 };
 
-long long hnGetCurrentTime() {
+int64_t hnGetCurrentTime() {
     
     auto now = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+    
+};
+
+bool operator<(const HnSocketAddress& lhs, const HnSocketAddress& rhs) {
+    
+    return lhs.sa_family < rhs.sa_family;
     
 };

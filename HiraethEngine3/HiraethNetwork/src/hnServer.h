@@ -7,44 +7,47 @@
 
 struct HnRemoteClient {
     // id of this client on the server
-    unsigned long long id = 0;
-    // socket of this client from server to client
-    HnSocket socket;
-    // the input thread of this client
-    std::thread thread;
+    uint16_t id = 0;
     // all data stored for this client, mapped to the id of it
     HnVariableDataMap variables;
     // all packets, public or private, sent by this client
     HnCustomPackets customPackets;
     // the ping in milliseconds (server -> client -> server)
-    unsigned int ping = 0;
-    // the time the last ping check was sent (from the server) in milliseconds, since program start or -1 if there
-    // is currently no outgoing ping check
-    long long pingCheck = 0;
+    uint16_t ping = 0;
+    // the time the last ping check was sent (from the server) in milliseconds since program start, or time since
+    // the last succesfull ping check (in milliseconds) as negativ value
+    int64_t pingCheck = 0;
+    // TCP: socket of this client from server to client
+    // UDP: server socket, with the clients destination
+    HnSocket socket;
+    
+    struct {
+        // the input thread of this client
+        std::thread thread;
+    } tcp;
+    
+    struct {
+        // the address of this remote client
+        HnSocketAddress address;
+    } udp;
 };
 
 struct HnServer {
     // accepting socket of the server
     HnSocket socket;
     // all connected clients, mapped to their ids
-    std::map<unsigned long long, HnRemoteClient> clients;
+    std::map<uint16_t, HnRemoteClient> clients;
     // id of the last connected client. This will increase everytime a client connects in order to keep
     // client ids unique
-    unsigned int clientCounter = 0;
-    // a vector of sockets that connected to this server. Filled in the accepting thread, read and handled
-    // in the server update
-    std::vector<unsigned long long> connectionRequests;
-    // a vector of client ids that disconnected since the last update. Filled in the clients threads, read and
-    // handled in the server update 
-    std::vector<unsigned long long> disconnectRequests;
+    uint16_t clientCounter = 0;
     
     // the time (in milliseconds) after which a connection is seen as timed out. When a ping check takes longer than
     // this time to return, the client is assumed to be dead and disconnected
-    unsigned int timeOut = 7000;
+    uint16_t timeOut = 7000;
     // the time intervall (in milliseconds) in which a ping check is sent out
-    unsigned int pingCheckIntervall = 500;
+    uint16_t pingCheckIntervall = 500;
     // the time (in milliseconds) since the last update
-    long long updateTime = 0;
+    uint64_t updateTime = 0;
     // stores the time point of the last server update
     std::chrono::high_resolution_clock::time_point lastUpdate;
     
@@ -52,12 +55,33 @@ struct HnServer {
     HnVariableInfoMap variableInfo;
     HnVariableLookupMap variableNames;
     // counts the number of variables requested in order to keep ids unique
-    unsigned int variableCounter = 0;
+    uint32_t variableCounter = 0;
+    
+    // a vector of client ids that disconnected since the last update. Filled in the clients threads, read and
+    // handled in the server update 
+    std::vector<uint16_t> disconnectRequests;
+    
+    struct {
+        // a vector of sockets that connected to this server. Filled in the accepting thread, read and handled
+        // in the server update
+        std::vector<HnSocketId> connectionRequests;
+    } tcp;
+    
+    struct {
+        // a buffer for the udp socket to read
+        char buffer[4096];
+        // maps a socket address to the client id of that socket
+        std::map<HnSocketAddress, uint16_t> addressToClient;
+        // a vector of connections that sent their first packet since the last server update (hnServerHandleRequests)
+        // in this vector we save the sa_family (2 chars) and then the sa_data (14 chars), meaning that one connection
+        // takes up 16 chars in this vector
+        std::vector<char> connectionRequests;
+    } udp;
 };
 
 // sets up a new server on given port. Type (the protocol of the connections) must be the same for clients and the 
 // server.
-extern HN_API void hnServerCreate(HnServer* server, const unsigned int port, const HnSocketType type);
+extern HN_API void hnServerCreate(HnServer* server, const uint32_t port, const HnProtocol type);
 // closes the server and deletes all associated data
 extern HN_API void hnServerDestroy(HnServer* server);
 // updates the server by running (dis-)connect requests and timeout checks. Should be called from the main thread.
@@ -74,6 +98,9 @@ extern HN_API void hnRemoteClientThreadTcp(HnServer* server, HnRemoteClient* cli
 // Reads all incoming data from all clients, including new connections. This should be called in an external thread
 // as it will block until data is read. This is only used for udp servers!
 extern HN_API void hnServerUpdateUdp(HnServer* server);
+
+// updates the server depending on its protocol. Wrapper function for hnServerUpdateTcp / hnServerUpdateUdp
+extern HN_API inline void hnServerUpdate(HnServer* server);
 
 // sends given packet to all clients on given server
 extern HN_API inline void hnServerBroadcastPacket(HnServer* server, const HnPacket& packet);

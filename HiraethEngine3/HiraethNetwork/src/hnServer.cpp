@@ -3,7 +3,7 @@
 #include <iostream>
 #include <algorithm>
 
-void hnServerCreate(HnServer* server, const unsigned int port, const HnSocketType type) {
+void hnServerCreate(HnServer* server, const uint32_t port, const HnProtocol type) {
     
     if(server->socket.status) {
         HN_ERROR("Server already started");
@@ -29,13 +29,12 @@ void hnServerDestroy(HnServer* server) {
 void hnServerHandleRequests(HnServer* server) {
     
     // check for timeouts
-    long long now = hnGetCurrentTime();
+    int64_t now = hnGetCurrentTime();
     for(auto& all : server->clients) {
         if(all.second.pingCheck > 0) {
             if(now - all.second.pingCheck > server->timeOut) {
                 HN_LOG("Connection to RemoteClient [" + std::to_string(all.second.id) + "] timed out");
                 server->disconnectRequests.emplace_back(all.first);
-                all.second.socket.status = HN_STATUS_DISCONNECTED;
             }
         } else {
             // time since last succesfull ping check is stored as negative value, pingCheckIntervall is unsigned
@@ -48,42 +47,71 @@ void hnServerHandleRequests(HnServer* server) {
         }
     }
     
-    // connecting clients
-    while(server->connectionRequests.size() > 0) {
-        unsigned int id = ++server->clientCounter;
+    
+    if(server->socket.type == HN_PROTOCOL_UDP) {
+        /*
+        // connecting clients
+        while(server->udp.connectionRequests.size() > 0) {
+            uint16_t id = ++server->clientCounter;
+            HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
+            
+            HnRemoteClient* client     = &server->clients[id];
+            client->id                 = id;
+            client->socket.destination.sa_family = (server->udp.connectionRequests[0] >> 8 | server->udp.connectionRequests[1]);
+            for(uint8_t i = 0; i < 14; ++i)
+                client->socket.destination.sa_data[i] = server->udp.connectionRequests[i + 2];
+            
+            if(server->callbacks.clientConnect != nullptr)
+                server->callbacks.clientConnect(server, client);
+            
+            // send packet now so that the client knows it was registered
+            hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
+            server->udp.connectionRequests.erase(server->udp.connectionRequests.begin(), server->udp.connectionRequests.begin() + 16);
+        }
+        */
+    } else if(server->socket.type == HN_PROTOCOL_TCP) {
         
-        HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
-        // send connect packet before new client is on list
-        hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
+        // connecting clients
+        while(server->tcp.connectionRequests.size() > 0) {
+            uint16_t id = ++server->clientCounter;
+            
+            HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
+            // send connect packet before new client is on list
+            hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
+            
+            HnRemoteClient* client = &server->clients[id];
+            client->id             = id;
+            client->socket         = HnSocket(server->tcp.connectionRequests[0], HN_PROTOCOL_TCP);
+            client->tcp.thread     = std::thread(hnRemoteClientThreadTcp, server, client);
+            
+            if(server->callbacks.clientConnect != nullptr)
+                server->callbacks.clientConnect(server, client);
+            
+            server->tcp.connectionRequests.erase(server->tcp.connectionRequests.begin());
+        }
         
-        HnRemoteClient* client = &server->clients[id];
-        client->id = id;
-        client->socket = HnSocket(server->connectionRequests[0], HN_SOCKET_TYPE_UDP);
-        client->thread = std::thread(hnRemoteClientThreadTcp, server, client);
-        
-        if(server->callbacks.clientConnect != nullptr)
-            server->callbacks.clientConnect(server, client);
-        
-        server->connectionRequests.erase(server->connectionRequests.begin());
     }
+    
     
     // disconnecting clients
     while(server->disconnectRequests.size() > 0) {
-        unsigned long long id = server->disconnectRequests[0];
+        uint16_t id = server->disconnectRequests[0];
         
         HnRemoteClient* cl = &server->clients[id];
         
         if(server->callbacks.clientDisconnect != nullptr)
             server->callbacks.clientDisconnect(server, cl);
         
-        if(cl->thread.joinable())
-            cl->thread.detach();
+        if(cl->tcp.thread.joinable())
+            cl->tcp.thread.detach();
+        hnSocketDestroy(&cl->socket);
         server->clients.erase(server->clients.find(id));
         cl = nullptr;
         hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_DISCONNECT, std::to_string(id).c_str()));
         HN_DEBUG("Disconnected from RemoteClient [" + std::to_string(id) + "]");
         server->disconnectRequests.erase(server->disconnectRequests.begin());
     }
+    
     
     auto nowTime = std::chrono::high_resolution_clock::now();
     server->updateTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - server->lastUpdate).count();
@@ -94,7 +122,7 @@ void hnServerHandleRequests(HnServer* server) {
 
 void hnServerUpdateTcp(HnServer* server) {
     
-    server->connectionRequests.emplace_back(hnServerAcceptClientTcp(&server->socket));
+    server->tcp.connectionRequests.emplace_back(hnServerAcceptClientTcp(&server->socket));
     
 };
 
@@ -124,6 +152,47 @@ void hnRemoteClientThreadTcp(HnServer* server, HnRemoteClient* client) {
 
 
 void hnServerUpdateUdp(HnServer* server) {
+    
+    HnSocketAddress from;
+    std::string msg = hnSocketReadUdp(&server->socket, server->udp.buffer, 4096, &from);
+    
+    // check for new connections and also handle old ones
+    auto it = server->udp.addressToClient.find(from);
+    if(it == server->udp.addressToClient.end()) {
+        // new client connection
+        HN_DEBUG("Connected to udp client!: " + std::to_string(from.sa_family) + ":" + msg);
+        
+        uint16_t id = ++server->clientCounter;
+        server->udp.addressToClient[from] = id;
+        // send packet now so that the client knows it was registered
+        hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
+        
+        HnRemoteClient* cl = &server->clients[id];
+        cl->id = id;
+        cl->socket = HnSocket(server->socket.id, HN_PROTOCOL_UDP);
+        cl->socket.destination.sa_family = from.sa_family;
+        memcpy(cl->socket.destination.sa_data, from.sa_data, 14);
+        
+        if(server->callbacks.clientConnect != nullptr)
+            server->callbacks.clientConnect(server, cl);
+        
+    } else {
+        HN_LOG("Read from client: " + msg);
+        HnRemoteClient* cl = &server->clients[server->udp.addressToClient[from]];
+        std::vector<HnPacket> packets = hnPacketDecodeAllFromString(msg);
+        for(const HnPacket& packet : packets)
+            hnRemoteClientHandlePacket(server, cl, packet);
+    }
+    
+};
+
+
+void hnServerUpdate(HnServer* server) {
+    
+    if(server->socket.type == HN_PROTOCOL_UDP)
+        hnServerUpdateUdp(server);
+    else if(server->socket.type == HN_PROTOCOL_TCP)
+        hnServerUpdateTcp(server);
     
 };
 

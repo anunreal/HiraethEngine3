@@ -14,6 +14,8 @@
 #define HN_ENABLE_ERROR_MSG
 #define HN_ENABLE_DEBUG_MSG
 
+typedef unsigned long long HnSocketId;
+
 enum HnDataType {
     HN_DATA_TYPE_NONE = 0,
     HN_DATA_TYPE_INT,
@@ -53,51 +55,63 @@ enum HnPacketType {
     HN_PACKET_CUSTOM
 };
 
-enum HnSocketType {
-    HN_SOCKET_TYPE_NONE,
-    HN_SOCKET_TYPE_UDP,
-    HN_SOCKET_TYPE_TCP
+enum HnProtocol {
+    HN_PROTOCOL_NONE,
+    HN_PROTOCOL_UDP,
+    HN_PROTOCOL_TCP
+};
+
+// wrapper struct for winsock SOCKADDR
+struct HnSocketAddress {
+    uint16_t sa_family;
+    char sa_data[14];
 };
 
 struct HnSocket {
-    unsigned long long id;
-    HnSocketType type;
+    // the platform-specific id of this socket. 0 if this is the socket of a udp remote client 
+    HnSocketId id;
+    // the protocol of this socket, must be the same as the other end of this connection 
+    HnProtocol type;
+    // the status, should be HN_STATUS_CONNECTED
     HnStatus status;
     
-    HnSocket() : id(0), type(HN_SOCKET_TYPE_NONE), status(HN_STATUS_READY) {};
-    HnSocket(const unsigned long long id, const HnSocketType type) : id(id), type(type), status(HN_STATUS_CONNECTED) {};
+    // the other end of the connection if this is a udp socket
+    HnSocketAddress destination;
+    
+    HnSocket() : id(0), type(HN_PROTOCOL_NONE), status(HN_STATUS_READY) {};
+    HnSocket(const HnSocketId id, const HnProtocol type) : id(id), type(type), status(HN_STATUS_CONNECTED) {};
 };
 
 struct HnPacket {
     // the id of this packet, ie the type of this packet. Used for faster recoginition. See above for
     // packet types
-    unsigned int type = 0;
+    uint8_t type = 0;
     std::vector<std::string> arguments;
     
     HnPacket() {};
-    HnPacket(const unsigned int type) : type(type) {};
+    HnPacket(const uint8_t type) : type(type) {};
 };
 
 struct HnVariableInfo {
     // the data type of this variable
     HnDataType type = HN_DATA_TYPE_NONE;
     // the id of this variable, as defined by the server
-    unsigned int id = 0;
+    uint16_t id = 0;
     // how often to update this variable to the server (tick rate)
-    unsigned int syncRate = 0;
+    uint16_t syncRate = 0;
     // when was the last update in ticks? Compared to the syncRate
-    unsigned int lastSync = 0;
+    uint16_t lastSync = 0;
     // a pointer to data representing this variable on the local side (local client or remote client). This
     // must point to a valid memory location of the correct data type
     void* data = nullptr;
 };
 
 // maps a variable id to its info
-typedef std::map<unsigned int, HnVariableInfo> HnVariableInfoMap;
+typedef std::map<uint16_t, HnVariableInfo> HnVariableInfoMap;
 // maps the name of a variable to its id as defined by the server
-typedef std::map<std::string, unsigned int> HnVariableLookupMap;
+typedef std::map<std::string, uint16_t> HnVariableLookupMap;
 // stores a pointer to some data with the variable id as key, only used for local clients
-typedef std::map<unsigned int, void*> HnVariableDataMap;
+typedef std::map<uint16_t, void*> HnVariableDataMap;
 // a list of custom packets sent over a socket. They are saved in the remote counter parts of each client
 typedef std::vector<HnPacket> HnCustomPackets;
 
@@ -125,30 +139,47 @@ extern HN_API void hnSocketCreateTcp(HnSocket* hnSocket);
 // tries to connect given socket to given server. If the connection fails, the status of the socket is set to error.
 // The type of the socket must be set before calling this method to either udp or tcp. The type must be the same 
 // as the server
-extern HN_API void hnSocketCreateClient(HnSocket* socket, const std::string& host, const unsigned int port);
+extern HN_API void hnSocketCreateClient(HnSocket* socket, const std::string& host, const uint32_t port);
 // sets up a server on given socket. If this fails (port already in use?), the status of the socket is set to error
-extern HN_API void hnSocketCreateServer(HnSocket* socket, const unsigned int port);
+extern HN_API void hnSocketCreateServer(HnSocket* socket, const uint32_t port);
 // closes given socket and sets its status to disconnected
 extern HN_API void hnSocketDestroy(HnSocket* socket);
 
-// sends given data over given socket. If an error occurrs, the status of the socket is updates and an 
+// sends given data over given socket. If an error occurrs, the status of the socket is updated and an 
 // error message is printed
 extern HN_API void hnSocketSendDataTcp(HnSocket* socket, const std::string& data);
+// sends given data from socket to the destination of the socket. If an error occurs, the status of the status of the 
+// socket is updated and an error message is printed
+extern HN_API void hnSocketSendDataUdp(HnSocket* socket, const std::string& data);
 // tries to read from given socket. If the connection is interrupted, an empty string will be returned, else
 // the read message will be returned as a string (with any null chars removed). You can pass a buffer to avoid
-// reallocation it every time this function is called or nullptr when this function should create its own buffer.
+// reallocating it every time this function is called or nullptr when this function should create its own buffer.
 // maxSize is the maximum number of bytes read at once (if buffer is not nullptr, maxSize should be the length 
 // of given buffer. If buffer is nullptr, a new buffer will be created with length maxSize)
-extern HN_API std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const int maxSize);
+extern HN_API std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const uint32_t maxSize);
+// reads all data available in the stream to socket. If an error occurrs, a message will be printed, the sockets
+// status will be set to error and an empty string will be returned. Else, the read message will be returned as
+// astring (with any null chars removed). You can pass a buffer to avoid reallocating it every time this function is 
+// called or nullptr when this function should create its own buffer.
+// maxSize is the maximum number of bytes read at once (if buffer is not nullptr, maxSize should be the length 
+// of given buffer. If buffer is nullptr, a new buffer will be created with length maxSize).
+// from will be filled with information about the sender of the read packet. This can be set to nullptr if that
+// information is not needed (client-side)
+extern HN_API std::string hnSocketReadUdp(HnSocket* socket, char* buffer, const uint32_t maxSize, HnSocketAddress* from);
 // waits for an incoming connection on given server socket and returns the incoming sockets id. If an error occurs,
 // an error message is printed, the server sockets status is set to error and 0 is returned
-extern HN_API unsigned long long hnServerAcceptClientTcp(HnSocket* serverSocket);
+extern HN_API HnSocketId hnServerAcceptClientTcp(HnSocket* serverSocket);
 
 
 /* PLATFORM INDEPENDANT */
 
 // creates a new socket depending on the type set in the socket
-extern HN_API void hnSocketCreate(HnSocket* hnSocket);
+extern HN_API inline void hnSocketCreate(HnSocket* hnSocket);
+// sends data over given socket, depending on its type (wrapper function for hnSocketSendDataTcp, hnSocketSendDataUdp)
+extern HN_API inline void hnSocketSend(HnSocket* socket, const std::string& msg);
+// reads data from given socket. This will either call the hnSocketReadTcp or hnSocketReadUdp function, depending
+// on the type of the socket
+extern HN_API inline std::string hnSocketRead(HnSocket* socket, char* buffer, const uint32_t maxSize);
 
 // returns the data represented in a string, multiple arguments of the variable (vec2, ...) will be split by a 
 // forward dash ('/')
@@ -163,7 +194,7 @@ extern HN_API void hnVariableParseFromString(void* ptr, const std::string& dataS
 extern HN_API void hnSocketSendPacket(HnSocket* socket, const HnPacket& packet);
 // builds a new packet with given arguments. numargs is the number of parameters of the packet (...),
 // type is the type of the packet (see HnPacketType)
-extern HN_API HnPacket hnPacketBuildFromParameters(int numargs, const unsigned int type, ...);
+extern HN_API HnPacket hnPacketBuildFromParameters(uint8_t numargs, const uint8_t type, ...);
 // decodes a string recieved over a socket into a packet. This will cut the string after the packet ('!') 
 extern HN_API HnPacket hnPacketDecodeFromString(std::string& message);
 // decodes all packets read in this string. If the string does not end in the last packet (unfinished 
@@ -175,7 +206,9 @@ extern HN_API std::string hnPacketGetContent(const HnPacket& packet);
 // writes given message with the prefix into cout
 extern HN_API void hnLogCout(const std::string& message, const std::string& prefix);
 // returns the current time (in milliseconds) since the network was set up (hnCreateNetwork)
-extern HN_API inline long long hnGetCurrentTime();
+extern HN_API inline int64_t hnGetCurrentTime();
+
+extern HN_API inline bool operator<(const HnSocketAddress& lhs, const HnSocketAddress& rhs);
 
 // builds a packet of given type from given parameters. All additional arguments must be a c style string 
 // (no std::string, numbers...)

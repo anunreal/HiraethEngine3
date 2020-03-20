@@ -41,7 +41,7 @@ void hnSocketCreateUdp(HnSocket* hnSocket) {
     
     hnSocket->status = HN_STATUS_ERROR;
     hnSocket->id     = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    hnSocket->type   = HN_SOCKET_TYPE_UDP;
+    hnSocket->type   = HN_PROTOCOL_UDP;
     if(hnSocket->id == INVALID_SOCKET)
         HN_ERROR("Could not create socket");
     else
@@ -53,7 +53,7 @@ void hnSocketCreateTcp(HnSocket* hnSocket) {
     
     hnSocket->status = HN_STATUS_ERROR;
     hnSocket->id     = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    hnSocket->type   = HN_SOCKET_TYPE_TCP;
+    hnSocket->type   = HN_PROTOCOL_TCP;
     if(hnSocket->id == INVALID_SOCKET)
         HN_ERROR("Could not create socket");
     else
@@ -61,7 +61,7 @@ void hnSocketCreateTcp(HnSocket* hnSocket) {
     
 };
 
-void hnSocketCreateClient(HnSocket* socket, const std::string& host, const unsigned int port) {
+void hnSocketCreateClient(HnSocket* socket, const std::string& host, const uint32_t port) {
     
     hnSocketCreate(socket);
     if(socket->status != HN_STATUS_ERROR) {
@@ -81,6 +81,12 @@ void hnSocketCreateClient(HnSocket* socket, const std::string& host, const unsig
             if(connResult == SOCKET_ERROR) {
                 HN_ERROR("Could not connect to server [" + host + ":" + std::to_string(port) + "]");
                 hnSocketDestroy(socket);
+            } else {
+                // successful connection
+                socket->destination.sa_family = ptr->ai_addr->sa_family;
+                //socket->destination.sa_data   = ptr->ai_addr->sa_data;
+                memcpy(socket->destination.sa_data, ptr->ai_addr->sa_data, 14);
+                HN_LOG("Successfully connected to server [" + host + "][" + std::to_string(port) + "]");
             }
         }
         
@@ -88,7 +94,7 @@ void hnSocketCreateClient(HnSocket* socket, const std::string& host, const unsig
     
 };
 
-void hnSocketCreateServer(HnSocket* socket, const unsigned int port) {
+void hnSocketCreateServer(HnSocket* socket, const uint32_t port) {
     
     hnSocketCreate(socket);
     if(socket->status != HN_STATUS_ERROR) {
@@ -102,7 +108,7 @@ void hnSocketCreateServer(HnSocket* socket, const unsigned int port) {
             hnSocketDestroy(socket);
             socket->status = HN_STATUS_ERROR;
         } else {
-            if(socket->type == HN_SOCKET_TYPE_TCP) {
+            if(socket->type == HN_PROTOCOL_TCP) {
                 if(listen(socket->id, SOMAXCONN) != 0) {
                     socket->status = HN_STATUS_ERROR;
                     //HN_ERROR("Port already in use"); ERROR CODE: 10048
@@ -133,7 +139,21 @@ void hnSocketSendDataTcp(HnSocket* socket, const std::string& data) {
     
 };
 
-std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const int maxSize) {
+void hnSocketSendDataUdp(HnSocket* socket, const std::string& data) {
+    
+    SOCKADDR addr;
+    addr.sa_family = socket->destination.sa_family;
+    //addr.sa_data = to->sa_data;
+    memcpy(addr.sa_data, socket->destination.sa_data, 14);
+    int res = sendto(socket->id, data.c_str(), (int) data.size() + 1, 0, &addr, sizeof(addr));
+    if(res <= 0) {
+        HN_ERROR("Lost connection to socket");
+        socket->status = HN_STATUS_ERROR;
+    }
+    
+};
+
+std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const uint32_t maxSize) {
     
     bool customBuffer = (buffer == nullptr);
     if(customBuffer)
@@ -156,9 +176,39 @@ std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const int maxSize) {
     
 };
 
-unsigned long long hnServerAcceptClientTcp(HnSocket* serverSocket) {
+std::string hnSocketReadUdp(HnSocket* socket, char* buffer, const uint32_t maxSize, HnSocketAddress* from) {
     
-    unsigned long long socket = accept(serverSocket->id, nullptr, nullptr);
+    bool customBuffer = (buffer == nullptr);
+    if(customBuffer)
+        buffer = (char*) malloc(maxSize);
+    
+    std::string msg;
+    SOCKADDR fromWs;
+    int fromSize = sizeof(fromWs);
+    ZeroMemory(buffer, maxSize);
+    int bytes = recvfrom(socket->id, buffer, maxSize, 0, &fromWs, &fromSize); 
+    if(bytes > 0) {
+        msg = std::string(buffer, bytes - 1);
+        
+        if(from != nullptr) {
+            from->sa_family = fromWs.sa_family;
+            memcpy(from->sa_data, fromWs.sa_data, 14);
+        }
+    } else {
+        socket->status = HN_STATUS_ERROR;
+        HN_ERROR("Lost connection to socket");
+    }
+    
+    if(customBuffer)
+        free(buffer);
+    
+    return msg;
+    
+};
+
+HnSocketId hnServerAcceptClientTcp(HnSocket* serverSocket) {
+    
+    HnSocketId socket = accept(serverSocket->id, nullptr, nullptr);
     if (socket == INVALID_SOCKET) {
         HN_ERROR("Connected to invalid socket");
         serverSocket->status = HN_STATUS_ERROR;

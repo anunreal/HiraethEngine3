@@ -2,11 +2,12 @@
 #include <iostream>
 #include <algorithm>
 
-void hnClientConnect(HnClient* client, const std::string& host, const unsigned int port, const HnSocketType type) {
+void hnClientConnect(HnClient* client, const std::string& host, const uint32_t port, const HnProtocol type) {
     
     hnNetworkCreate(); // make sure wsa is started
     client->socket.type = type;
     hnSocketCreateClient(&client->socket, host, port);
+    hnSocketSendPacket(&client->socket, hnPacketBuild(HN_PACKET_PING_CHECK));
     
 };
 
@@ -19,9 +20,9 @@ void hnClientDisconnect(HnClient* client) {
     
 };
 
-void hnClientUpdateInputTcp(HnClient* client) {
+void hnClientUpdateInput(HnClient* client) {
     
-    std::string msg = hnSocketReadTcp(&client->socket, client->inputBuffer, 4096);
+    std::string msg = hnSocketRead(&client->socket, client->inputBuffer, 4096);
     if(msg.size() > 0) {
         msg = client->lastInput + msg;
         msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
@@ -163,7 +164,7 @@ void hnClientHandlePacket(HnClient* client, const HnPacket& packet) {
     
 };
 
-void hnClientCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const unsigned int tickRate) {
+void hnClientCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const uint16_t tickRate) {
     
     if (client->variableNames.find(name) != client->variableNames.end())
         // variable already registered
@@ -254,7 +255,7 @@ HnPacket hnClientGetCustomPacket(HnClient* client) {
     
 };
 
-HnLocalClient* hnClientGetLocalClientByIndex(HnClient* client, const unsigned int index) {
+HnLocalClient* hnClientGetLocalClientByIndex(HnClient* client, const uint16_t index) {
     
     if(index >= client->clients.size())
         return nullptr;

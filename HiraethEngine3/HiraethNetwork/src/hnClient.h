@@ -7,7 +7,7 @@
 
 struct HnLocalClient {
     // the client id
-    unsigned int id = 0;
+    uint16_t id = 0;
     // local variable pointers of this client
     HnVariableDataMap variableData;
     // a list of custom packets sent by this client
@@ -16,11 +16,11 @@ struct HnLocalClient {
 
 struct HnClient {
     // the id of this client
-    unsigned int id = 0;
+    uint16_t id = 0;
     // the socket to the server
     HnSocket socket;
     // maps clients from the server to their id
-    std::map<unsigned int, HnLocalClient> clients;
+    std::map<uint16_t, HnLocalClient> clients;
     HnVariableLookupMap variableNames;
     HnVariableInfoMap variableInfo;
     HnClientCallbacks callbacks;
@@ -40,12 +40,12 @@ struct HnClient {
 
 // tries to connect the client to a given server. If the connection succeeds, data is synchronised between
 // the client and the server, else the sockets status is set to error and a message will be printed
-extern HN_API void hnClientConnect(HnClient* client, const std::string& host, const unsigned int port, const HnSocketType type);
+extern HN_API void hnClientConnect(HnClient* client, const std::string& host, const uint32_t port, const HnProtocol type);
 // disconnects and cleans up given client
 extern HN_API void hnClientDisconnect(HnClient* client);
 // updates the input of given client. This should be called from a seperate thread as this will block until
 // a message is read from the server or the connection is stopped
-extern HN_API void hnClientUpdateInputTcp(HnClient* client);
+extern HN_API void hnClientUpdateInput(HnClient* client);
 // updates all variables of given client if they need to be updated by sending their value to the server
 extern HN_API void hnClientUpdateVariables(HnClient* client);
 // handles a packet recieved for a client. If this is a custom packet, it is added to the packet queue of the
@@ -53,7 +53,7 @@ extern HN_API void hnClientUpdateVariables(HnClient* client);
 extern HN_API void hnClientHandlePacket(HnClient* client, const HnPacket& packet);
 // requests a new variable which will be registered anywhere. syncRate is the number of ticks after which the 
 // variable should be synced with 
-extern HN_API void hnClientCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const unsigned int syncRate);
+extern HN_API void hnClientCreateVariable(HnClient* client, const std::string& name, const HnDataType type, const uint16_t syncRate);
 // syncs a client to the current server state. This should be called after the connection was established.
 // A sync request will be sent to the server and then this function blocks until the sync is ended by the server.
 // This will synchronize remote clients and variables
@@ -77,7 +77,7 @@ extern HN_API HnPacket hnLocalClientGetCustomPacket(HnLocalClient* client);
 extern HN_API HnPacket hnClientGetCustomPacket(HnClient* client);
 // returns the client with given index, NOT id. This is simply in the order of connection, as they are stored in the
 // map. Indices start at 0. If given index is too big (not enough clients), nullptr is returned
-extern HN_API HnLocalClient* hnClientGetLocalClientByIndex(HnClient* client, const unsigned int index);
+extern HN_API HnLocalClient* hnClientGetLocalClientByIndex(HnClient* client, const uint16_t index);
 // returns the pointer to the given variable of the local client. If that variable does not exist or was not
 // hooked for given local client, nullptr is returned
 extern HN_API void* hnClientGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& varName);
