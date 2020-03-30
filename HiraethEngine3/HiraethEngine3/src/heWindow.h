@@ -13,10 +13,10 @@ struct HeWindowInfo {
     // the name of the window
     std::wstring title   = L"";
     // maximum fps allowed. If this is set to 0, vsync will be enabled
-    unsigned int fpsCap  = 0;
+    uint16_t fpsCap  = 0;
     // samples used for one pixel. If this is left at 1, no multisampling will be used. The higher this value,
     // the smoother the result will be at a higher performance and memory cost
-    unsigned int samples = 1;
+    uint8_t samples = 1;
 };
 
 struct HeMouseInfo {
@@ -69,7 +69,7 @@ extern HE_API void heDestroyWindow(HeWindow* window);
 extern HE_API void heSyncToFps(HeWindow* window);
 // enables vsync. Should only be called once. Timestamp is the number of frames to wait before doing the next
 // one. Should always be one. Called when the window is created and fpsCap is 0
-extern HE_API void heEnableVsync(unsigned int timestamp);
+extern HE_API void heEnableVsync(const int8_t timestamp);
 // swaps the buffers of the given window. Should be called after rendering the frame
 extern HE_API void heSwapWindow(const HeWindow* window);
 // calculates the window border sizes (caption bar...) 

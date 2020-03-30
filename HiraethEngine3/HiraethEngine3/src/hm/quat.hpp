@@ -18,9 +18,9 @@ namespace hm {
         
     };
     
-    typedef quat<int> quati;
     typedef quat<float> quatf;
     typedef quat<double> quatd;
+    typedef quat<int32_t> quati;
     
     // turns this quaternion into a rotated transformation matrix
     template<typename T>

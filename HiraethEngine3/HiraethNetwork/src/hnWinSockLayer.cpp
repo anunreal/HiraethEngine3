@@ -84,7 +84,6 @@ void hnSocketCreateClient(HnSocket* socket, const std::string& host, const uint3
             } else {
                 // successful connection
                 socket->destination.sa_family = ptr->ai_addr->sa_family;
-                //socket->destination.sa_data   = ptr->ai_addr->sa_data;
                 memcpy(socket->destination.sa_data, ptr->ai_addr->sa_data, 14);
                 HN_LOG("Successfully connected to server [" + host + "][" + std::to_string(port) + "]");
             }

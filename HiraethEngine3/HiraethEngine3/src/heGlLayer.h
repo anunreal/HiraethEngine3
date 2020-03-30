@@ -18,52 +18,52 @@ struct HeShaderData {
 };
 
 struct HeShaderProgram {
-    unsigned int programId = 0;
+    uint32_t programId = 0;
     // a list of all files loaded for this shader. Everytime the shader is bound and hotswapping is enabled,
     // all shader files will be checked for modification and then the shader might be reloaded
     std::vector<std::string> files;
     // maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
     // be stored in the map for faster lookup.
-    std::map<std::string, int> uniforms;
+    std::map<std::string, int16_t> uniforms;
     // maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the texture
     // slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is saved here so
     // that we dont have to remember it 
-    std::map<std::string, int> samplers;
+    std::map<std::string, int16_t> samplers;
 };
 
 struct HeVbo {
-    unsigned int vboId = 0;
-    unsigned int dimensions = 0;
-    unsigned int verticesCount = 0;
+    uint32_t vboId = 0;
+    uint32_t verticesCount = 0;
+    uint8_t dimensions = 0;
     std::vector<float> data;
 };
 
 struct HeVao {
-    unsigned int vaoId = 0;
-    unsigned int verticesCount = 0;
+    uint32_t vaoId = 0;
+    uint32_t verticesCount = 0;
     std::vector<HeVbo> vbos;
 };
 
 struct HeFbo {
     // the gl id of this fbo, used by the engine
-    unsigned int fboId = 0;
+    uint32_t fboId = 0;
     // an array of (possible) depth attachments to this fbo. These values may be set or just left at 0 if that attachment
     // was not created
     // 0. depth texture
     // 1. depth buffer
-    unsigned int depthAttachments[2] = { 0 };
+    uint32_t depthAttachments[2] = { 0 };
     
     /* only one of the two arrays should be used, therefore a fbo should only have either colour buffers or
      * colour textures */
     
 	 // a vector of (multisampled) colour buffers attached to this array.
-    std::vector<unsigned int> colourBuffers;
+    std::vector<uint32_t> colourBuffers;
     // a vector of colour textures attached to this array
-    std::vector<unsigned int> colourTextures;
+    std::vector<uint32_t> colourTextures;
     
     // the amount of samples in this fbo (multisampling). Must be either 4, 8, 16. More samplers mean smoother
     // results but higher memory usage. Needs to be set before fbo creation
-    unsigned int samples = 1;
+    uint8_t samples = 1;
     // flags of this fbo. More flags can be set, but only one of HE_FBO_FLAG_DEPTH_RENDER_BUFFER and 
     // HE_FBO_FLAG_DEPTH_TEXTURE
     // should be set. Needs to be set before fbo creation
@@ -76,17 +76,18 @@ struct HeTexture {
     // for every time this texture is requested from the asset pool, this reference count goes up.
     // If this texture is destroyed with heDestroyTexture, referenceCount will go down.
     // Only if the referenceCount is 0, the texture will actually be deleted
-    unsigned int referenceCount = 0;
+    uint32_t referenceCount = 0;
     // the opengl texture id
-    unsigned int textureId = 0;
+    uint32_t textureId = 0;
     // the internal format used for storing the pixels. Can be:
     // 0: RGBA (8bit / channel)
     // 1: RGBA (16bit / channel)
     HeColourFormat format = HE_COLOUR_FORMAT_NONE;
     // dimensions of the texture
-    int width = 0, height = 0;
+    int32_t width = 0;
+	int32_t height = 0;
     // the number of channels in this texture. Can be 3 (rgb) or 4 (rgba)
-    int channels = 0;
+    int32_t channels = 0;
 };
 
 
@@ -106,7 +107,7 @@ extern HE_API void heUnbindShader();
 // deletes the given shader
 extern HE_API void heDestroyShader(HeShaderProgram* program);
 // runs given compute shader. The number of groups in each dimension can be specified here, according to the texture this shader is operating on
-extern HE_API void heRunComputeShader(HeShaderProgram* program, const unsigned int groupsX, const unsigned int groupsY, const unsigned int groupsZ);
+extern HE_API void heRunComputeShader(HeShaderProgram* program, const uint32_t groupsX, const uint32_t groupsY, const uint32_t groupsZ);
 // reloads given shader
 extern HE_API void heReloadShader(HeShaderProgram* program);
 // checks if any of the shaders files were modified (and shader hotswapping is enabled), and if so it 
@@ -119,7 +120,7 @@ extern HE_API int heGetShaderUniformLocation(HeShaderProgram* program, const std
 // gets the location of given sampler in given shader. Once the sampler is loaded, the location is stored in program
 // for faster lookups later. If the sampler wasnt found (spelling mistake or optimized away), -1 is returned.
 // If the sampler does exist, it will be bound to given texture slot (glActiveTexture(GL_TEXTURE0 + requestedSlot))
-extern HE_API int heGetShaderSamplerLocation(HeShaderProgram* program, const std::string& sampler, const unsigned int requestedSlot);
+extern HE_API int heGetShaderSamplerLocation(HeShaderProgram* program, const std::string& sampler, const uint8_t requestedSlot);
 
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const void* data, const HeUniformDataType dataType);
 extern HE_API void heLoadShaderUniform(HeShaderProgram* program, const std::string& uniformName, const int value);
@@ -148,13 +149,13 @@ extern HE_API void heDestroyVbo(HeVbo* vbo);
 extern HE_API void heCreateVao(HeVao* vao);
 // simply uploads the data stored in the vbo onto the currently bound vao. This will clear the data stored in the vbo
 // attributeIndex is the index of this vbo in the vao
-extern HE_API void heAddVboData(HeVbo* vbo, const unsigned int attributeIndex);
+extern HE_API void heAddVboData(HeVbo* vbo, const int8_t attributeIndex);
 // adds an existing vbo to given vao. Both vao and vbo need to be created beforehand, and the vao needs
 // to be bound before this call. If this is the first vbo for the given vao, the verticesCount 
 // of the vao is calculated 
 extern HE_API void heAddVbo(HeVao* vao, HeVbo* vbo);
 // adds new data to given vao. The vao needs to be created and bound before this.
-extern HE_API void heAddVaoData(HeVao* vao, const std::vector<float>& data, const unsigned int dimensions);
+extern HE_API void heAddVaoData(HeVao* vao, const std::vector<float>& data, const uint8_t dimensions);
 // binds given vao
 extern HE_API void heBindVao(const HeVao* vao);
 // unbinds the currently bound vao
@@ -199,15 +200,15 @@ extern HE_API void heLoadTexture(HeTexture* texture, const std::string& fileName
 extern inline HE_API void heCreateTexture(HeTexture* texture);
 // creates an opengl texture from given information. Id will be set to the gl texture id created. This will
 // also delete the buffer
-extern HE_API void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const int width, const int height, const int channels,
+extern HE_API void heCreateGlTextureFromBuffer(unsigned char* buffer, uint32_t* id, const int16_t width, const int16_t height, const int8_t channels,
                                                const HeColourFormat format);
 // loads a new texture from given stream. If the stream is invalid, an error is printed and no gl texture
 // will be generated
 extern HE_API void heLoadTexture(HeTexture* texture, FILE* stream);
 // binds given texture to given gl slot
-extern HE_API void heBindTexture(const HeTexture* texture, const int slot);
+extern HE_API void heBindTexture(const HeTexture* texture, const int8_t slot);
 // binds given texture id to given gl slot
-extern HE_API void heBindTexture(const unsigned int texture, const int slot);
+extern HE_API void heBindTexture(const uint32_t texture, const int8_t slot);
 // binds a given texture to a shader for reading / writing, mostly used for compute shaders
 // slot is the uniform slot this shader should be bound to
 // if layer is -1, a new layered texture binding is established, else the given layer is used (layer >= 0)
@@ -215,9 +216,9 @@ extern HE_API void heBindTexture(const unsigned int texture, const int slot);
 //  0: read only
 //  1: write only
 //  2: read and write
-extern HE_API void heBindImageTexture(const HeTexture* texture, const int slot, const int layer, const HeAccessType access);
+extern HE_API void heBindImageTexture(const HeTexture* texture, const int8_t slot, const int8_t layer, const HeAccessType access);
 // unbinds the currently bound texture from given gl slot
-extern HE_API void heUnbindTexture(int slot);
+extern HE_API void heUnbindTexture(const int8_t slot);
 // deletes given texture if its reference count is currently 1
 extern HE_API void heDestroyTexture(HeTexture* texture);
 
@@ -246,14 +247,14 @@ extern HE_API void heTextureClampRepeat();
 // type = 0: The colour buffer is cleared
 // type = 1: The depth buffer is cleared
 // type = 2: Both the colour and the depth colour are cleared
-extern HE_API void heClearFrame(const hm::colour& colour, const int type);
+extern HE_API void heClearFrame(const hm::colour& colour, const int8_t type);
 // sets the gl blend mode to given mode. Possible modes:
 // -1 = disable gl blending
 //  0 = normal blending (one minus source alpha)
 //  1 = additive blending (add two colours)
 //  2 = disable blending by completely overwriting previous colour with new one
-extern HE_API void heBlendMode(const int mode);
+extern HE_API void heBlendMode(const int8_t mode);
 // applies a gl blend mode to only given colour attachment of a fbo. Same modes as above apply
-extern HE_API void heBufferBlendMode(const int attachmentIndex, const int mode);
+extern HE_API void heBufferBlendMode(const int8_t attachmentIndex, const int8_t mode);
 // en- or disables depth testing
 extern HE_API void heEnableDepth(const bool depth);

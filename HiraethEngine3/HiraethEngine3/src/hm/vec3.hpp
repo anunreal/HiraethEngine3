@@ -49,9 +49,9 @@ namespace hm {
         };
     };
     
-    typedef vec3<int> vec3i;
     typedef vec3<float> vec3f;
     typedef vec3<double> vec3d;
+    typedef vec3<int32_t> vec3i;
     
     template<typename T>
         static inline vec3<T> length(const vec3<T>& vector) {

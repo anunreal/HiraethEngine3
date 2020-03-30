@@ -63,8 +63,8 @@ enum HnProtocol {
 
 // wrapper struct for winsock SOCKADDR
 struct HnSocketAddress {
-    uint16_t sa_family;
-    char sa_data[14];
+    uint16_t sa_family = 0;
+    char sa_data[14]   = {0};
 };
 
 struct HnSocket {

@@ -33,7 +33,7 @@ struct HnClient {
     
     
     // input buffer for reading
-    char inputBuffer[4096];
+    char inputBuffer[4096] = {0};
     // left over message from the last input if it didnt line up with the packet ending
     std::string lastInput = "";
 };

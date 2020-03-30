@@ -1,6 +1,7 @@
 #pragma once
 #include "heD3.h"
-#include "heWindow.h"
+
+struct HeWindow; // avoid #include "heWindow.h"
 
 struct HeRenderEngine {
     // a 2d quad vao used for 2d rendering
@@ -36,7 +37,7 @@ extern HE_API void heLoadMaterialToShader(HeShaderProgram* shader, const HeMater
 // loads a 3d light source to given shader. If index is -1, the shader is assumed to only have one light as a uniform 
 // called u_light. If index is greater or equal to 0, the shader is assumed to have an array of lights, called 
 // u_lights[]
-extern HE_API void heLoadLightToShader(HeShaderProgram* program, const HeD3LightSource* light, const int index);
+extern HE_API void heLoadLightToShader(HeShaderProgram* program, const HeD3LightSource* light, const int8_t index);
 // renders a single 3d instance using the instances mesh and material. Make sure that a shader is bound and
 // set up before this is called (camera and lights)
 extern HE_API void heRenderD3Instance(HeD3Instance* instance);
@@ -53,4 +54,4 @@ extern HE_API void heEndD3RenderEngine(HeRenderEngine* engine);
 
 // updates a (or adds a new) render property for given engine. This should be done before the shaders are loaded.
 // If a property is updated after the shaders are loaded, you can reload specific shaders manually
-extern HE_API void heSetRenderProperty(HeRenderEngine* engine, const std::string& name, const int value);
+extern HE_API void heSetRenderProperty(HeRenderEngine* engine, const std::string& name, const int32_t value);

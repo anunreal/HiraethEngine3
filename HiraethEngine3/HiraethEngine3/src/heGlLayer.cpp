@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "..\stb_image.h"
 
 
 // --- Shaders
@@ -35,7 +35,7 @@ std::string heLoadShaderSource(const std::string& file) {
 
 void heLoadComputeShader(HeShaderProgram* program, const std::string& computeShader) {
     
-    unsigned int cid = glCreateShader(GL_COMPUTE_SHADER);
+    uint32_t cid = glCreateShader(GL_COMPUTE_SHADER);
     int err = glGetError();
     if (err != GL_NO_ERROR)
         HE_ERROR("Shader Creation: " + std::to_string(err));
@@ -55,7 +55,7 @@ void heLoadComputeShader(HeShaderProgram* program, const std::string& computeSha
         HE_ERROR("While compiling shader [" + computeShader + "]:\n" + std::string(infoLog));
     }
     
-    unsigned int programId = glCreateProgram();
+    uint32_t programId = glCreateProgram();
     glAttachShader(programId, cid);
     glLinkProgram(programId);
     
@@ -82,8 +82,8 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
     if (vs.empty() || fs.empty())
         return;
     
-    unsigned int vid = glCreateShader(GL_VERTEX_SHADER);
-    unsigned int fid = glCreateShader(GL_FRAGMENT_SHADER);
+    uint32_t vid = glCreateShader(GL_VERTEX_SHADER);
+    uint32_t fid = glCreateShader(GL_FRAGMENT_SHADER);
     
     int err = glGetError();
     if (err != GL_NO_ERROR)
@@ -116,7 +116,7 @@ void heLoadShader(HeShaderProgram* program, const std::string& vertexShader, con
         HE_ERROR("While compiling shader [" + fragmentShader + "]:\n" + std::string(infoLog));
     }
     
-    unsigned int programId = glCreateProgram();
+    uint32_t programId = glCreateProgram();
     glAttachShader(programId, vid);
     glAttachShader(programId, fid);
     glLinkProgram(programId);
@@ -148,7 +148,7 @@ void heCreateShader(HeShaderProgram* program, const std::string& vertexShader, c
 
 void heBindShader(HeShaderProgram* program) {
     
-    heReloadShader(program);
+    heCheckReloadShader(program);
     glUseProgram(program->programId);
     
 };
@@ -168,7 +168,7 @@ void heDestroyShader(HeShaderProgram* program) {
     
 };
 
-void heRunComputeShader(HeShaderProgram* program, const unsigned int groupsX, const unsigned int groupsY, const unsigned int groupsZ) {
+void heRunComputeShader(HeShaderProgram* program, const uint32_t groupsX, const uint32_t groupsY, const uint32_t groupsZ) {
     
     heBindShader(program);
     glDispatchCompute(groupsX, groupsY, groupsZ);
@@ -264,7 +264,7 @@ int heGetShaderUniformLocation(HeShaderProgram* program, const std::string& unif
     
 };
 
-int heGetShaderSamplerLocation(HeShaderProgram* program, const std::string& sampler, const unsigned int requestedSlot) {
+int heGetShaderSamplerLocation(HeShaderProgram* program, const std::string& sampler, const uint8_t requestedSlot) {
     
     int location;
     if (program->samplers.find(sampler) != program->samplers.end()) {
@@ -425,7 +425,7 @@ void heCreateVao(HeVao* vao) {
     
 };
 
-void heAddVboData(HeVbo* vbo, const unsigned int attributeIndex) {
+void heAddVboData(HeVbo* vbo, const int8_t attributeIndex) {
     
     heCreateVbo(vbo, vbo->data);
     glVertexAttribPointer(attributeIndex, vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
@@ -435,14 +435,14 @@ void heAddVboData(HeVbo* vbo, const unsigned int attributeIndex) {
 
 void heAddVbo(HeVao* vao, HeVbo* vbo) {
     
-    glVertexAttribPointer((unsigned int) vao->vbos.size(), vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+    glVertexAttribPointer((uint32_t) vao->vbos.size(), vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
     vao->vbos.emplace_back(*vbo);
     if (vao->vbos.size() == 1)
         vao->verticesCount = vbo->verticesCount;
     
 };
 
-void heAddVaoData(HeVao* vao, const std::vector<float>& data, const unsigned int dimensions) {
+void heAddVaoData(HeVao* vao, const std::vector<float>& data, const uint8_t dimensions) {
     
     if(heIsMainThread()) {
         HeVbo vbo;
@@ -460,14 +460,14 @@ void heAddVaoData(HeVao* vao, const std::vector<float>& data, const unsigned int
 void heBindVao(const HeVao* vao) {
     
     glBindVertexArray(vao->vaoId);
-    for (unsigned int i = 0; i < (unsigned int)vao->vbos.size(); ++i)
+    for (uint32_t i = 0; i < (uint32_t)vao->vbos.size(); ++i)
         glEnableVertexAttribArray(i);
     
 };
 
 void heUnbindVao(const HeVao* vao) {
     
-    for (unsigned int i = 0; i < (unsigned int)vao->vbos.size(); ++i)
+    for (uint32_t i = 0; i < (uint32_t) vao->vbos.size(); ++i)
         glDisableVertexAttribArray(i);
     glBindVertexArray(0);
     
@@ -493,7 +493,7 @@ void heRenderVao(const HeVao* vao) {
 
 void heCreateColourAttachment(HeFbo* fbo) {
     
-    unsigned int id;
+    uint32_t id;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, (fbo->flags & HE_FBO_FLAG_HDR) ? GL_RGBA16F : GL_RGBA8, fbo->size.x, fbo->size.y,
@@ -509,7 +509,7 @@ void heCreateColourAttachment(HeFbo* fbo) {
 
 void heCreateMultisampledColourAttachment(HeFbo* fbo) {
     
-    unsigned int id;
+    uint32_t id;
     glGenRenderbuffers(1, &id);
     glBindRenderbuffer(GL_RENDERBUFFER, id);
     glRenderbufferStorageMultisample(GL_RENDERBUFFER, fbo->samples, (fbo->flags & HE_FBO_FLAG_HDR) ? GL_RGBA16F : GL_RGBA8,
@@ -575,7 +575,7 @@ void heBindFbo(HeFbo* fbo) {
     
     // enable draw buffers
     int count = std::max<int>((int)fbo->colourBuffers.size(), (int)fbo->colourTextures.size());
-    std::vector<unsigned int> drawBuffers;
+    std::vector<uint32_t> drawBuffers;
     for (int i = 0; i < count; ++i)
         drawBuffers.emplace_back(GL_COLOR_ATTACHMENT0 + i);
     
@@ -677,7 +677,7 @@ void heCreateTexture(HeTexture* texture) {
     
 };
 
-void heCreateGlTextureFromBuffer(unsigned char* buffer, unsigned int* id, const int width, const int height, const int channels, const HeColourFormat format) 
+void heCreateGlTextureFromBuffer(unsigned char* buffer, uint32_t* id, const int16_t width, const int16_t height, const int8_t channels, const HeColourFormat format) 
 {
     
     glGenTextures(1, id);
@@ -714,7 +714,7 @@ void heLoadTexture(HeTexture* texture, FILE* stream) {
     
 };
 
-void heBindTexture(const HeTexture* texture, const int slot) {
+void heBindTexture(const HeTexture* texture, const int8_t slot) {
     
     if(texture != nullptr) {
         glActiveTexture(GL_TEXTURE0 + slot);
@@ -724,21 +724,21 @@ void heBindTexture(const HeTexture* texture, const int slot) {
     
 };
 
-void heBindTexture(const unsigned int texture, const int slot) {
+void heBindTexture(const uint32_t texture, const int8_t slot) {
     
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, texture);
     
 };
 
-void heBindImageTexture(const HeTexture* texture, const int slot, const int layer, const HeAccessType access) {
+void heBindImageTexture(const HeTexture* texture, const int8_t slot, const int8_t layer, const HeAccessType access) {
     
     if(texture != nullptr)
         glBindImageTexture(slot, texture->textureId, 0, (layer == -1) ? GL_TRUE : GL_FALSE, layer, access, texture->format);
     
 };
 
-void heUnbindTexture(const int slot) {
+void heUnbindTexture(const int8_t slot) {
     
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -813,7 +813,7 @@ void heTextureClampRepeat() {
 
 // --- Utils
 
-void heClearFrame(const hm::colour& colour, const int type) {
+void heClearFrame(const hm::colour& colour, const int8_t type) {
     
     glClearColor(getR(&colour), getG(&colour), getB(&colour), getA(&colour));
     switch (type) {
@@ -832,7 +832,7 @@ void heClearFrame(const hm::colour& colour, const int type) {
     
 };
 
-void heBlendMode(const int mode) {
+void heBlendMode(const int8_t mode) {
     
     if (mode == -1) {
         glDisable(GL_BLEND);
@@ -855,7 +855,7 @@ void heBlendMode(const int mode) {
     
 };
 
-void heBufferBlendMode(const int attachmentIndex, const int mode) {
+void heBufferBlendMode(const int8_t attachmentIndex, const int8_t mode) {
     
     if (mode == -1)
         glDisable(GL_BLEND);

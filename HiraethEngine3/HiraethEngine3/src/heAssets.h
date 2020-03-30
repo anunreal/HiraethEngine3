@@ -11,7 +11,7 @@ struct HeMaterial {
 };
 
 struct HeThreadLoaderVao {
-    std::vector<unsigned int> dimensions;
+    std::vector<uint8_t> dimensions;
     std::vector<std::vector<float>> data;
 };
 

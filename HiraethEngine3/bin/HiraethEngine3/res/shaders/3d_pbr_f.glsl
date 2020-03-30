@@ -7,7 +7,7 @@ struct Light {
 	vec3 vector;
 	vec4 colour;
 	vec4 data1;
-	float data2;
+	vec4 data2;
 	int type;
 };
 
@@ -44,10 +44,12 @@ vec4 getLightVector(Light light) {
 		vec3 dir = normalize(light.vector - pass_worldPos);
 		vec3 lightDir = vec3(-light.data1.xyz);
 		float theta = dot(dir, lightDir);
-		if(theta > light.data2) {
-			float epsilon   = light.data2 - light.data1.w;
-			float intensity = clamp((theta - light.data2) / epsilon, 0.0, 1.0);
-			return vec4(dir, intensity);
+		if(theta > light.data2.x) {
+			float epsilon   = light.data2.x - light.data1.w;
+			float intensity = clamp((theta - light.data2.x) / epsilon, 0.0, 1.0);
+			float dist = length(dir);
+			float attenuation = 1.0 / (light.data2.y + light.data2.z * dist + light.data2.w * (dist * dist));   
+			return vec4(dir, intensity * attenuation);
 		}
 	
 		return vec4(0.0);

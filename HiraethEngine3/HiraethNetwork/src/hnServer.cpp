@@ -47,29 +47,7 @@ void hnServerHandleRequests(HnServer* server) {
         }
     }
     
-    
-    if(server->socket.type == HN_PROTOCOL_UDP) {
-        /*
-        // connecting clients
-        while(server->udp.connectionRequests.size() > 0) {
-            uint16_t id = ++server->clientCounter;
-            HN_DEBUG("Connected to RemoteClient [" + std::to_string(id) + "]");
-            
-            HnRemoteClient* client     = &server->clients[id];
-            client->id                 = id;
-            client->socket.destination.sa_family = (server->udp.connectionRequests[0] >> 8 | server->udp.connectionRequests[1]);
-            for(uint8_t i = 0; i < 14; ++i)
-                client->socket.destination.sa_data[i] = server->udp.connectionRequests[i + 2];
-            
-            if(server->callbacks.clientConnect != nullptr)
-                server->callbacks.clientConnect(server, client);
-            
-            // send packet now so that the client knows it was registered
-            hnServerBroadcastPacket(server, hnPacketBuild(HN_PACKET_CLIENT_CONNECT, std::to_string(id).c_str()));
-            server->udp.connectionRequests.erase(server->udp.connectionRequests.begin(), server->udp.connectionRequests.begin() + 16);
-        }
-        */
-    } else if(server->socket.type == HN_PROTOCOL_TCP) {
+    if(server->socket.type == HN_PROTOCOL_TCP) {
         
         // connecting clients
         while(server->tcp.connectionRequests.size() > 0) {

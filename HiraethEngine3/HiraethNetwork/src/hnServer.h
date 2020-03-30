@@ -72,10 +72,6 @@ struct HnServer {
         char buffer[4096];
         // maps a socket address to the client id of that socket
         std::map<HnSocketAddress, uint16_t> addressToClient;
-        // a vector of connections that sent their first packet since the last server update (hnServerHandleRequests)
-        // in this vector we save the sa_family (2 chars) and then the sa_data (14 chars), meaning that one connection
-        // takes up 16 chars in this vector
-        std::vector<char> connectionRequests;
     } udp;
 };
 

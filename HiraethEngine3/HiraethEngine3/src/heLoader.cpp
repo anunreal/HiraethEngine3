@@ -50,6 +50,8 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
     
 };
 
+// parses a float of given format:
+// +ffff.fff (or -ffff.fff)
 bool parseFloatFixedWidth(std::ifstream& stream, float* result) {
     
     char c;
@@ -60,20 +62,21 @@ bool parseFloatFixedWidth(std::ifstream& stream, float* result) {
     int sign = (c == '-') ? -1 : 1;
     *result = 0;
     
-    // 0 = 2;
-    // 1 = 1;
-    // 2 = 0;
-    // 3 = -1
-    // 4 = -2
-    // 5 = -3
+    // 0 = 3;
+    // 1 = 2;
+    // 2 = 1;
+    // 3 = 0
+    // 4 = -1
+    // 5 = -2
+    // 6 = -3
     
-    for(int i = 0; i < 6; ++i) {
+    for(int i = 0; i < 7; ++i) {
         stream.get(c);
-        int exp = -(i - 3) - 1;
+        int exp = -(i - 4) - 1;
         int ch = (int) (c - '0');
         *result = *result + (float) (ch * std::pow(10, exp));
         
-        if(i == 2)
+        if(i == 3)
             stream.get(c); // skip .
     }
     
@@ -82,6 +85,46 @@ bool parseFloatFixedWidth(std::ifstream& stream, float* result) {
     
 };
 
+// parses an int of given format:
+// +iiii (or -iiii)
+bool parseIntFixedWidth(std::ifstream& stream, int* result) {
+    
+    char c;
+    stream.get(c);
+    if(c == '\n')
+        return false;
+    
+    int sign = (c == '-') ? -1 : 1;
+    *result = 0;
+    
+    for(int i = 0; i < 4; ++i) {
+        stream.get(c);
+        int exp = (3 - i);
+        int ch = (int) (c - '0');
+        *result = *result + ch * (int) std::pow(10, exp);
+    }
+    
+    
+    *result *= sign;
+    return true;
+    
+};
+
+// parses n floats and stores them in ptr
+void parseFloats(std::ifstream& stream, int n, void* ptr) {
+    
+    for(int i = 0; i < n; ++i)
+        parseFloatFixedWidth(stream, &((float*)ptr)[i]);
+    
+};
+
+// parses n ints and stores them in ptr
+void parseInts(std::ifstream& stream, int n, void* ptr) {
+    
+    for(int i = 0; i < n; ++i)
+        parseIntFixedWidth(stream, &((int*)ptr)[i]);
+    
+};
 
 HeVao* heLoadD3Obj(const std::string& fileName) {
     
@@ -158,38 +201,6 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
     return vao;
     
 };
-
-void heLoadD3Level(HeD3Level* level, const std::string& fileName) {
-    
-    std::ifstream stream(fileName);
-    std::string line;
-    
-    std::vector<HeMaterial*> materials;
-    
-    while(std::getline(stream, line)) {
-        std::vector<std::string> args = heStringSplit(line.substr(2), ':');
-        if(line[0] == 'm') {
-            // material
-            std::string name = fileName + "_" + std::to_string(materials.size());
-            HeMaterial* mat = heCreatePbrMaterial(name, heGetTexture(args[0]), heGetTexture(args[1]), heGetTexture(args[2]));
-            materials.emplace_back(mat);
-        } else if(line[0] == 'i') {
-            // instance
-            HeD3Instance* ins            = &level->instances.emplace_back();
-            ins->mesh                    = heGetMesh(args[0]);
-            ins->material                = materials[std::stoi(args[1])];
-            ins->transformation.position = hm::parseVec3f(args[2]);
-            //ins->transformation.rotation = hm::fromEuler(hm::parseVec3f(args[3]));
-            ins->transformation.scale    = hm::parseVec3f(args[4]);
-        } else if(line[0] == 'l') {
-            
-        }
-    }
-    
-    stream.close();
-    
-};
-
 
 
 void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
@@ -275,7 +286,7 @@ void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
     
 };
 
-void heLoadLevel(const std::string& fileName, HeD3Level* level) {
+void heLoadD3Level(const std::string& fileName, HeD3Level* level) {
     
     std::ifstream stream(fileName);
     if(!stream) {
@@ -296,21 +307,14 @@ void heLoadLevel(const std::string& fileName, HeD3Level* level) {
                 stream.get(c);
             }
             
-            hm::vec3f position, rotation, scale;
-            parseFloatFixedWidth(stream, &position.x);
-            parseFloatFixedWidth(stream, &position.y);
-            parseFloatFixedWidth(stream, &position.z);
-            parseFloatFixedWidth(stream, &rotation.x);
-            parseFloatFixedWidth(stream, &rotation.y);
-            parseFloatFixedWidth(stream, &rotation.z);
-            parseFloatFixedWidth(stream, &scale.x);
-            parseFloatFixedWidth(stream, &scale.y);
-            parseFloatFixedWidth(stream, &scale.z);
-            
             HeD3Instance* instance = &level->instances.emplace_back();
-            instance->transformation.position = position;
+            hm::vec3f rotation;
+            
+            parseFloats(stream, 3, &instance->transformation.position);
+            parseFloats(stream, 3, &rotation);
+            parseFloats(stream, 3, &instance->transformation.scale);
+            
             instance->transformation.rotation = hm::fromEulerRadians(rotation);
-            instance->transformation.scale = scale;
             heLoadAsset("res/assets/" + name, instance);
             stream.get(c); // skip next line
         } else if(type == 'l') {
@@ -318,7 +322,9 @@ void heLoadLevel(const std::string& fileName, HeD3Level* level) {
             HeD3LightSource* light = &level->lights.emplace_back();
             stream.get(c);
             light->type = (HeLightSourceType) (c - '0');
-            
+            parseFloats(stream, 3, &light->vector);
+            parseInts(stream, 4, &light->colour);
+            parseFloats(stream, 8, &light->data);
         }
     }
     

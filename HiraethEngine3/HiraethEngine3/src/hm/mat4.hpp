@@ -106,9 +106,9 @@ namespace hm {
         };
     };
     
-    typedef mat4<int> mat4i;
     typedef mat4<float> mat4f;
     typedef mat4<double> mat4d;
+    typedef mat4<int32_t> mat4i;
     
     template<typename T>
         static inline mat4<T> translate(const mat4<T>& matrix, const vec3<T>& position) {
@@ -163,9 +163,9 @@ namespace hm {
         static inline mat4<T> rotate(const mat4<T>& matrix, const vec3<T>& vector) {
         
         mat4<T> m = matrix;
+        m = rotate(m, vector.x, hm::vec3f(1, 0, 0));
         m = rotate(m, vector.y, hm::vec3f(0, 1, 0)); // we need negative angle here because of rotation definition
         m = rotate(m, vector.z, hm::vec3f(0, 0, 1));
-        m = rotate(m, vector.x, hm::vec3f(1, 0, 0));
         return m;
         
     };

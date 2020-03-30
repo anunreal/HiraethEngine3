@@ -45,29 +45,29 @@ typedef enum HeKeyCode {
     HE_KEY_X		 = 0x058,
     HE_KEY_Y		 = 0x059,
     HE_KEY_Z		 = 0x05A,
-    HE_KEY_CAPS		 = 0x14,
+    HE_KEY_CAPS      = 0x14,
     HE_KEY_SPACE     = 0x20,
     HE_KEY_LSHIFT    = 0xA0,
     HE_KEY_RSHIFT    = 0xA1,
     HE_KEY_ESCAPE    = 0x1B,
     HE_KEY_ENTER     = 0x0D,
     HE_KEY_BACKSPACE = 0x08,
-    HE_KEY_F1		 = 0x70,
-    HE_KEY_F2		 = 0x71,
-    HE_KEY_F3		 = 0x72,
-    HE_KEY_F4		 = 0x73,
-    HE_KEY_F5		 = 0x74,
-    HE_KEY_F6		 = 0x75,
-    HE_KEY_F7		 = 0x76,
-    HE_KEY_F8		 = 0x77,
-    HE_KEY_F9		 = 0x78,
-    HE_KEY_F10		 = 0x79,
-    HE_KEY_F11		 = 0xFA,
-    HE_KEY_F12		 = 0x7B
+    HE_KEY_F1		= 0x70,
+    HE_KEY_F2		= 0x71,
+    HE_KEY_F3		= 0x72,
+    HE_KEY_F4		= 0x73,
+    HE_KEY_F5		= 0x74,
+    HE_KEY_F6		= 0x75,
+    HE_KEY_F7		= 0x76,
+    HE_KEY_F8		= 0x77,
+    HE_KEY_F9		= 0x78,
+    HE_KEY_F10	   = 0x79,
+    HE_KEY_F11	   = 0xFA,
+    HE_KEY_F12	   = 0x7B
 } HeKeyCode;
 
 typedef enum HeUniformDataType {
-    HE_UNIFORM_DATA_TYPE_NONE,
+    HE_UNIFORM_DATA_TYPE_NONE    = 0,
     HE_UNIFORM_DATA_TYPE_INT     = 0x1404,
     HE_UNIFORM_DATA_TYPE_VEC2    = 0x8B50,
     HE_UNIFORM_DATA_TYPE_VEC3    = 0x8B51,
@@ -106,9 +106,14 @@ typedef enum HeLightSourceType {
     HE_LIGHT_SOURCE_TYPE_SPOT
 } HeSourceLightType;
 
+typedef enum HeDebugInfoFlags {
+    HE_DEBUG_INFO_LIGHTS    = 0b0001,
+    HE_DEBUG_INFO_INSTANCES = 0b0010
+} HeDebugInfoFlags;
 
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\
 inline T operator& (T a, T b) {return (T)((int) a & (int) b);};
 
 HE_ENABLE_BIT(HeFboFlags)
+HE_ENABLE_BIT(HeDebugInfoFlags)

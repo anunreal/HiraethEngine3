@@ -7,7 +7,6 @@ void hnClientConnect(HnClient* client, const std::string& host, const uint32_t p
     hnNetworkCreate(); // make sure wsa is started
     client->socket.type = type;
     hnSocketCreateClient(&client->socket, host, port);
-    hnSocketSendPacket(&client->socket, hnPacketBuild(HN_PACKET_PING_CHECK));
     
 };
 

@@ -444,13 +444,13 @@ void heSyncToFps(HeWindow* window) {
     
 };
 
-void heEnableVsync(unsigned int timestamp) {
+void heEnableVsync(const int8_t timestamp) {
     
     if (!_wglSwapIntervalEXT)
         _wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
     
     if (_wglSwapIntervalEXT)
-        _wglSwapIntervalEXT(1);
+        _wglSwapIntervalEXT(timestamp);
     else
         HE_ERROR("Could not enable vsync");
 }

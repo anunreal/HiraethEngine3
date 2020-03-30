@@ -10,9 +10,6 @@
 static bool inputActive = true;
 hm::vec2i lastPosition;
 
-const unsigned int SIZEX = 150, SIZEZ = 100;
-float heightmap[SIZEX + 1][SIZEZ + 1];
-
 void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     
     if (window->mouseInfo.leftButtonDown) {
@@ -78,8 +75,8 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
 
 
 struct Player {
-    HnLocalClient* client;
-    HeD3Instance* model;
+    HnLocalClient* client = nullptr;
+    HeD3Instance* model   = nullptr;
     std::string name;
 };
 
@@ -95,8 +92,8 @@ void _onClientConnect(HnClient* client, HnLocalClient* local) {
     HeD3Instance* instance = &level.instances.emplace_back();
     instance->mesh = heGetMesh("res/models/player.obj");
     instance->material = heGetMaterial("level");
-    hnHookVariable(client, local, "position", &instance->transformation.position);
-    hnHookVariable(client, local, "rotation", &instance->transformation.rotation);
+    hnLocalClientHookVariable(client, local, "position", &instance->transformation.position);
+    hnLocalClientHookVariable(client, local, "rotation", &instance->transformation.rotation);
     
     Player* p = &players[local->id];
     p->client = local;
@@ -114,20 +111,62 @@ void createClient() {
     client.callbacks.clientConnect = &_onClientConnect;
     client.callbacks.clientDisconnect = &_onClientDisconnect;
     //hnConnectClient(&client, "tealfire.de", 9876);
-    hnConnectClient(&client, "localhost", 9876);
-    hnSyncClient(&client);
-    hnCreateVariable(&client, "position", HN_DATA_TYPE_VEC3, 1);
-    hnHookVariable(&client, "position", &level.camera.position);
-    hnCreateVariable(&client, "rotation", HN_DATA_TYPE_VEC4, 1);
-    hnHookVariable(&client, "rotation", &cameraRotation);
+    hnClientConnect(&client, "localhost", 9876, HN_PROTOCOL_TCP);
+    hnClientSync(&client);
+    hnClientCreateVariable(&client, "position", HN_DATA_TYPE_VEC3, 1);
+    hnClientHookVariable(&client, "position", &level.camera.position);
+    hnClientCreateVariable(&client, "rotation", HN_DATA_TYPE_VEC4, 1);
+    hnClientHookVariable(&client, "rotation", &cameraRotation);
     
     while(client.socket.status == HN_STATUS_CONNECTED) {
         cameraRotation = hm::fromEulerDegrees(-level.camera.rotation);
-        hnUpdateClientInput(&client);
+        hnClientUpdateInput(&client);
     };
     
 };
 
+
+void modelStressTest(const std::string& file) {
+    LARGE_INTEGER frequency;        // ticks per second
+    LARGE_INTEGER t1, t2;           // ticks
+    double elapsedTime;
+    
+    // get ticks per second
+    QueryPerformanceFrequency(&frequency);
+    
+    // start timer
+    QueryPerformanceCounter(&t1);
+    
+    for(int i = 0; i < 1000; ++i) {
+        heLoadD3Obj(file);
+    }
+    
+    // stop timer
+    QueryPerformanceCounter(&t2);
+    
+    // compute and print the elapsed time in millisec
+    elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
+    HN_LOG("OBJ loading took: " + std::to_string(elapsedTime) + "ms");
+    
+    
+    
+    
+    // start timer
+    QueryPerformanceCounter(&t1);
+    
+    HeD3Instance instance;
+    
+    for(int i = 0; i < 1000; ++i) {
+        heLoadAsset(file, &instance);
+    }
+    
+    // stop timer
+    QueryPerformanceCounter(&t2);
+    
+    // compute and print the elapsed time in millisec
+    elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
+    HN_LOG("h3asset loading took: " + std::to_string(elapsedTime) + "ms");
+}
 
 
 
@@ -157,7 +196,7 @@ void createWorld(HeWindow* window) {
         thingyModel->transformation.position = hm::vec3f(-3, 1, -5);
         heLoadAsset("res/assets/road.h3asset", thingyModel);
     } else {
-        heLoadLevel("res/level/level0.h3level", &level);
+        heLoadD3Level("res/level/level0.h3level", &level);
     }
     
 };
@@ -192,9 +231,8 @@ int main() {
         heUpdateWindow(&window);
         level.time += window.frameTime;
         
-        if (window.active) {
+        if (window.active)
             checkWindowInput(&window, &level.camera, (float) window.frameTime);
-        }
         
         hePrepareD3RenderEngine(&engine);
         heRenderD3Level(&level);
@@ -203,12 +241,12 @@ int main() {
         heSwapWindow(&window);
         heSyncToFps(&window);
 #if USE_NETWORKING
-        hnUpdateClientVariables(&client);
+        hnClientUpdateVariables(&client);
 #endif
     }
     
 #if USE_NETWORKING
-    hnDisconnectClient(&client);
+    hnClientDisconnect(&client);
     thread.join();
 #endif
     heDestroyRenderEngine(&engine);

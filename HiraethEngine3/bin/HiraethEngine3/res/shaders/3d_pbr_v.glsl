@@ -35,8 +35,7 @@ mat3 getTangentMatrix(mat4 tMat) {
 }  
 
 void main(void) {
-	vec3 mesh_pos = vec3(in_position.x, in_position.y, in_position.z);
-	vec4 worldPos = u_transMat * vec4(mesh_pos, 1.0);
+	vec4 worldPos = u_transMat * vec4(in_position, 1.0);
 	gl_Position = u_projMat * u_viewMat * worldPos;
 	
 	pass_normal = normalize(u_transMat * vec4(in_normal, 0.0)).xyz;

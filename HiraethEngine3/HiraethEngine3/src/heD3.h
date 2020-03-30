@@ -49,10 +49,15 @@ struct HeD3LightSource {
     //  0 - 2: a vector representing the direction of the light (normalized)
     //  3: the radius of the inner light circle, as cosinus
     //  4: the radius of the outer light circle, as cosinus
-    float data[5];
+    //  5: the constant light value
+    //  6: the linear light value
+    //  7: the quadractic light value
+    float data[8];
     // this should be true whenever this light is manipulated by the client. When update is true, the light
     // will be uploaded to the shader in the next frame
     bool update = false;
+    // whether this light is active at all. This should only be set to false if a light is off for a larger amount
+    // of time
     bool active = true;
 };
 
