@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HE_CORE_H
+#define HE_CORE_H
+
 #include <string>
 #include "heTypes.h"
 
@@ -54,4 +56,6 @@ extern HE_API bool heCommandRun(const std::string& command);
 #define HE_ERROR(msg) heLogCout(msg, "[ERROR]:")
 #else
 #define HE_ERROR(msg)
+#endif
+
 #endif

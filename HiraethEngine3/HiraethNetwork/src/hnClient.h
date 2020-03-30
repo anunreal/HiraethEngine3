@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HN_CLIENT_H
+#define HN_CLIENT_H
+
 #include "hnConnection.h"
 #include "hnCallbacks.h"
 #include <thread>
@@ -81,3 +83,5 @@ extern HN_API HnLocalClient* hnClientGetLocalClientByIndex(HnClient* client, con
 // returns the pointer to the given variable of the local client. If that variable does not exist or was not
 // hooked for given local client, nullptr is returned
 extern HN_API void* hnClientGetLocalClientVariable(HnClient* client, HnLocalClient* localClient, const std::string& varName);
+
+#endif

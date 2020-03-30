@@ -126,7 +126,7 @@ void parseInts(std::ifstream& stream, int n, void* ptr) {
     
 };
 
-HeVao* heLoadD3Obj(const std::string& fileName) {
+HeVao* heMeshLoad(const std::string& fileName) {
     
     std::ifstream stream(fileName);
     if (!stream.good()) {
@@ -186,24 +186,24 @@ HeVao* heLoadD3Obj(const std::string& fileName) {
     
     HeVao* vao = &heAssetPool.meshPool[fileName];
     if(isMainThread) {
-        heCreateVao(vao);
-        heBindVao(vao);
+        heVaoCreate(vao);
+        heVaoBind(vao);
     }
     
-    heAddVaoData(vao, mesh.verticesArray, 3);
-    heAddVaoData(vao, mesh.uvArray, 2);
-    heAddVaoData(vao, mesh.normalArray, 3);
-    heAddVaoData(vao, mesh.tangentArray, 3);
+    heVaoAddData(vao, mesh.verticesArray, 3);
+    heVaoAddData(vao, mesh.uvArray, 2);
+    heVaoAddData(vao, mesh.normalArray, 3);
+    heVaoAddData(vao, mesh.tangentArray, 3);
     
     if(!isMainThread)
-        heRequestVao(vao);
+        heThreadLoaderRequestVao(vao);
     
     return vao;
     
 };
 
 
-void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
+void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
     
     std::ifstream stream(fileName);
     if(!stream) {
@@ -221,7 +221,7 @@ void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
         instance->material = &heAssetPool.materialPool[assetName];
     
     HeMaterial* material = instance->material;
-    material->shader = heGetShader(line);
+    material->shader = heAssetPoolGetShader(line);
     
     std::getline(stream, line);
     while(!line.empty()) {
@@ -229,7 +229,7 @@ void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
         size_t pos = line.find('=');
         std::string name = line.substr(0, pos);
         std::string tex = line.substr(pos + 1);
-        material->textures[name] = heGetTexture("res/textures/assets/" + tex);
+        material->textures[name] = heAssetPoolGetTexture("res/textures/assets/" + tex);
         std::getline(stream, line);
     }
     
@@ -270,23 +270,23 @@ void heLoadAsset(const std::string& fileName, HeD3Instance* instance) {
     
     HeVao* vao = &heAssetPool.meshPool[fileName];
     if(isMainThread) {
-        heCreateVao(vao);
-        heBindVao(vao);
+        heVaoCreate(vao);
+        heVaoBind(vao);
     }
     
-    heAddVaoData(vao, builder.verticesArray, 3);
-    heAddVaoData(vao, builder.uvArray, 2);
-    heAddVaoData(vao, builder.normalArray, 3);
-    heAddVaoData(vao, builder.tangentArray, 3);
+    heVaoAddData(vao, builder.verticesArray, 3);
+    heVaoAddData(vao, builder.uvArray, 2);
+    heVaoAddData(vao, builder.normalArray, 3);
+    heVaoAddData(vao, builder.tangentArray, 3);
     
     if(!isMainThread)
-        heRequestVao(vao);
+        heThreadLoaderRequestVao(vao);
     
     instance->mesh = vao;
     
 };
 
-void heLoadD3Level(const std::string& fileName, HeD3Level* level) {
+void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
     
     std::ifstream stream(fileName);
     if(!stream) {
@@ -315,7 +315,7 @@ void heLoadD3Level(const std::string& fileName, HeD3Level* level) {
             parseFloats(stream, 3, &instance->transformation.scale);
             
             instance->transformation.rotation = hm::fromEulerRadians(rotation);
-            heLoadAsset("res/assets/" + name, instance);
+            heD3InstanceLoad("res/assets/" + name, instance);
             stream.get(c); // skip next line
         } else if(type == 'l') {
             // light

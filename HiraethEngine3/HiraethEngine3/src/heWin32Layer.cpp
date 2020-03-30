@@ -12,6 +12,8 @@ typedef std::map<std::string, HANDLE> HeFileHandleMap;
 HeFileTimeMap timeMap;
 HeFileHandleMap handleMap;
 
+// the windows class instance
+extern HINSTANCE classInstance;								
 
 
 bool heFileModified(const std::string& file) {
@@ -49,3 +51,5 @@ bool heFileModified(const std::string& file) {
     }
     
 };
+
+

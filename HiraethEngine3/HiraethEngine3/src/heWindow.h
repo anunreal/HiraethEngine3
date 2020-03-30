@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HE_WINDOW_H
+#define HE_WINDOW_H
+
 #include "hm/hm.hpp"
 #include "heTypes.h"
 #include <map>
@@ -55,38 +57,33 @@ struct HeWindow {
     double frameTime = 0.; // the duration of the last frame (in seconds)
 };
 
-// creates the windows class with name Hiraeth2D if it wasnt created before
-extern HE_API bool heSetupClassInstance();
-// creates a dummy context needed for retrieving function pointers (context creation with attributes...)
-extern HE_API void heCreateDummyContext();
 // creates the window
-extern HE_API bool heCreateWindow(HeWindow* window);
+extern HE_API bool heWindowCreate(HeWindow* window);
 // updates the input of the window and clears the buffer
-extern HE_API void heUpdateWindow(HeWindow* window);
+extern HE_API void heWindowUpdate(HeWindow* window);
 // destroys the window and its context
-extern HE_API void heDestroyWindow(HeWindow* window);
+extern HE_API void heWindowDestroy(HeWindow* window);
 // sleeps in the current thread until the requested fps cap is reached
-extern HE_API void heSyncToFps(HeWindow* window);
+extern HE_API void heWindowSyncToFps(HeWindow* window);
 // enables vsync. Should only be called once. Timestamp is the number of frames to wait before doing the next
 // one. Should always be one. Called when the window is created and fpsCap is 0
-extern HE_API void heEnableVsync(const int8_t timestamp);
+extern HE_API void heWindowEnableVsync(const int8_t timestamp);
 // swaps the buffers of the given window. Should be called after rendering the frame
-extern HE_API void heSwapWindow(const HeWindow* window);
+extern HE_API void heWindowSwapBuffers(const HeWindow* window);
 // calculates the window border sizes (caption bar...) 
-extern HE_API hm::vec2i heCalculateWindowBorderSize(const HeWindow* window);
+extern HE_API hm::vec2i heWindowCalculateBorderSize(const HeWindow* window);
 // switches the state of the cursor between visible and hidden
-extern HE_API void heToggleCursor(const bool hidden);
+extern HE_API void heWindowToggleCursor(const bool hidden);
 
 // returns true if given key was pressed during the last frame on given window.
 // This simply searches the vector of keys pressed of the window's keyboardInfo for key
-extern inline HE_API bool heKeyWasPressed(const HeWindow* window, const HeKeyCode key);
+extern inline HE_API bool heWindowKeyWasPressed(const HeWindow* window, const HeKeyCode key);
 
 // sets the mouse to the given position relative to the window.
 // The position can either be in pixels (positive), or as a percentage (negative) meaning
 // that -0.5 will be have the current window size
-extern HE_API void heSetMousePosition(HeWindow* window, const hm::vec2f& position);
+extern HE_API void heWindowSetMousePosition(HeWindow* window, const hm::vec2f& position);
 // returns true if there is a valid rendering context in the current thread
 extern HE_API bool heIsMainThread();
-// the windows class instance
-extern HINSTANCE classInstance;								
 
+#endif

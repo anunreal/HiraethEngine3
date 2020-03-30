@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HN_CALLBACKS_H
+#define HN_CALLBACKS_H
 
 struct HnClient;
 struct HnLocalClient;
@@ -34,3 +35,5 @@ struct HnServerCallbacks {
     HnRemoteClientConnectCallback clientConnect = nullptr;
     HnRemoteClientDisconnectCallback clientDisconnect = nullptr;
 };
+
+#endif

@@ -7,36 +7,36 @@ HeThreadLoader heThreadLoader;
 
 
 // --- Materials
-HeMaterial* heCreatePbrMaterial(const std::string& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture) {
+HeMaterial* heMaterialCreatePbr(const std::string& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture) {
     
     auto it = heAssetPool.materialPool.find(name);
     if (it != heAssetPool.materialPool.end())
         return &it->second;
     
     HeMaterial* mat = &heAssetPool.materialPool[name];
-    mat->shader = heGetShader("3d_pbr");
+    mat->shader = heAssetPoolGetShader("3d_pbr");
     mat->textures["diffuse"] = diffuseTexture;
     mat->textures["normal"] = normalTexture;
     mat->textures["arm"] = armTexture;
     return mat;
     
-}
+};
 
 
 // --- Assets
 
-HeVao* heGetMesh(const std::string& file) {
+HeVao* heAssetPoolGetMesh(const std::string& file) {
     
     auto it = heAssetPool.meshPool.find(file);
     if (it != heAssetPool.meshPool.end())
         return &it->second;
     
     // load model
-    return heLoadD3Obj(file);
+    return heMeshLoad(file);
     
 };
 
-HeTexture* heGetTexture(const std::string& file) {
+HeTexture* heAssetPoolGetTexture(const std::string& file) {
     
     auto it = heAssetPool.texturePool.find(file);
     if (it != heAssetPool.texturePool.end()) {
@@ -46,36 +46,36 @@ HeTexture* heGetTexture(const std::string& file) {
     
     HeTexture* t = &heAssetPool.texturePool[file];
     t->referenceCount = 1;
-    heLoadTexture(t, file);
+    heTextureLoadFromFile(t, file);
     return t;
     
 };
 
-HeShaderProgram* heGetShader(const std::string& name) {
+HeShaderProgram* heAssetPoolGetShader(const std::string& name) {
     
     auto it = heAssetPool.shaderPool.find(name);
     if (it != heAssetPool.shaderPool.end())
         return &it->second;
     
     HeShaderProgram* s = &heAssetPool.shaderPool[name];
-    heCreateShader(s, "res/shaders/" + name + "_v.glsl", "res/shaders/" + name + "_f.glsl");
+    heShaderCreateProgram(s, "res/shaders/" + name + "_v.glsl", "res/shaders/" + name + "_f.glsl");
     return s;
     
 };
 
-HeShaderProgram* heGetShader(const std::string& name, const std::string& vShader, const std::string& fShader) {
+HeShaderProgram* heAssetPoolGetShader(const std::string& name, const std::string& vShader, const std::string& fShader) {
     
     auto it = heAssetPool.shaderPool.find(name);
     if (it != heAssetPool.shaderPool.end())
         return &it->second;
     
     HeShaderProgram* s = &heAssetPool.shaderPool[name];
-    heCreateShader(s, vShader, fShader);
+    heShaderCreateProgram(s, vShader, fShader);
     return s;
     
 };
 
-HeMaterial* heGetMaterial(const std::string& name) {
+HeMaterial* heAssetPoolGetMaterial(const std::string& name) {
     
     auto it = heAssetPool.materialPool.find(name);
     if (it != heAssetPool.materialPool.end())
@@ -88,7 +88,7 @@ HeMaterial* heGetMaterial(const std::string& name) {
 
 // --- ThreadLoader
 
-void heRequestTexture(HeTexture* texture, unsigned char* buffer) {
+void heThreadLoaderRequestTexture(HeTexture* texture, unsigned char* buffer) {
     
     if(!heIsMainThread()) {
         heThreadLoader.textures[texture] = buffer;
@@ -97,7 +97,7 @@ void heRequestTexture(HeTexture* texture, unsigned char* buffer) {
     
 };
 
-void heRequestVao(HeVao* vao) {
+void heThreadLoaderRequestVao(HeVao* vao) {
     
     if(!heIsMainThread()) {
         heThreadLoader.vaos.emplace_back(vao);
@@ -106,24 +106,27 @@ void heRequestVao(HeVao* vao) {
     
 };
 
-void heUpdateThreadLoader() {
+void heThreadLoaderUpdate() {
     
+    // textures
     for (auto& all : heThreadLoader.textures)
-        heCreateGlTextureFromBuffer(all.second, &all.first->textureId, all.first->width, all.first->height, all.first->channels, 
-                                    all.first->format);
+        heTextureCreateFromBuffer(all.second, &all.first->textureId, all.first->width, all.first->height, all.first->channels, 
+                                  all.first->format);
     
+    // vaos
     for(auto all : heThreadLoader.vaos) {
-        heCreateVao(all);
-        heBindVao(all);
+        heVaoCreate(all);
+        heVaoBind(all);
         all->verticesCount = (unsigned int) (all->vbos[0].data.size()) / all->vbos[0].dimensions;
         
         unsigned int counter = 0;
         for(auto& vbos : all->vbos)
-            heAddVboData(&vbos, counter++);
+            heVaoAddVboData(&vbos, counter++);
         
-        heUnbindVao(all);
+        heVaoUnbind(all);
     }
     
+    // clear
     heThreadLoader.textures.clear();
     heThreadLoader.vaos.clear();
     heThreadLoader.updateRequested = false;

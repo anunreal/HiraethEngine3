@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HN_CONNECTION_H
+#define HN_CONNECTION_H
+
 #include <string>
 #include <vector>
 #include <tuple> // for hnBuildPacket macro
@@ -234,4 +236,6 @@ extern HN_API inline bool operator<(const HnSocketAddress& lhs, const HnSocketAd
 #define HN_ERROR(msg) hnLogCout(msg, "[ERROR]: ")
 #else
 #define HN_ERROR(msg) {}
+#endif
+
 #endif

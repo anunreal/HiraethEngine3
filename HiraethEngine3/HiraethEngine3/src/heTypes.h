@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HE_TYPES_H
+#define HE_TYPES_H
 
 #pragma warning( disable : 26812 )
 
@@ -117,3 +118,5 @@ inline T operator& (T a, T b) {return (T)((int) a & (int) b);};
 
 HE_ENABLE_BIT(HeFboFlags)
 HE_ENABLE_BIT(HeDebugInfoFlags)
+
+#endif

@@ -1,4 +1,5 @@
 #include "heWindow.h"
+#include "heWin32Layer.h"
 #include "heGlLayer.h"
 #include "heCore.h"
 #include <map>
@@ -26,13 +27,13 @@ PFNWGLCREATECONTEXTATTRIBSARBPROC _wglCreateContextAttribsARB = nullptr;
 PFNWGLCHOOSEPIXELFORMATARBPROC    _wglChoosePixelFormatARB = nullptr;
 PFNWGLSWAPINTERVALEXTPROC         _wglSwapIntervalEXT = nullptr;
 
+
 void registerMouseInput(HeWindow* window) {
     const RAWINPUTDEVICE rid = { 0x01, 0x02, 0, window->handle };
     
-    if (!RegisterRawInputDevices(&rid, 1, sizeof(rid))) {
+    if (!RegisterRawInputDevices(&rid, 1, sizeof(rid)))
         HE_ERROR("Win32: Failed to register raw input device");
-    }
-}
+};
 
 LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     
@@ -90,7 +91,6 @@ LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpa
                 break;
             };
 #else
-            
             case WM_MOUSEMOVE: {
                 hm::vec2i pos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
                 window->mouseInfo.deltaMousePosition = pos - window->mouseInfo.mousePosition;
@@ -133,7 +133,7 @@ LRESULT CALLBACK heWindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpa
     
 };
 
-bool heCreateWindowHandle(HeWindow* window) {
+bool heWindowCreateHandle(HeWindow* window) {
     
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME | WS_MAXIMIZEBOX;
     
@@ -159,7 +159,7 @@ bool heCreateWindowHandle(HeWindow* window) {
     
     ShowWindow(window->handle, SW_SHOW);
     UpdateWindow(window->handle);
-    hm::vec2i size = heCalculateWindowBorderSize(window);
+    hm::vec2i size = heWindowCalculateBorderSize(window);
     window->windowInfo.size.x -= size.x;
     window->windowInfo.size.y -= size.y;
     window->shouldClose = false;
@@ -168,41 +168,10 @@ bool heCreateWindowHandle(HeWindow* window) {
     
 };
 
-bool heCreateWindowContext(HeWindow* window) {
+bool heWindowCreateContext(HeWindow* window) {
     
     if (_wglCreateContextAttribsARB == nullptr)
-        heCreateDummyContext();
-    
-    /*
-    const int pixelAttribs[] = {
-       WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-       WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-       WGL_DOUBLE_BUFFER_ARB,  GL_TRUE,
-       WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
-       WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB,
-       WGL_COLOR_BITS_ARB,     32,
-       WGL_ALPHA_BITS_ARB,     8,
-       WGL_DEPTH_BITS_ARB,     24,
-       WGL_STENCIL_BITS_ARB,   8,
-       WGL_SAMPLE_BUFFERS_ARB, 1,
-       WGL_SAMPLES_ARB,        0,
-       0
-    };
- 
- 
-    int pixelFormatID;
-    UINT numFormats;
-    bool status = _wglChoosePixelFormatARB(window->dc, pixelAttribs, NULL, 1, &pixelFormatID, &numFormats);
- 
-    if (status == false || numFormats == 0) {
-       std::cout << "wglChoosePixelFormatARB() failed." << std::endl;
-       return 1;
-    }
- 
-    PIXELFORMATDESCRIPTOR PFD;
-    DescribePixelFormat(window->dc, pixelFormatID, sizeof(PFD), &PFD);
-    SetPixelFormat(window->dc, pixelFormatID, &PFD);
-    */
+        heWin32CreateDummyContext();
     
     PIXELFORMATDESCRIPTOR pfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
@@ -254,7 +223,157 @@ bool heCreateWindowContext(HeWindow* window) {
     
 };
 
-bool heSetupClassInstance() {
+bool heWindowCreate(HeWindow* window) {
+    
+    if (!heWin32SetupClassInstance())
+        return false;
+    
+    if (!heWindowCreateHandle(window))
+        return false;
+    
+    if (!heWindowCreateContext(window))
+        return false;
+    
+    if (window->windowInfo.fpsCap == 0)
+        heWindowEnableVsync(1);
+    
+    registerMouseInput(window);
+    windowMap[window->handle] = window;
+    window->active = true;
+    
+    return true;
+    
+};
+
+void heWindowUpdate(HeWindow* window) {
+    
+    window->mouseInfo.leftButtonDown = false;
+    window->mouseInfo.rightButtonDown = false;
+    window->mouseInfo.deltaMousePosition = hm::vec2i(0);
+    window->keyboardInfo.keysPressed.clear();
+    
+    MSG msg;
+    while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    heFrameClear(window->windowInfo.backgroundColour, 2);
+    
+};
+
+void heWindowDestroy(HeWindow* window) {
+    
+    HDC context = GetDC(window->handle);
+    wglMakeCurrent(context, NULL);
+    ReleaseDC(window->handle, context);
+    
+    wglDeleteContext(window->context);
+    DestroyWindow(window->handle);
+    window->handle = NULL;
+    windowMap.erase(window->handle);
+    
+    if (windowMap.size() == 0)
+        UnregisterClass(L"HiraethUI", classInstance);
+    
+};
+
+void heWindowSyncToFps(HeWindow* window) {
+    
+    auto now = std::chrono::system_clock::now();
+    double nowTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    if (window->lastFrame == 0.)
+        window->lastFrame = nowTime;
+    
+    // make sure that vsync is not enabled
+    if (window->windowInfo.fpsCap > 0) {
+        double deltaTime = nowTime - window->lastFrame;
+        
+        double requestedTime = 1000. / window->windowInfo.fpsCap;
+        double sleepTime = (requestedTime - deltaTime);
+        
+        if (sleepTime > 0.) {
+            std::chrono::milliseconds duration((int)sleepTime);
+            std::this_thread::sleep_for(duration);
+        };
+    }
+    
+    now = std::chrono::system_clock::now();
+    nowTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    window->frameTime = (nowTime - window->lastFrame) / 1000.;
+    window->lastFrame = nowTime;
+    
+};
+
+void heWindowEnableVsync(const int8_t timestamp) {
+    
+    if (!_wglSwapIntervalEXT)
+        _wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
+    
+    if (_wglSwapIntervalEXT)
+        _wglSwapIntervalEXT(timestamp);
+    else
+        HE_ERROR("Could not enable vsync");
+}
+
+void heWindowSwapBuffers(const HeWindow* window) {
+    
+    SwapBuffers(window->dc);
+    
+};
+
+hm::vec2i heWindowCalculateBorderSize(const HeWindow* window) {
+    
+    RECT w, c;
+    GetWindowRect(window->handle, &w);
+    GetClientRect(window->handle, &c);
+    return hm::vec2i((w.right - w.left) - (c.right - c.left), (w.bottom - w.top) - (c.bottom - c.top));
+    
+};
+
+void heWindowToggleCursor(const bool hidden) {
+    if (hidden)
+        while (ShowCursor(false) >= 0);
+    else
+        ShowCursor(true);
+};
+
+
+bool heWindowKeyWasPressed(const HeWindow* window, const HeKeyCode key) {
+    
+    return std::find(window->keyboardInfo.keysPressed.begin(), window->keyboardInfo.keysPressed.end(), key)
+        != window->keyboardInfo.keysPressed.end();
+    
+};
+
+void heWindowSetMousePosition(HeWindow* window, const hm::vec2f& position) {
+    
+    hm::vec2i abs;
+    abs.x = (position.x >= 0) ? (int)position.x : (int)(-position.x * window->windowInfo.size.x);
+    abs.y = (position.y >= 0) ? (int)position.y : (int)(-position.y * window->windowInfo.size.y);
+    
+    POINT p;
+    p.x = abs.x;
+    p.y = abs.y;
+    ClientToScreen(window->handle, &p);
+    SetCursorPos(p.x, p.y);
+    GetCursorPos(&p);
+    ScreenToClient(window->handle, &p);
+    window->mouseInfo.mousePosition.x = p.x;
+    window->mouseInfo.mousePosition.y = p.y;
+    
+};
+
+bool heIsMainThread() {
+    
+    return wglGetCurrentContext() != NULL;
+    
+};
+
+
+
+
+bool heWin32SetupClassInstance() {
     
     if (classInstance == NULL) {
         WNDCLASSEX wex = { 0 };
@@ -282,7 +401,8 @@ bool heSetupClassInstance() {
     
 };
 
-void heCreateDummyContext() {
+
+void heWin32CreateDummyContext() {
     
     HWND dummy_window = CreateWindowExA(
                                         0,
@@ -357,154 +477,5 @@ void heCreateDummyContext() {
     wglDeleteContext(dummy_context);
     ReleaseDC(dummy_window, dummy_dc);
     DestroyWindow(dummy_window);
-    
-};
-
-bool heCreateWindow(HeWindow* window) {
-    
-    if (!heSetupClassInstance())
-        return false;
-    
-    if (!heCreateWindowHandle(window))
-        return false;
-    
-    if (!heCreateWindowContext(window))
-        return false;
-    
-    if (window->windowInfo.fpsCap == 0)
-        heEnableVsync(1);
-    
-    registerMouseInput(window);
-    windowMap[window->handle] = window;
-    window->active = true;
-    
-    return true;
-    
-};
-
-void heUpdateWindow(HeWindow* window) {
-    
-    window->mouseInfo.leftButtonDown = false;
-    window->mouseInfo.rightButtonDown = false;
-    window->mouseInfo.deltaMousePosition = hm::vec2i(0);
-    window->keyboardInfo.keysPressed.clear();
-    
-    MSG msg;
-    while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-    
-    //glClearColor(window->windowInfo.backgroundColour.getR(), window->windowInfo.backgroundColour.getG(), window->windowInfo.backgroundColour.getB(), 1.f);
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    heClearFrame(window->windowInfo.backgroundColour, 2);
-    
-};
-
-void heDestroyWindow(HeWindow* window) {
-    
-    HDC context = GetDC(window->handle);
-    wglMakeCurrent(context, NULL);
-    ReleaseDC(window->handle, context);
-    
-    wglDeleteContext(window->context);
-    DestroyWindow(window->handle);
-    window->handle = NULL;
-    windowMap.erase(window->handle);
-    
-    if (windowMap.size() == 0)
-        UnregisterClass(L"HiraethUI", classInstance);
-    
-};
-
-void heSyncToFps(HeWindow* window) {
-    
-    auto now = std::chrono::system_clock::now();
-    double nowTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-    if (window->lastFrame == 0.)
-        window->lastFrame = nowTime;
-    
-    // make sure that vsync is not enabled
-    if (window->windowInfo.fpsCap > 0) {
-        double deltaTime = nowTime - window->lastFrame;
-        
-        double requestedTime = 1000. / window->windowInfo.fpsCap;
-        double sleepTime = (requestedTime - deltaTime);
-        
-        if (sleepTime > 0.) {
-            std::chrono::milliseconds duration((int)sleepTime);
-            std::this_thread::sleep_for(duration);
-        };
-    }
-    
-    now = std::chrono::system_clock::now();
-    nowTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-    window->frameTime = (nowTime - window->lastFrame) / 1000.;
-    window->lastFrame = nowTime;
-    
-};
-
-void heEnableVsync(const int8_t timestamp) {
-    
-    if (!_wglSwapIntervalEXT)
-        _wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
-    
-    if (_wglSwapIntervalEXT)
-        _wglSwapIntervalEXT(timestamp);
-    else
-        HE_ERROR("Could not enable vsync");
-}
-
-void heSwapWindow(const HeWindow* window) {
-    
-    SwapBuffers(window->dc);
-    
-};
-
-hm::vec2i heCalculateWindowBorderSize(const HeWindow* window) {
-    
-    RECT w, c;
-    GetWindowRect(window->handle, &w);
-    GetClientRect(window->handle, &c);
-    return hm::vec2i((w.right - w.left) - (c.right - c.left), (w.bottom - w.top) - (c.bottom - c.top));
-    
-};
-
-void heToggleCursor(const bool hidden) {
-    if (hidden)
-        while (ShowCursor(false) >= 0);
-    else
-        ShowCursor(true);
-};
-
-
-bool heKeyWasPressed(const HeWindow* window, const HeKeyCode key) {
-    
-    return std::find(window->keyboardInfo.keysPressed.begin(), window->keyboardInfo.keysPressed.end(), key)
-        != window->keyboardInfo.keysPressed.end();
-    
-};
-
-void heSetMousePosition(HeWindow* window, const hm::vec2f& position) {
-    
-    hm::vec2i abs;
-    abs.x = (position.x >= 0) ? (int)position.x : (int)(-position.x * window->windowInfo.size.x);
-    abs.y = (position.y >= 0) ? (int)position.y : (int)(-position.y * window->windowInfo.size.y);
-    
-    POINT p;
-    p.x = abs.x;
-    p.y = abs.y;
-    ClientToScreen(window->handle, &p);
-    SetCursorPos(p.x, p.y);
-    GetCursorPos(&p);
-    ScreenToClient(window->handle, &p);
-    window->mouseInfo.mousePosition.x = p.x;
-    window->mouseInfo.mousePosition.y = p.y;
-    
-};
-
-bool heIsMainThread() {
-    
-    return wglGetCurrentContext() != NULL;
     
 };

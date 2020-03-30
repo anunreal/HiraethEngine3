@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HE_LOADER_H
+#define HE_LOADER_H
+
 #include "heD3.h"
 
 struct HeD3MeshBuilder {
@@ -21,10 +23,10 @@ struct HeD3MeshBuilder {
 
 // loads a 3d object from given file and stores the data in a vao from the asset pool. The name of the mesh in the 
 // asset pool will be the file name. This loads the vertices, uvs, normals and tangents of the model
-extern HE_API HeVao* heLoadD3Obj(const std::string& fileName);
+extern HE_API HeVao* heMeshLoad(const std::string& fileName);
 // loads an asset from given file. This asset must be a valid h3asset file. This will load a material and a mesh and
 // simply replace the existing ones in instance (should be nullptr)
-extern HE_API void heLoadAsset(const std::string& fileName, HeD3Instance* instance);
+extern HE_API void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance);
 // loads a level from given file. This file must be a valid h3level file. This will load all assets and lights in
 // that level. Specification for the level file format:
 // Instances:
@@ -39,4 +41,6 @@ extern HE_API void heLoadAsset(const std::string& fileName, HeD3Instance* instan
 //   colour are 3 fixed width ints and one fixed width float (see hm::colour)
 //   data are up to 8 fixed width floats (see HeD3LightSource#data)
 //   because we are only parsing numbers here, the parser does not expect any border character between the values
-extern HE_API void heLoadD3Level(const std::string& fileName, HeD3Level* level);
+extern HE_API void heD3LevelLoad(const std::string& fileName, HeD3Level* level);
+
+#endif

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HN_SERVER_H
+#define HN_SERVER_H
+
 #include "hnConnection.h"
 #include "hnCallbacks.h"
 #include <map>
@@ -111,3 +113,5 @@ extern HN_API void hnRemoteClientPingCheck(HnRemoteClient* client);
 // gets the oldest custom packet sent from this client or an empty packet if no custom packet was sent since
 // the last check. This will remove the packet from the clients list
 extern HN_API HnPacket hnRemoteClientGetCustomPacket(HnRemoteClient* client);
+
+#endif

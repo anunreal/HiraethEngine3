@@ -219,8 +219,8 @@
       <Command>copy /y "$(TargetPath)" "$(SolutionDir)bin\HiraethEngine3\$(TargetName).dll"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ServerDebug|Win32'">
@@ -240,8 +240,8 @@
       <Command>copy /y $(TargetPath) $(SolutionDir)bin\HiraethEngine3\$(TargetName)</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -261,8 +261,8 @@
       <Command>copy /y "$(TargetPath)" "$(SolutionDir)bin\HiraethEngine3\$(TargetName).dll"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ServerDebug|x64'">
@@ -282,8 +282,8 @@
       <Command>copy /y $(TargetPath) $(SolutionDir)bin\HiraethEngine3\$(TargetName)</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -308,8 +308,8 @@
       <Command>copy /y "$(TargetPath)" "$(SolutionDir)bin\HiraethEngine3\$(TargetName).dll"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Server|Win32'">
@@ -334,8 +334,8 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Client|Win32'">
@@ -360,8 +360,8 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -386,8 +386,8 @@
       <Command>copy /y "$(TargetPath)" "$(SolutionDir)bin\HiraethEngine3\$(TargetName).dll"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Server|x64'">
@@ -412,8 +412,8 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Client|x64'">
@@ -438,12 +438,11 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>cd ..
-"$(SolutionDir)hiraethmetacoder.exe" -o HiraethNetwork HiraethNetwork/src</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="hmc.cpp" />
     <ClCompile Include="src\hnClient.cpp" />
     <ClCompile Include="src\hnConnection.cpp" />
     <ClCompile Include="src\hnServer.cpp" />
@@ -451,7 +450,6 @@
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="hmc.h" />
     <ClInclude Include="src\hnCallbacks.h" />
     <ClInclude Include="src\hnClient.h" />
     <ClInclude Include="src\hnConnection.h" />

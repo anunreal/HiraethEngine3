@@ -14,7 +14,7 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     
     if (window->mouseInfo.leftButtonDown) {
         inputActive = !inputActive;
-        heToggleCursor(inputActive);
+        heWindowToggleCursor(inputActive);
     }
     
     if (!inputActive)
@@ -25,7 +25,7 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     hm::vec2i current(current_mouse_pos.x, current_mouse_pos.y);
     hm::vec2f dmouse = hm::vec2f(current - lastPosition) * 0.05f;
     
-    heSetMousePosition(window, window->windowInfo.size / 2);
+    heWindowSetMousePosition(window, window->windowInfo.size / 2);
     ::GetCursorPos(&current_mouse_pos);
     lastPosition.x = (int) current_mouse_pos.x;
     lastPosition.y = (int) current_mouse_pos.y;
@@ -90,8 +90,8 @@ std::map<unsigned int, Player> players;
 void _onClientConnect(HnClient* client, HnLocalClient* local) {
     
     HeD3Instance* instance = &level.instances.emplace_back();
-    instance->mesh = heGetMesh("res/models/player.obj");
-    instance->material = heGetMaterial("level");
+    instance->mesh = heAssetPoolGetMesh("res/models/player.obj");
+    instance->material = heAssetPoolGetMaterial("level");
     hnLocalClientHookVariable(client, local, "position", &instance->transformation.position);
     hnLocalClientHookVariable(client, local, "rotation", &instance->transformation.rotation);
     
@@ -103,7 +103,7 @@ void _onClientConnect(HnClient* client, HnLocalClient* local) {
 
 void _onClientDisconnect(HnClient* client, HnLocalClient* local) {
     Player* p = &players[local->id];
-    heRemoveD3Instance(&level, p->model);
+    heD3LevelRemoveInstance(&level, p->model);
 };
 
 void createClient() {
@@ -138,7 +138,7 @@ void modelStressTest(const std::string& file) {
     QueryPerformanceCounter(&t1);
     
     for(int i = 0; i < 1000; ++i) {
-        heLoadD3Obj(file);
+        heMeshLoad(file);
     }
     
     // stop timer
@@ -157,7 +157,7 @@ void modelStressTest(const std::string& file) {
     HeD3Instance instance;
     
     for(int i = 0; i < 1000; ++i) {
-        heLoadAsset(file, &instance);
+        heD3InstanceLoad(file, &instance);
     }
     
     // stop timer
@@ -166,8 +166,7 @@ void modelStressTest(const std::string& file) {
     // compute and print the elapsed time in millisec
     elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
     HN_LOG("h3asset loading took: " + std::to_string(elapsedTime) + "ms");
-}
-
+};
 
 
 void createWorld(HeWindow* window) {
@@ -178,25 +177,25 @@ void createWorld(HeWindow* window) {
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window->windowInfo.size.x / (float)window->windowInfo.size.y, 0.1f, 1000.0f);
     
-    heCreatePointLight(&level, hm::vec3f(100, 100, 20), 1.0f, 0.045f, 0.0075f, hm::colour(255, 5.0f));
-    heCreatePointLight(&level, hm::vec3f(-5, 6, 7), 1.0f, 0.045f, 0.0075f, hm::colour(255, 0, 0, 2.0f));
+    heD3LightSourceCreatePoint(&level, hm::vec3f(100, 100, 20), 1.0f, 0.045f, 0.0075f, hm::colour(255, 5.0f));
+    heD3LightSourceCreatePoint(&level, hm::vec3f(-5, 6, 7), 1.0f, 0.045f, 0.0075f, hm::colour(255, 0, 0, 2.0f));
     
     if(false) {
         HeD3Instance* levelModel = &level.instances.emplace_back();
-        levelModel->material = heCreatePbrMaterial("level", heGetTexture("res/textures/test/placeholder.png"), nullptr, heGetTexture("res/textures/blankArm.png"));
-        levelModel->mesh = heGetMesh("res/models/level.obj");
+        levelModel->material = heMaterialCreatePbr("level", heAssetPoolGetTexture("res/textures/test/placeholder.png"), nullptr, heAssetPoolGetTexture("res/textures/blankArm.png"));
+        levelModel->mesh = heAssetPoolGetMesh("res/models/level.obj");
         levelModel->transformation.scale = hm::vec3f(1);
         
         HeD3Instance* lampModel = &level.instances.emplace_back();
         lampModel->transformation.position = hm::vec3f(-5, 0, 7);
-        lampModel->mesh = heGetMesh("res/models/lamp.obj");
-        lampModel->material = heGetMaterial("level");
+        lampModel->mesh = heAssetPoolGetMesh("res/models/lamp.obj");
+        lampModel->material = heAssetPoolGetMaterial("level");
         
         HeD3Instance* thingyModel = &level.instances.emplace_back();
         thingyModel->transformation.position = hm::vec3f(-3, 1, -5);
-        heLoadAsset("res/assets/road.h3asset", thingyModel);
+        heD3InstanceLoad("res/assets/road.h3asset", thingyModel);
     } else {
-        heLoadD3Level("res/level/level0.h3level", &level);
+        heD3LevelLoad("res/level/level0.h3level", &level);
     }
     
 };
@@ -212,11 +211,11 @@ int main() {
     windowInfo.size             = hm::vec2i(1366, 768);
     window.windowInfo           = windowInfo;
     
-    heCreateWindow(&window);
-    heToggleCursor(true);
+    heWindowCreate(&window);
+    heWindowToggleCursor(true);
     
     HeRenderEngine engine;
-    heCreateRenderEngine(&engine, &window);
+    heRenderEngineCreate(&engine, &window);
     
     createWorld(&window);
     
@@ -226,20 +225,20 @@ int main() {
     
     while (!window.shouldClose) {
         if (heThreadLoader.updateRequested)
-            heUpdateThreadLoader();
+            heThreadLoaderUpdate();
         
-        heUpdateWindow(&window);
+        heWindowUpdate(&window);
         level.time += window.frameTime;
         
         if (window.active)
             checkWindowInput(&window, &level.camera, (float) window.frameTime);
         
-        hePrepareD3RenderEngine(&engine);
-        heRenderD3Level(&level);
-        heEndD3RenderEngine(&engine);
+        heRenderEnginePrepareD3(&engine);
+        heD3LevelRender(&level);
+        heRenderEngineFinishD3(&engine);
         
-        heSwapWindow(&window);
-        heSyncToFps(&window);
+        heWindowSwapBuffers(&window);
+        heWindowSyncToFps(&window);
 #if USE_NETWORKING
         hnClientUpdateVariables(&client);
 #endif
@@ -249,7 +248,7 @@ int main() {
     hnClientDisconnect(&client);
     thread.join();
 #endif
-    heDestroyRenderEngine(&engine);
-    heDestroyWindow(&window);
+    heRenderEngineDestroy(&engine);
+    heWindowDestroy(&window);
     return 0;
 };
