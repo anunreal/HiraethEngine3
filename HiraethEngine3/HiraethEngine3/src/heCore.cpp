@@ -31,37 +31,37 @@ void heDebugRequestInfo(const HeDebugInfoFlags flags) {
     
 };
 
-bool heDebugIsInfoRequested(const HeDebugInfoFlags flag) {
+b8 heDebugIsInfoRequested(const HeDebugInfoFlags flag) {
     
-    bool set = heDebugInfo.flags & flag;
+    b8 set = heDebugInfo.flags & flag;
     heDebugInfo.flags = heDebugInfo.flags & ~flag;
     return set;
     
 };
 
 void heDebugSetOutput(std::ostream* stream) {
-
+    
     heDebugInfo.stream = stream;
-
+    
 };
 
 void heDebugPrint(const std::string& message) {
-
-	// get time
-	auto time = std::time(nullptr);
-	struct tm buf;
-	localtime_s(&buf, &time);
-	std::string timeString;
-	timeString.reserve(10);
-	std::strftime(timeString.data(), 10, "[%H:%M:%S]", &buf);
-
-	std::string output;
-	output.reserve(19 + message.size());
-	output.append(timeString);
-	output.append("[DEBUG]:");
-	output.append(message);
-	output.push_back('\n');
-
+    
+    // get time
+    auto time = std::time(nullptr);
+    struct tm buf;
+    localtime_s(&buf, &time);
+    std::string timeString;
+    timeString.reserve(10);
+    std::strftime(timeString.data(), 10, "[%H:%M:%S]", &buf);
+    
+    std::string output;
+    output.reserve(19 + message.size());
+    output.append(timeString);
+    output.append("[DEBUG]:");
+    output.append(message);
+    output.push_back('\n');
+    
     if (heDebugInfo.stream == nullptr) {
         std::cout << output;
         std::cout.flush();
@@ -69,5 +69,5 @@ void heDebugPrint(const std::string& message) {
         *heDebugInfo.stream << output;
         heDebugInfo.stream->flush();
     }
-
+    
 };

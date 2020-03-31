@@ -17,11 +17,10 @@ struct HeDebugInfo {
 // writes given message with the prefix into cout (thread safe) with the prefix before the message and a time stamp
 extern HE_API void heLogCout(const std::string& message, const std::string& prefix);
 
-
+// returns true if the given flag was requested before (since the last check). This will remove the flag
+extern HE_API inline b8 heDebugIsInfoRequested(const HeDebugInfoFlags flag);
 // requests given debug information. This will set the given flag.
 extern HE_API inline void heDebugRequestInfo(const HeDebugInfoFlags flags);
-// returns true if the given flag was requested before (since the last check). This will remove the flag
-extern HE_API inline bool heDebugIsInfoRequested(const HeDebugInfoFlags flag);
 // sets the output stream for debug information (heDebugPrint)
 extern HE_API inline void heDebugSetOutput(std::ostream* stream);
 // prints given debug information to the stream set with heDebugSetOutput
@@ -29,7 +28,7 @@ extern HE_API void heDebugPrint(const std::string& message);
 
 // tries to run a command. These commands are mainly for dynamic debugging (print debug info, set variables...).
 // If this is no valid command, false is returned
-extern HE_API bool heCommandRun(const std::string& command);
+extern HE_API b8 heCommandRun(const std::string& command);
 
 #ifdef HE_ENABLE_LOGGING_ALL
 #define HE_ENABLE_DEBUG_MSG

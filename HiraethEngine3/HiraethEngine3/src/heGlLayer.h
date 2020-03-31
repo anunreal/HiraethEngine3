@@ -259,7 +259,9 @@ extern HE_API void heBlendMode(const int8_t mode);
 // applies a gl blend mode to only given colour attachment of a fbo. Same modes as above apply
 extern HE_API void heBufferBlendMode(const int8_t attachmentIndex, const int8_t mode);
 // en- or disables depth testing
-extern HE_API void heEnableDepth(const bool depth);
-
+extern HE_API void heEnableDepth(const b8 depth);
+// sets the view port. lowerleft is the lower left corner of the new view port (in pixels, (0|0) is default
+// size is the viewport size in pixels (width, height)
+extern HE_API void heViewport(const hm::vec2i& lowerleft, const hm::vec2i& size);
 
 #endif

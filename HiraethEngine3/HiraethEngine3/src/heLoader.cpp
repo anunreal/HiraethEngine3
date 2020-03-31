@@ -52,7 +52,7 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
 
 // parses a float of given format:
 // +ffff.fff (or -ffff.fff)
-bool parseFloatFixedWidth(std::ifstream& stream, float* result) {
+b8 parseFloatFixedWidth(std::ifstream& stream, float* result) {
     
     char c;
     stream.get(c);
@@ -87,7 +87,7 @@ bool parseFloatFixedWidth(std::ifstream& stream, float* result) {
 
 // parses an int of given format:
 // +iiii (or -iiii)
-bool parseIntFixedWidth(std::ifstream& stream, int* result) {
+b8 parseIntFixedWidth(std::ifstream& stream, int* result) {
     
     char c;
     stream.get(c);
@@ -182,7 +182,7 @@ HeVao* heMeshLoad(const std::string& fileName) {
     
     stream.close();
     
-    bool isMainThread = heIsMainThread();
+    b8 isMainThread = heIsMainThread();
     
     HeVao* vao = &heAssetPool.meshPool[fileName];
     if(isMainThread) {
@@ -266,7 +266,7 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
     stream.close();
     
     
-    bool isMainThread = heIsMainThread();
+    b8 isMainThread = heIsMainThread();
     
     HeVao* vao = &heAssetPool.meshPool[fileName];
     if(isMainThread) {

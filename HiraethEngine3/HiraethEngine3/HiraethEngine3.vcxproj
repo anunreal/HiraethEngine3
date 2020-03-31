@@ -97,7 +97,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
@@ -115,7 +115,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
@@ -135,7 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_USE_WIN32;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
@@ -157,7 +157,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_USE_WIN32;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>

@@ -9,6 +9,8 @@
 #define HE_API __declspec(dllimport)
 #endif
 
+typedef bool b8;
+
 typedef enum HeKeyCode {
     HE_KEY_0		 = 0x030,
     HE_KEY_1		 = 0x031,

@@ -57,10 +57,10 @@ struct HeD3LightSource {
     float data[8];
     // this should be true whenever this light is manipulated by the client. When update is true, the light
     // will be uploaded to the shader in the next frame
-    bool update = false;
+    b8 update = false;
     // whether this light is active at all. This should only be set to false if a light is off for a larger amount
     // of time
-    bool active = true;
+    b8 active = true;
 };
 
 struct HeD3Level {

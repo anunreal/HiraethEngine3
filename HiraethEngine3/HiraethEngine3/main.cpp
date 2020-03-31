@@ -3,6 +3,7 @@
 #include "src/heRenderer.h"
 #include "src/heLoader.h"
 #include "GLEW/glew.h"
+#include <windows.h>
 #include <thread>
 
 #include "hnClient.h"
@@ -25,7 +26,7 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     hm::vec2i current(current_mouse_pos.x, current_mouse_pos.y);
     hm::vec2f dmouse = hm::vec2f(current - lastPosition) * 0.05f;
     
-    heWindowSetMousePosition(window, window->windowInfo.size / 2);
+    heWindowSetCursorPosition(window, window->windowInfo.size / 2);
     ::GetCursorPos(&current_mouse_pos);
     lastPosition.x = (int) current_mouse_pos.x;
     lastPosition.y = (int) current_mouse_pos.y;

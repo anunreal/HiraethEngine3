@@ -185,7 +185,7 @@ void heShaderReload(HeShaderProgram* program) {
             float fdata[16];
             int   idata[16];
         };
-        bool isInt = false;
+        b8 isInt = false;
         HeUniformDataType type = HE_UNIFORM_DATA_TYPE_NONE;
     };
     
@@ -237,7 +237,7 @@ void heShaderReload(HeShaderProgram* program) {
 void heShaderCheckReload(HeShaderProgram* program) {
     
 #ifdef HE_ENABLE_HOTSWAP_SHADER
-    bool needsReloading = false;
+    b8 needsReloading = false;
     
     for(const std::string& files : program->files) {
         if(heFileModified(files)) {
@@ -876,11 +876,17 @@ void heBufferBlendMode(const int8_t attachmentIndex, const int8_t mode) {
     
 };
 
-void heEnableDepth(const bool depth) {
+void heEnableDepth(const b8 depth) {
     
     if (depth)
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);
+    
+};
+
+void heViewport(const hm::vec2i& lowerleft, const hm::vec2i& size) {
+    
+    glViewport(lowerleft.x, lowerleft.y, size.x, size.y);
     
 };

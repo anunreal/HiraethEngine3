@@ -45,7 +45,7 @@ struct HeThreadLoader {
     HeTextureRequests textures;
     HeVaoRequests vaos;
     
-    bool updateRequested = false;
+    b8 updateRequested = false;
 };
 
 extern HeAssetPool heAssetPool;

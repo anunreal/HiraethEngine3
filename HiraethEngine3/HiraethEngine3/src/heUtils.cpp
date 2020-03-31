@@ -37,7 +37,7 @@ std::string heStringReplaceAll(const std::string& input, const std::string& from
     
 }; 
 
-bool heStringStartsWith(const std::string& base, const std::string& check) {
+b8 heStringStartsWith(const std::string& base, const std::string& check) {
     
     return base.compare(0, check.size(), check.c_str()) == 0;
     

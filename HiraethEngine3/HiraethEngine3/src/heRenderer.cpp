@@ -114,7 +114,7 @@ void heD3LevelRender(HeD3Level* level) {
     
     std::vector<uint32_t> updatedLights;
     std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
-    bool printLights = heDebugIsInfoRequested(HE_DEBUG_INFO_LIGHTS);
+    b8 printLights = heDebugIsInfoRequested(HE_DEBUG_INFO_LIGHTS);
     if(printLights)
         heDebugPrint("=== LIGHT SOURCES ===");
     

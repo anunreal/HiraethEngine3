@@ -82,9 +82,9 @@ namespace hm {
     };
     
     
-    // decodes a vec2 from a int32_t (which should be previosuly recieved by encoding a vec2). Note that we can return any
-    // vec2 type here, but the x and y coordinates will always be rounded (integers), because we cant store floating point
-    // numbers in the int32_t
+    // decodes a vec2 from a int32_t (which should be previosuly recieved by encoding a vec2). Note that we can return 
+    // any vec2 type here, but the x and y coordinates will always be rounded (integers), because we cant store 
+    // floating point numbers in the int32_t
     template<typename T>
         static inline vec2<T> decodeVec2(const int32_t val) {
         vec2<T> v;
@@ -93,8 +93,8 @@ namespace hm {
         return v;
     };
     
-    // Encodes an integer vec2 to an int32_t. Only int vec2 can be encoded because floats / double have commas (duh), so
-    // we'd have to calculate and store a precision, which would just be dumb
+    // Encodes an integer vec2 to an int32_t. Only int vec2 can be encoded because floats / double have commas (duh), 
+    // so we'd have to calculate and store a precision, which would just be dumb
     static inline int32_t encodeVec2(const vec2i& vec) {
         return vec.x | (vec.y * (1 << 16));
     };
