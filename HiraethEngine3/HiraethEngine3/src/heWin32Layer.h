@@ -15,7 +15,6 @@ struct HeWin32Window {
     HDC          dc = nullptr;
 };
 
-
 // returns true if the file was modified since the last time it was checked (with this function). If this is
 // the first time this file is checked, it is assumed to not have changed. From then on the last access time will
 // be stored
@@ -26,6 +25,7 @@ extern HE_API b8 heWin32SetupClassInstance();
 // creates a dummy context needed for retrieving function pointers (context creation with attributes...)
 extern HE_API void heWin32CreateDummyContext();
 
+extern HE_API b8 heWin32IsMainThread();
 extern HE_API b8 heWin32WindowCreate(HeWindow* window);
 extern HE_API void heWin32WindowUpdate(HeWindow* window);
 extern HE_API void heWin32WindowDestroy(HeWindow* window);

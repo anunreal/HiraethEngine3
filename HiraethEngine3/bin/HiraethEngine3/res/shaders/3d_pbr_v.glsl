@@ -15,6 +15,7 @@ out vec3 pass_tangent;
 uniform mat4 u_projMat;
 uniform mat4 u_viewMat;
 uniform mat4 u_transMat;
+uniform mat3 u_normMat;
 uniform float u_time;
 uniform float u_tiling = 1;
 
@@ -38,7 +39,8 @@ void main(void) {
 	vec4 worldPos = u_transMat * vec4(in_position, 1.0);
 	gl_Position = u_projMat * u_viewMat * worldPos;
 	
-	pass_normal = normalize(u_transMat * vec4(in_normal, 0.0)).xyz;
+	//pass_normal = u_normMat * in_normal;
+	pass_normal = (u_transMat * vec4(in_normal, 0.0)).xyz;
 	pass_worldPos = worldPos.xyz;
 	pass_cameraPos = (inverse(u_viewMat) * vec4(0, 0, 0, 1)).xyz;
 	pass_tangSpace = getTangentMatrix(u_transMat);

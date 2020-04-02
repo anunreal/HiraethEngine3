@@ -24,8 +24,8 @@ namespace hm {
     
     // turns this quaternion into a rotated transformation matrix
     template<typename T>
-        static mat4<T> toMat4(const quat<T>& q) {
-        mat4 result(1.0f);
+        static mat<4, 4, T> toMat4(const quat<T>& q) {
+        mat<4, 4, T> result(1.0f);
         T qxx(q.x * q.x);
         T qyy(q.y * q.y);
         T qzz(q.z * q.z);

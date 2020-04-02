@@ -42,7 +42,7 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
     hm::vec3f tang(x, y, z);
     tang = hm::normalize(tang);
     
-    for (unsigned int i = 0; i < 3; ++i) {
+    for (uint8_t i = 0; i < 3; ++i) {
         mesh.tangentArray.emplace_back(tang.x);
         mesh.tangentArray.emplace_back(tang.y);
         mesh.tangentArray.emplace_back(tang.z);
@@ -70,7 +70,7 @@ b8 parseFloatFixedWidth(std::ifstream& stream, float* result) {
     // 5 = -2
     // 6 = -3
     
-    for(int i = 0; i < 7; ++i) {
+    for(uint8_t i = 0; i < 7; ++i) {
         stream.get(c);
         int exp = -(i - 4) - 1;
         int ch = (int) (c - '0');
@@ -87,23 +87,23 @@ b8 parseFloatFixedWidth(std::ifstream& stream, float* result) {
 
 // parses an int of given format:
 // +iiii (or -iiii)
-b8 parseIntFixedWidth(std::ifstream& stream, int* result) {
+template<typename T>
+b8 parseIntFixedWidth(std::ifstream& stream, T* result) {
     
     char c;
     stream.get(c);
     if(c == '\n')
         return false;
     
-    int sign = (c == '-') ? -1 : 1;
+    uint8_t sign = (c == '-') ? -1 : 1;
     *result = 0;
     
-    for(int i = 0; i < 4; ++i) {
+    for(uint8_t i = 0; i < 4; ++i) {
         stream.get(c);
-        int exp = (3 - i);
-        int ch = (int) (c - '0');
-        *result = *result + ch * (int) std::pow(10, exp);
+        uint16_t exp = (3 - i);
+        T ch = (T) (c - '0');
+        *result = *result + ch * (T) std::pow(10, exp);
     }
-    
     
     *result *= sign;
     return true;
@@ -113,16 +113,17 @@ b8 parseIntFixedWidth(std::ifstream& stream, int* result) {
 // parses n floats and stores them in ptr
 void parseFloats(std::ifstream& stream, int n, void* ptr) {
     
-    for(int i = 0; i < n; ++i)
+    for(uint8_t i = 0; i < n; ++i)
         parseFloatFixedWidth(stream, &((float*)ptr)[i]);
     
 };
 
 // parses n ints and stores them in ptr
-void parseInts(std::ifstream& stream, int n, void* ptr) {
+template<typename T>
+void parseInts(std::ifstream& stream, const uint8_t n, void* ptr) {
     
-    for(int i = 0; i < n; ++i)
-        parseIntFixedWidth(stream, &((int*)ptr)[i]);
+    for(uint8_t i = 0; i < n; ++i)
+        parseIntFixedWidth(stream, &((T*)ptr)[i]);
     
 };
 
@@ -157,9 +158,9 @@ HeVao* heMeshLoad(const std::string& fileName) {
             const std::vector<std::string> vertex1 = heStringSplit(args[2], '/');
             const std::vector<std::string> vertex2 = heStringSplit(args[3], '/');
             
-            int vertexId0[3] = { std::stoi(vertex0[0]) - 1, std::stoi(vertex0[1]) - 1, std::stoi(vertex0[2]) - 1 };
-            int vertexId1[3] = { std::stoi(vertex1[0]) - 1, std::stoi(vertex1[1]) - 1, std::stoi(vertex1[2]) - 1 };
-            int vertexId2[3] = { std::stoi(vertex2[0]) - 1, std::stoi(vertex2[1]) - 1, std::stoi(vertex2[2]) - 1 };
+            int32_t vertexId0[3] = { std::stoi(vertex0[0]) - 1, std::stoi(vertex0[1]) - 1, std::stoi(vertex0[2]) - 1 };
+            int32_t vertexId1[3] = { std::stoi(vertex1[0]) - 1, std::stoi(vertex1[1]) - 1, std::stoi(vertex1[2]) - 1 };
+            int32_t vertexId2[3] = { std::stoi(vertex2[0]) - 1, std::stoi(vertex2[1]) - 1, std::stoi(vertex2[2]) - 1 };
             
             parseObjVertex(vertexId0, mesh);
             parseObjVertex(vertexId1, mesh);
@@ -321,13 +322,17 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
             // light
             HeD3LightSource* light = &level->lights.emplace_back();
             stream.get(c);
-            light->type = (HeLightSourceType) (c - '0');
+            light->type     = (HeLightSourceType) (c - '0');
+            light->colour.a = 255; // unneccesary for lights  
+            light->update   = true;
             parseFloats(stream, 3, &light->vector);
-            parseInts(stream, 4, &light->colour);
+            parseInts<uint8_t>(stream, 3, &light->colour);
+            parseFloatFixedWidth(stream, &light->colour.i);
             parseFloats(stream, 8, &light->data);
         }
     }
     
     stream.close();
+    heD3LevelSetActive(level);
     
 };

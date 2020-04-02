@@ -17,7 +17,6 @@ HeFileTimeMap   timeMap;
 HeFileHandleMap handleMap;
 
 
-
 #ifndef HID_USAGE_PAGE_GENERIC
 #define HID_USAGE_PAGE_GENERIC         ((USHORT) 0x01)
 #endif
@@ -25,9 +24,9 @@ HeFileHandleMap handleMap;
 #define HID_USAGE_GENERIC_MOUSE        ((USHORT) 0x02)
 #endif
 
-PFNWGLCREATECONTEXTATTRIBSARBPROC _wglCreateContextAttribsARB = nullptr;
-PFNWGLCHOOSEPIXELFORMATARBPROC    _wglChoosePixelFormatARB = nullptr;
-PFNWGLSWAPINTERVALEXTPROC         _wglSwapIntervalEXT = nullptr;
+PFNWGLCREATECONTEXTATTRIBSARBPROC  _wglCreateContextAttribsARB = nullptr;
+PFNWGLCHOOSEPIXELFORMATARBPROC     _wglChoosePixelFormatARB = nullptr;
+PFNWGLSWAPINTERVALEXTPROC          _wglSwapIntervalEXT = nullptr;
 HINSTANCE                          classInstance;								
 std::map<HWND, HeWindow*>          windowHandleMap;
 std::map<HeWindow*, HeWin32Window> win32map;
@@ -380,14 +379,17 @@ b8 heWin32WindowCreateContext(HeWindow* window, HeWin32Window* win32) {
         return false;
     }
     
-    // TODO(Victor): use gl layer 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
+    heBlendMode(0);
     return true;
     
 };
 
+
+b8 heWin32IsMainThread() {
+    
+    return wglGetCurrentContext() != NULL;
+    
+};
 
 b8 heWin32WindowCreate(HeWindow* window) {
     

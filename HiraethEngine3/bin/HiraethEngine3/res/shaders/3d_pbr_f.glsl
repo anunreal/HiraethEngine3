@@ -37,7 +37,7 @@ vec4 getLightVector(Light light) {
 	
 	if(light.type == 2)
 		// directional light
-		return vec4(normalize(light.vector), 1.0);
+		return vec4(normalize(-light.vector), 1.0);
 
 	if(light.type == 3) {
 		// spot light

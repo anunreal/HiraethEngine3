@@ -111,7 +111,8 @@ typedef enum HeLightSourceType {
 
 typedef enum HeDebugInfoFlags {
     HE_DEBUG_INFO_LIGHTS    = 0b0001,
-    HE_DEBUG_INFO_INSTANCES = 0b0010
+    HE_DEBUG_INFO_INSTANCES = 0b0010,
+    HE_DEBUG_INFO_CAMERA    = 0b0100,
 } HeDebugInfoFlags;
 
 // a small macro to enable bitwise operations on enums

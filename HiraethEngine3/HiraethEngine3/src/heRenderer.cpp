@@ -1,6 +1,7 @@
 #include "heRenderer.h"
 #include "heWindow.h"
 #include "heCore.h"
+#include "heDebugUtils.h"
 
 void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     
@@ -16,7 +17,7 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     
     engine->hdrFbo.samples = 4;
     engine->hdrFbo.size    = window->windowInfo.size;
-    engine->hdrFbo.flags   = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER; 
+    engine->hdrFbo.flags   = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER;
     heFboCreate(&engine->hdrFbo);
     
     engine->resolvedFbo.samples = 1;
@@ -74,8 +75,12 @@ void heD3InstanceRender(HeD3Instance* instance) {
     
     if (instance->mesh != nullptr) {
         // load instance data
-        heShaderLoadUniform(instance->material->shader, "u_transMat", hm::createTransformationMatrix(instance->transformation.position,
-                                                                                                     instance->transformation.rotation, instance->transformation.scale));
+        hm::mat4f transMat = hm::createTransformationMatrix(instance->transformation.position,
+                                                            instance->transformation.rotation, instance->transformation.scale);
+        heShaderLoadUniform(instance->material->shader, "u_normMat", hm::transpose(hm::inverse(hm::mat3f(transMat))));
+        heShaderLoadUniform(instance->material->shader, "u_transMat", transMat);
+        
+        
         
         // load material
         heShaderLoadMaterial(instance->material->shader, instance->material);
@@ -114,44 +119,27 @@ void heD3LevelRender(HeD3Level* level) {
     
     std::vector<uint32_t> updatedLights;
     std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
-    b8 printLights = heDebugIsInfoRequested(HE_DEBUG_INFO_LIGHTS);
-    if(printLights)
-        heDebugPrint("=== LIGHT SOURCES ===");
-    
     uint32_t lightIndex = 0;
+    
+    // check for lights that need to be updated
     for(auto lights = level->lights.begin(); lights != level->lights.end(); ++lights) {
         if(lights->update) {
-            //heLoadLightToShader(all.first, &(*lights), lightIndex);
-            //updatedLights[lights] = lightIndex;
             updatedLights.emplace_back(lightIndex);
             lights->update = false;
-        }
-        
-        if(printLights) {
-            std::string string = "HeD3LightSource {\n";
-            string += " type    = " + std::to_string(lights->type) + "\n";
-            string += " vector  = " + hm::to_string(lights->vector) + "\n";
-            string += " colour  = " + hm::to_string(lights->colour) + "\n";
-            for(uint8_t i = 0; i < 8; ++i)
-                string += " data[" + std::to_string(i) + "] = " + std::to_string(lights->data[i]) + "\n";
-            string += "}\n";
-            heDebugPrint(string);
         }
         
         lightIndex++;
     }
     
-    if(printLights)
-        heDebugPrint("=== LIGHT SOURCES ===");
-    
+    // map all instances to their shader
     for(auto it = level->instances.begin(); it != level->instances.end(); ++it) {
-        if(it->material != nullptr) 
+        if(it->material != nullptr)
             shaderMap[it->material->shader].emplace_back(&(*it));
     }
     
     
+    // loop through shaders, load data and then render all instances
     for(const auto& all : shaderMap) {
-        
         heShaderBind(all.first);
         heShaderLoadUniform(all.first, "u_time", level->time);
         

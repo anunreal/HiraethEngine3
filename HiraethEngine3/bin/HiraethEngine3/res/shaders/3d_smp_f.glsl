@@ -19,7 +19,8 @@ in vec3 pass_cameraPos;
 out vec4 out_colour;
 
 uniform sampler2D t_diffuse;
-
+uniform float shineDamper = 50;
+uniform float reflectivity = 0.1;
 uniform vec3 u_cameraPos;
 uniform Light u_lights[lightCount];
 
@@ -34,7 +35,7 @@ vec4 getLightVector(Light light) {
 	
 	if(light.type == 2)
 		// directional light
-		return vec4(normalize(light.vector), 1.0);
+		return vec4(normalize(-light.vector), 1.0);
 
 	if(light.type == 3) {
 		// spot light
@@ -57,7 +58,11 @@ vec4 getLightVector(Light light) {
 
 void main(void) {
 	// simple phong shader
-	vec3 totalLight = vec3(0.0);
+	vec3 totalDiffuse = vec3(0.0);
+	vec3 totalSpecular = vec3(0.0);
+	vec3 diffuseColour = texture(t_diffuse, pass_uv).rgb;
+	vec3 unitNormal = normalize(pass_normal);
+	vec3 unitView = normalize(pass_cameraPos - pass_worldPos);
 	
 	for(int i = 0; i < lightCount; ++i) {
 		vec4 lightDirection = getLightVector(u_lights[i]);
@@ -66,10 +71,22 @@ void main(void) {
 			// fragment is not affected by this light
 			continue; 
 		   
-		float brightness = max(dot(lightDirection.xyz, pass_normal), 0.2);
-		totalLight += brightness * u_lights[i].colour.rgb * u_lights[i].colour.w;
+		vec3 lightColour = u_lights[i].colour.rgb * u_lights[i].colour.w;
+																		   // This works for now, for whatever reason LOL
+		float brightness = max(dot(lightDirection.xyz, unitNormal), 0.0) * 0.2;
+		totalDiffuse  += lightDirection.w * lightColour * brightness;
+		
+		
+		vec3 reflectedLightDir = reflect(-lightDirection.xyz, unitNormal);
+		float specularFactor = dot(reflectedLightDir, unitView);
+		specularFactor = max(specularFactor, 0.0);
+
+		float dampedFactor = pow(specularFactor, shineDamper);
+		dampedFactor = max(dampedFactor, 0.0);
+		vec3 finalSpecular = dampedFactor * reflectivity * lightColour;
+
+	    totalSpecular += finalSpecular * lightDirection.w;
 	}
 	
-	out_colour = vec4(totalLight + vec3(0.03) * texture(t_diffuse, pass_uv).rgb, 1.0);
-		
+	out_colour = vec4(totalDiffuse * diffuseColour + totalSpecular + vec3(0.00) * diffuseColour, 1.0);
 }

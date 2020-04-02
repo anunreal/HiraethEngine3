@@ -52,6 +52,8 @@ struct HeWindow {
     double frameTime = 0.; // the duration of the last frame (in seconds)
 };
 
+// returns true if there is a valid rendering context in the current thread
+extern HE_API b8 heIsMainThread();
 // creates the window
 extern HE_API b8 heWindowCreate(HeWindow* window);
 // updates the input of the window and clears the buffer
@@ -77,8 +79,5 @@ extern HE_API hm::vec2i heWindowCalculateBorderSize(const HeWindow* window);
 // returns true if given key was pressed during the last frame on given window.
 // This simply searches the vector of keys pressed of the window's keyboardInfo for key
 extern inline HE_API b8 heWindowKeyWasPressed(const HeWindow* window, const HeKeyCode key);
-
-// returns true if there is a valid rendering context in the current thread
-extern HE_API b8 heIsMainThread();
 
 #endif

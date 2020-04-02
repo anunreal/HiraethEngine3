@@ -6,6 +6,7 @@
 namespace hm {
     
     constexpr double PI = 3.14159265358979323846;
+    typedef int32_t length_t;
     
     template<typename T>
         inline T to_radians(const T value) {

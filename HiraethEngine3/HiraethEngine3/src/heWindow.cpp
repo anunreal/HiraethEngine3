@@ -10,7 +10,15 @@
 
 #ifdef HE_USE_WIN32
 #include "heWin32Layer.h"
+#else
+#error "Please specify a platform"
 #endif
+
+b8 heIsMainThread() {
+#ifdef HE_USE_WIN32
+    return heWin32IsMainThread();
+#endif
+};
 
 b8 heWindowCreate(HeWindow* window) {
 #ifdef HE_USE_WIN32
@@ -101,11 +109,5 @@ b8 heWindowKeyWasPressed(const HeWindow* window, const HeKeyCode key) {
     
     return std::find(window->keyboardInfo.keysPressed.begin(), window->keyboardInfo.keysPressed.end(), key)
         != window->keyboardInfo.keysPressed.end();
-    
-};
-
-b8 heIsMainThread() {
-    
-    return wglGetCurrentContext() != NULL;
     
 };

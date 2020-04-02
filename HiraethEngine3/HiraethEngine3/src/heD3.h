@@ -54,7 +54,7 @@ struct HeD3LightSource {
     //  5: the constant light value
     //  6: the linear light value
     //  7: the quadractic light value
-    float data[8];
+    float data[8] = { 0 };
     // this should be true whenever this light is manipulated by the client. When update is true, the light
     // will be uploaded to the shader in the next frame
     b8 update = false;
@@ -73,22 +73,29 @@ struct HeD3Level {
 
 // sets all important information for a directional light for a new light source in level.
 // direction should be normalized and in world space
-extern HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, const hm::vec3f& direction, const hm::colour& colour);
+extern HE_API HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, const hm::vec3f& direction, const hm::colour& colour);
 // sets all important information for a spot light for a new light source in level.
 // position is in world space
 // direction of the light is in world space
 // inAngle and outAngle are the angles in degrees that light is spreaded. In the inner circle, everything will
 // be lit with full light, and then its interpolated to zero to outAngle.
-extern HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, const hm::vec3f& position, const hm::vec3f& direction, const float inAngle, const float outAngle,  const hm::colour& colour);
+extern HE_API HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, const hm::vec3f& position, const hm::vec3f& direction, const float inAngle, const float outAngle,  const hm::colour& colour);
 // sets all important information for a point light for a new source in level.
 // position is in world space
 // the three light values control how the light acts over distance.
 // the constLightValue should always be 1
 // the linear value controls the normal decay, can be around 0.045
 // the quadratic value controls the light in far distance, can be around 0.0075
-extern HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, const hm::vec3f& position, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour);
+extern HE_API HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, const hm::vec3f& position, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour);
 // removes the HeD3Instance that instance points to from the level, if it does exist there and instance is a
 // valid pointer.
 extern void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance);
+
+// returns a pointer to the active level
+extern inline HeD3Level* heD3LevelGetActive();
+// sets the active level. This is called when a level is loaded, but can be called at any time by the user.
+// The active level is used for commands (debugging), physics and so on. Usually a game should only have one
+// loaded level anyway
+extern inline void heD3LevelSetActive(HeD3Level* level);
 
 #endif

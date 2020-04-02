@@ -29,11 +29,23 @@ extern HE_API void heDebugPrint(const std::string& message);
 // tries to run a command. These commands are mainly for dynamic debugging (print debug info, set variables...).
 // If this is no valid command, false is returned
 extern HE_API b8 heCommandRun(const std::string& command);
+// runs a thread that checks the console for input and then runs commands. This must be run in a seperate thread as
+// it will block io. The function will run as long as running is true. If running is a nullptr, the function will
+// run until the application closes
+extern HE_API void heCommandThread(b8* running);
 
 #ifdef HE_ENABLE_LOGGING_ALL
+#define HE_ENABLE_LOG_MSG
 #define HE_ENABLE_DEBUG_MSG
 #define HE_ENABLE_WARNING_MSG
 #define HE_ENABLE_ERROR_MSG
+#endif
+
+
+#ifdef HE_ENABLE_LOG_MSG
+#define HE_LOG(msg) heLogCout(msg, "[LOG  ]:")
+#else
+#define HE_LOG(msg)
 #endif
 
 

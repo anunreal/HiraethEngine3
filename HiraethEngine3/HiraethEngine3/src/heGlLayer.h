@@ -27,9 +27,9 @@ struct HeShaderProgram {
     // maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
     // be stored in the map for faster lookup.
     std::map<std::string, int16_t> uniforms;
-    // maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the 
-    // texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is 
-    // saved here so that we dont have to remember it 
+    // maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the
+    // texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is
+    // saved here so that we dont have to remember it
     std::map<std::string, int16_t> samplers;
 };
 
@@ -58,7 +58,7 @@ struct HeFbo {
     /* only one of the two arrays should be used, therefore a fbo should only have either colour buffers or
      * colour textures */
     
-	 // a vector of (multisampled) colour buffers attached to this array.
+    // a vector of (multisampled) colour buffers attached to this array.
     std::vector<uint32_t> colourBuffers;
     // a vector of colour textures attached to this array
     std::vector<uint32_t> colourTextures;
@@ -66,7 +66,7 @@ struct HeFbo {
     // the amount of samples in this fbo (multisampling). Must be either 4, 8, 16. More samplers mean smoother
     // results but higher memory usage. Needs to be set before fbo creation
     uint8_t samples = 1;
-    // flags of this fbo. More flags can be set, but only one of HE_FBO_FLAG_DEPTH_RENDER_BUFFER and 
+    // flags of this fbo. More flags can be set, but only one of HE_FBO_FLAG_DEPTH_RENDER_BUFFER and
     // HE_FBO_FLAG_DEPTH_TEXTURE
     // should be set. Needs to be set before fbo creation
     HeFboFlags flags;
@@ -96,13 +96,13 @@ struct HeTexture {
 // --- Shaders
 
 // loads a compute shader from given file
-extern HE_API void heGlShaderLoadCompute(HeShaderProgram* program, const std::string& computeShader);
+extern HE_API void heShaderLoadCompute(HeShaderProgram* program, const std::string& computeShader);
 // loads a shader from given shader files
-extern HE_API void heGlShaderLoadProgram(HeShaderProgram* program, const std::string& vertexShader, const std::string& fragmentShader);
+extern HE_API void heShaderLoadProgram(HeShaderProgram* program, const std::string& vertexShader, const std::string& fragmentShader);
 // creates a new shader by loading it from given files. This should only be used once (first creation) as it will store
 // important data for now. This should be used when the user loads shaders
 extern HE_API void heShaderCreateProgram(HeShaderProgram* program, const std::string& vertexShader, const std::string& framentShader);
-// binds given shader. If shader hotswapping is reloaded and this shader was modified it will also reload it 
+// binds given shader. If shader hotswapping is reloaded and this shader was modified it will also reload it
 extern HE_API void heShaderBind(HeShaderProgram* program);
 // unbinds the currently bound shader
 extern HE_API void heShaderUnbind();
@@ -112,7 +112,7 @@ extern HE_API void heShaderDestroy(HeShaderProgram* program);
 extern HE_API void heShaderRunCompute(HeShaderProgram* program, const uint32_t groupsX, const uint32_t groupsY, const uint32_t groupsZ);
 // reloads given shader
 extern HE_API void heShaderReload(HeShaderProgram* program);
-// checks if any of the shaders files were modified (and shader hotswapping is enabled), and if so it 
+// checks if any of the shaders files were modified (and shader hotswapping is enabled), and if so it
 // reloads the program
 extern HE_API void heShaderCheckReload(HeShaderProgram* program);
 
@@ -129,6 +129,7 @@ extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::stri
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const float value);
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const double value);
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const uint32_t value);
+extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat3f& value);
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat4f& value);
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec2f& value);
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const hm::vec3f& value);
@@ -140,7 +141,7 @@ extern HE_API void heShaderLoadUniform(HeShaderProgram* program, const std::stri
 
 // --- Buffers
 
-// creates a new vbo buffer from given data. Dimensions is the number of floats that build one vertex 
+// creates a new vbo buffer from given data. Dimensions is the number of floats that build one vertex
 // (i.e. 3 for a normal, 2 for a uv). This does not add the buffer to any vao. A vbo can be used in
 // different vaos, though it is not recommended
 extern HE_API void heVboCreate(HeVbo* vbo, const std::vector<float>& data);
@@ -153,8 +154,8 @@ extern HE_API void heVaoCreate(HeVao* vao);
 // attributeIndex is the index of this vbo in the vao
 extern HE_API void heVaoAddVboData(HeVbo* vbo, const int8_t attributeIndex);
 // adds an existing vbo to given vao. Both vao and vbo need to be created beforehand, and the vao needs
-// to be bound before this call. If this is the first vbo for the given vao, the verticesCount 
-// of the vao is calculated 
+// to be bound before this call. If this is the first vbo for the given vao, the verticesCount
+// of the vao is calculated
 extern HE_API void heVaoAddVbo(HeVao* vao, HeVbo* vbo);
 // adds new data to given vao. The vao needs to be created and bound before this.
 extern HE_API void heVaoAddData(HeVao* vao, const std::vector<float>& data, const uint8_t dimensions);
@@ -186,7 +187,7 @@ extern HE_API void heFboUnbind();
 extern HE_API void heFboDestroy(HeFbo* fbo);
 // resizes given fbo by destroying it and creating a new version with new size
 extern HE_API void heFboResize(HeFbo* fbo, const hm::vec2i& newSize);
-// draws the source fbo onto the target fbo. If the source should be drawn directly onto the screen, then a "fake" fbo 
+// draws the source fbo onto the target fbo. If the source should be drawn directly onto the screen, then a "fake" fbo
 // must be created with an id of 0 and the size of the window
 extern HE_API void heFboRender(HeFbo* sourceFbo, HeFbo* targetFbo);
 // renders the source fbo directly onto the window with given size
@@ -198,7 +199,7 @@ extern HE_API void heFboRender(HeFbo* sourceFbo, const hm::vec2i& windowSize);
 // creates an empty texture. The details of the texture (width, height...) must already be set
 extern inline HE_API void heTextureCreateEmpty(HeTexture* texture);
 // loads a new texture from given file. If given file does not exist, an error is printed and no gl texture
-// will be generated. If gammaCorrect is true, the texture will be saved as srgb, which is useful for  
+// will be generated. If gammaCorrect is true, the texture will be saved as srgb, which is useful for
 extern HE_API void heTextureLoadFromFile(HeTexture* texture, const std::string& fileName);
 // creates an opengl texture from given information. Id will be set to the gl texture id created. This will
 // also delete the buffer

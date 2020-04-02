@@ -2,6 +2,7 @@
 #include "src/heD3.h"
 #include "src/heRenderer.h"
 #include "src/heLoader.h"
+#include "src/heCore.h"
 #include "GLEW/glew.h"
 #include <windows.h>
 #include <thread>
@@ -128,6 +129,8 @@ void createClient() {
 
 
 void modelStressTest(const std::string& file) {
+    const int COUNT = 10;
+    
     LARGE_INTEGER frequency;        // ticks per second
     LARGE_INTEGER t1, t2;           // ticks
     double elapsedTime;
@@ -138,16 +141,16 @@ void modelStressTest(const std::string& file) {
     // start timer
     QueryPerformanceCounter(&t1);
     
-    for(int i = 0; i < 1000; ++i) {
-        heMeshLoad(file);
+    for(int i = 0; i < COUNT; ++i) {
+        HeVao* v = heMeshLoad(file + ".obj");
+        heVaoDestroy(v);
     }
     
     // stop timer
     QueryPerformanceCounter(&t2);
     
     // compute and print the elapsed time in millisec
-    elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
-    HN_LOG("OBJ loading took: " + std::to_string(elapsedTime) + "ms");
+    double elapsedTimeObj = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
     
     
     
@@ -157,8 +160,9 @@ void modelStressTest(const std::string& file) {
     
     HeD3Instance instance;
     
-    for(int i = 0; i < 1000; ++i) {
-        heD3InstanceLoad(file, &instance);
+    for(int i = 0; i < COUNT; ++i) {
+        heD3InstanceLoad(file + ".h3asset", &instance);
+        heVaoDestroy(instance.mesh);
     }
     
     // stop timer
@@ -166,11 +170,14 @@ void modelStressTest(const std::string& file) {
     
     // compute and print the elapsed time in millisec
     elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
+    HN_LOG("OBJ loading took: " + std::to_string(elapsedTimeObj) + "ms");
     HN_LOG("h3asset loading took: " + std::to_string(elapsedTime) + "ms");
 };
 
 
 void createWorld(HeWindow* window) {
+    
+    //modelStressTest("res/assets/stage");
     
     HeD3Camera* camera = &level.camera;
     camera->position = hm::vec3f(0, 1, 0);
@@ -178,8 +185,8 @@ void createWorld(HeWindow* window) {
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window->windowInfo.size.x / (float)window->windowInfo.size.y, 0.1f, 1000.0f);
     
-    heD3LightSourceCreatePoint(&level, hm::vec3f(100, 100, 20), 1.0f, 0.045f, 0.0075f, hm::colour(255, 5.0f));
-    heD3LightSourceCreatePoint(&level, hm::vec3f(-5, 6, 7), 1.0f, 0.045f, 0.0075f, hm::colour(255, 0, 0, 2.0f));
+    //heD3LightSourceCreatePoint(&level, hm::vec3f(100, 100, 20), 1.0f, 0.045f, 0.0075f, hm::colour(255, 5.0f));
+    //heD3LightSourceCreatePoint(&level, hm::vec3f(-5, 6, 7), 1.0f, 0.045f, 0.0075f, hm::colour(255, 0, 0, 2.0f));
     
     if(false) {
         HeD3Instance* levelModel = &level.instances.emplace_back();
@@ -195,9 +202,8 @@ void createWorld(HeWindow* window) {
         HeD3Instance* thingyModel = &level.instances.emplace_back();
         thingyModel->transformation.position = hm::vec3f(-3, 1, -5);
         heD3InstanceLoad("res/assets/road.h3asset", thingyModel);
-    } else {
+    } else
         heD3LevelLoad("res/level/level0.h3level", &level);
-    }
     
 };
 
@@ -219,6 +225,8 @@ int main() {
     heRenderEngineCreate(&engine, &window);
     
     createWorld(&window);
+    
+    std::thread commandThread(heCommandThread, nullptr);
     
 #if USE_NETWORKING
     std::thread thread(createClient);
@@ -249,6 +257,7 @@ int main() {
     hnClientDisconnect(&client);
     thread.join();
 #endif
+    commandThread.detach();
     heRenderEngineDestroy(&engine);
     heWindowDestroy(&window);
     return 0;

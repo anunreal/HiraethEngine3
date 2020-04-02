@@ -1,6 +1,10 @@
 #include "heCore.h"
+#include "heUtils.h"
+#include "heD3.h"
+#include "heDebugUtils.h"
 #include <ctime>
 #include <iostream>
+#include <vector>
 
 HeDebugInfo heDebugInfo;
 
@@ -10,9 +14,9 @@ void heLogCout(const std::string& message, const std::string& prefix) {
     auto time = std::time(nullptr);
     struct tm buf;
     localtime_s(&buf, &time);
-    std::string timeString;
-    timeString.reserve(10);
-    std::strftime(timeString.data(), 10, "[%H:%M:%S]", &buf);
+    char timeBuf[11];
+    std::strftime(timeBuf, 11, "[%H:%M:%S]", &buf);
+    std::string timeString(timeBuf, 10);
     
     std::string output;
     output.reserve(19 + message.size());
@@ -27,7 +31,41 @@ void heLogCout(const std::string& message, const std::string& prefix) {
 
 void heDebugRequestInfo(const HeDebugInfoFlags flags) {
     
-    heDebugInfo.flags |= flags;
+    //heDebugInfo.flags |= flags;
+    // print debug information
+    
+    if(flags == HE_DEBUG_INFO_LIGHTS) {
+        HeD3Level* level = heD3LevelGetActive();
+        heDebugPrint("=== LIGHTS === ");
+        for(const auto& all : level->lights) {
+            std::string string;
+            he_to_string(&all, string);
+            heDebugPrint(string);
+        }
+        
+        heDebugPrint("=== LIGHTS ===");
+    }
+    
+    if(flags == HE_DEBUG_INFO_INSTANCES) {
+        HeD3Level* level = heD3LevelGetActive();
+        heDebugPrint("=== INSTANCES ===");
+        for(const auto& all : level->instances) {
+            std::string string;
+            he_to_string(&all, string);
+            heDebugPrint(string);
+        }
+        
+        heDebugPrint("=== INSTANCES ===");
+    }
+    
+    if(flags & HE_DEBUG_INFO_CAMERA) {
+        HeD3Level* level = heD3LevelGetActive();
+        heDebugPrint("=== CAMERA ===");
+        std::string string;
+        he_to_string(&level->camera, string);
+        heDebugPrint(string);
+        heDebugPrint("=== CAMERA ===");
+    }
     
 };
 
@@ -47,18 +85,7 @@ void heDebugSetOutput(std::ostream* stream) {
 
 void heDebugPrint(const std::string& message) {
     
-    // get time
-    auto time = std::time(nullptr);
-    struct tm buf;
-    localtime_s(&buf, &time);
-    std::string timeString;
-    timeString.reserve(10);
-    std::strftime(timeString.data(), 10, "[%H:%M:%S]", &buf);
-    
     std::string output;
-    output.reserve(19 + message.size());
-    output.append(timeString);
-    output.append("[DEBUG]:");
     output.append(message);
     output.push_back('\n');
     
@@ -69,5 +96,37 @@ void heDebugPrint(const std::string& message) {
         *heDebugInfo.stream << output;
         heDebugInfo.stream->flush();
     }
+    
+};
+
+
+b8 heCommandRun(const std::string& message) {
+    
+    b8 found = false;
+    
+    std::vector<std::string> args = heStringSplit(message, ' ');
+    if(args[0] == "print") {
+        if(args[1] == "lights") {
+            heDebugRequestInfo(HE_DEBUG_INFO_LIGHTS);
+            found = true;
+        } else if(args[1] == "instances") {
+            heDebugRequestInfo(HE_DEBUG_INFO_INSTANCES);
+            found = true;
+        } else if(args[1] == "camera") {
+            heDebugRequestInfo(HE_DEBUG_INFO_CAMERA);
+            found = true;
+        }
+    }
+    
+    return found;
+    
+};
+
+void heCommandThread(b8* running) {
+    
+    std::string line;
+    while((running == nullptr || *running) && std::getline(std::cin, line))
+        if(!heCommandRun(line))
+        HE_DEBUG("Invalid command!");
     
 };

@@ -4,7 +4,7 @@
 
 namespace hm {
     template<typename T>
-        static mat4<T> createOrthographicProjectionMatrix(const vec2<T>& size, const vec2<T>& center, const T depth) {
+        static mat<4, 4, T> createOrthographicProjectionMatrix(const vec2<T>& size, const vec2<T>& center, const T depth) {
         
         T size2x = size.x / 2;
         T size2y = size.y / 2;
@@ -18,7 +18,7 @@ namespace hm {
         f = depth,
         n = -1.0f;
         
-        hm::mat4 orthoMat = hm::mat4(1.0f);
+        hm::mat<4, 4, T> orthoMat(1.0f);
         orthoMat[0][0] = 2.0f / (r - l);
         orthoMat[1][1] = 2.0f / (t - b);
         orthoMat[2][2] = 2.0f / (f - n);
@@ -31,9 +31,9 @@ namespace hm {
     };
     
     template<typename T>
-        static mat4<T> createPerspectiveProjectionMatrix(const T fov, const T ratio, const T nearPlane, const T farPlane) {
+        static mat<4, 4, T> createPerspectiveProjectionMatrix(const T fov, const T ratio, const T nearPlane, const T farPlane) {
         
-        mat4<T> mat(0.0);
+        mat<4, 4, T> mat(static_cast<T>(0));
         const T frustumLength = farPlane - nearPlane;
         const T tanHalfAngle = (T)std::tan(to_radians(fov) / 2.0);
         
@@ -47,9 +47,9 @@ namespace hm {
     };
     
     template<typename T>
-        static mat4<T> createViewMatrix(const vec3<T>& position, const vec3<T>& rotation) {
+        static mat<4, 4, T> createViewMatrix(const vec3<T>& position, const vec3<T>& rotation) {
         
-        mat4<T> mat(1.0);
+        mat<4, 4, T> mat(static_cast<T>(1));
         mat = rotate(mat, rotation.x, hm::vec3f(1, 0, 0));
         mat = rotate(mat, rotation.y, hm::vec3f(0, 1, 0));
         mat = translate(mat, -position);
@@ -58,21 +58,21 @@ namespace hm {
     };
     
     template<typename T>
-        static mat4<T> createTransformationMatrix(const vec3<T>& position, const quat<T>& rotation, const vec3<T>& scale) {
+        static mat<4, 4, T> createTransformationMatrix(const vec3<T>& position, const quat<T>& rotation, const vec3<T>& scale) {
         
-        mat4<T> p(1);
+        mat<4, 4, T> p(static_cast<T>(1));
         p = hm::translate(p, position);
-        mat4<T> s(1);
+        mat<4, 4, T> s(static_cast<T>(1));
         s = hm::scale(s, scale);
-        mat4<T> r = hm::toMat4(rotation);
+        mat<4, 4, T> r = hm::toMat4(rotation);
         return p * r * s;
         
     };
     
     template<typename T>
-        static mat4<T> createTransformationMatrix(const vec3<T>& position, const vec3<T>& rotation, const vec3<T>& scale) {
+        static mat<4, 4, T> createTransformationMatrix(const vec3<T>& position, const vec3<T>& rotation, const vec3<T>& scale) {
         
-        mat4<T> m(1);
+        mat<4, 4, T> m(static_cast<T>(1));
         m = hm::scale(m, scale);
         m = hm::translate(m, position);
         m = hm::rotate(m, rotation);
@@ -81,9 +81,9 @@ namespace hm {
     };
     
     template<typename T>
-        static mat4<T> createTransformationMatrix(const vec2<T>& position, const vec2<T>& scale) {
+        static mat<4, 4, T> createTransformationMatrix(const vec2<T>& position, const vec2<T>& scale) {
         
-        mat4<T> mat(1);
+        mat<4, 4, T> mat(static_cast<T>(1));
         mat = hm::scale(mat, scale);
         mat = hm::translate(mat, position);
         return mat;
@@ -97,9 +97,9 @@ namespace hm {
         T ry = to_radians(eulerAngles.y);
         
         vec3<T> direction;
-        direction.x = (T) (std::cos(ry) * std::cos(rx)); 
-        direction.y = (T) std::sin(rx); 
-        direction.z = (T) (std::cos(ry) * std::cos(rx)); 
+        direction.x = (T) (std::cos(ry) * std::cos(rx));
+        direction.y = (T) std::sin(rx);
+        direction.z = (T) (std::cos(ry) * std::cos(rx));
         return direction;
         
     };

@@ -146,7 +146,7 @@ void heShaderCreateProgram(HeShaderProgram* program, const std::string& vertexSh
     program->files.emplace_back(fragmentShader);
     heShaderLoadProgram(program, vertexShader, fragmentShader);
     
-}; 
+};
 
 void heShaderBind(HeShaderProgram* program) {
     
@@ -191,7 +191,7 @@ void heShaderReload(HeShaderProgram* program) {
     
     int uniformCount;
     glGetProgramInterfaceiv(program->programId, GL_UNIFORM, GL_ACTIVE_RESOURCES, &uniformCount);
-    std::map<std::string, Uniform> uniforms; 
+    std::map<std::string, Uniform> uniforms;
     
     std::vector<GLchar> nameData(256);
     std::vector<GLenum> properties;
@@ -201,7 +201,7 @@ void heShaderReload(HeShaderProgram* program) {
     std::vector<GLint> values(properties.size());
     
     for(int i = 0; i < uniformCount; ++i) {
-        glGetProgramResourceiv(program->programId, GL_UNIFORM, i, (GLsizei) properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]); 
+        glGetProgramResourceiv(program->programId, GL_UNIFORM, i, (GLsizei) properties.size(), &properties[0], (GLsizei) values.size(), NULL, &values[0]);
         
         nameData.resize(values[0]); // length of the name
         glGetProgramResourceName(program->programId, GL_UNIFORM, i, (GLsizei) nameData.size(), NULL, &nameData[0]);
@@ -223,7 +223,7 @@ void heShaderReload(HeShaderProgram* program) {
     // reload shader
     heShaderDestroy(program);
     // for now we assume that the program is a simple vertex / fragment shader
-    heShaderLoadProgram(program, program->files[0], program->files[1]); 
+    heShaderLoadProgram(program, program->files[0], program->files[1]);
     heShaderBind(program);
     
     // upload data to it
@@ -341,6 +341,13 @@ void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformNam
     
     int location = heShaderGetUniformLocation(program, uniformName);
     glUniform1i(location, value);
+    
+};
+
+void heShaderLoadUniform(HeShaderProgram* program, const std::string& uniformName, const hm::mat3f& value) {
+    
+    int location = heShaderGetUniformLocation(program, uniformName);
+    glUniformMatrix3fv(location, 1, false, &value[0][0]);
     
 };
 
@@ -634,7 +641,7 @@ void heFboRender(HeFbo* sourceFbo, HeFbo* targetFbo) {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, targetFbo->fboId);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, sourceFbo->fboId);
     glDrawBuffer(GL_BACK);
-    glBlitFramebuffer(0, 0, sourceFbo->size.x, sourceFbo->size.y, 0, 0, targetFbo->size.x, targetFbo->size.y, 
+    glBlitFramebuffer(0, 0, sourceFbo->size.x, sourceFbo->size.y, 0, 0, targetFbo->size.x, targetFbo->size.y,
                       GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
     heFboUnbind();
     
@@ -678,7 +685,7 @@ void heTextureLoadFromFile(HeTexture* texture, const std::string& fileName) {
     
 };
 
-void heTextureCreateFromBuffer(unsigned char* buffer, uint32_t* id, const int16_t width, const int16_t height, const int8_t channels, const HeColourFormat format) 
+void heTextureCreateFromBuffer(unsigned char* buffer, uint32_t* id, const int16_t width, const int16_t height, const int8_t channels, const HeColourFormat format)
 {
     
     glGenTextures(1, id);

@@ -14,6 +14,44 @@ namespace hm {
         vec3(const vec3& v) : x(v.x), y(v.y), z(v.z) {};
         
         
+        // accessors
+        
+        const T& operator[](const unsigned int index) const {
+            switch (index) {
+                case 0:
+                return x;
+                
+                case 1:
+                return y;
+                
+                case 2:
+                return z;
+            }
+            
+            // Cannot access higher indices in this vec4 (size: 4, tried: index)
+            assert(index < 3);
+            return x;
+        };
+        
+        
+        T& operator[](const unsigned int index) {
+            switch (index) {
+                case 0:
+                return x;
+                
+                case 1:
+                return y;
+                
+                case 2:
+                return z;
+            }
+            
+            // Cannot access higher indices in this vec4 (size: 4, tried: index)
+            assert(index < 3);
+            return x;
+        };
+        
+        
         // operators
         
         inline vec3 operator*(const vec3& v) const {

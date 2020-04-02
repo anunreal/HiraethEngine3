@@ -173,6 +173,7 @@
     <ClInclude Include="src\heAssets.h" />
     <ClInclude Include="src\heCore.h" />
     <ClInclude Include="src\heD3.h" />
+    <ClInclude Include="src\heDebugUtils.h" />
     <ClInclude Include="src\heGlLayer.h" />
     <ClInclude Include="src\heLoader.h" />
     <ClInclude Include="src\heRenderer.h" />
@@ -182,7 +183,9 @@
     <ClInclude Include="src\heWindow.h" />
     <ClInclude Include="src\hm\colour.hpp" />
     <ClInclude Include="src\hm\hm.hpp" />
+    <ClInclude Include="src\hm\mat3.hpp" />
     <ClInclude Include="src\hm\mat4.hpp" />
+    <ClInclude Include="src\hm\matrix.hpp" />
     <ClInclude Include="src\hm\matrixmath.hpp" />
     <ClInclude Include="src\hm\quat.hpp" />
     <ClInclude Include="src\hm\setup.hpp" />
@@ -195,6 +198,7 @@
     <ClCompile Include="src\heAssets.cpp" />
     <ClCompile Include="src\heCore.cpp" />
     <ClCompile Include="src\heD3.cpp" />
+    <ClCompile Include="src\heDebugUtils.cpp" />
     <ClCompile Include="src\heGlLayer.cpp" />
     <ClCompile Include="src\heLoader.cpp" />
     <ClCompile Include="src\heRenderer.cpp" />

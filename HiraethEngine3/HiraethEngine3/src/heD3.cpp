@@ -1,5 +1,7 @@
 #include "heD3.h"
 
+HeD3Level* heActiveLevel;
+
 
 HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, const hm::vec3f& direction, const hm::colour& colour) {
     
@@ -60,3 +62,7 @@ void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance) {
     level->instances.erase(it);
     
 };
+
+HeD3Level* heD3LevelGetActive() { return heActiveLevel; };
+
+void heD3LevelSetActive(HeD3Level* level) { heActiveLevel = level; };
