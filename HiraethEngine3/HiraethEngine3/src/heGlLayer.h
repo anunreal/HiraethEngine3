@@ -31,6 +31,10 @@ struct HeShaderProgram {
     // texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is
     // saved here so that we dont have to remember it
     std::map<std::string, int16_t> samplers;
+    
+#ifdef HE_ENABLE_NAMES
+    std::string name;
+#endif
 };
 
 struct HeVbo {
@@ -44,6 +48,10 @@ struct HeVao {
     uint32_t vaoId = 0;
     uint32_t verticesCount = 0;
     std::vector<HeVbo> vbos;
+    
+#ifdef HE_ENABLE_NAMES
+    std::string name;
+#endif
 };
 
 struct HeFbo {

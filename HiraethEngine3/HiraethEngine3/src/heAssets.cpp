@@ -32,7 +32,14 @@ HeVao* heAssetPoolGetMesh(const std::string& file) {
         return &it->second;
     
     // load model
-    return heMeshLoad(file);
+    HeVao* vao = &heAssetPool.meshPool[file];
+    heMeshLoad(file, vao);
+    
+#ifdef HE_ENABLE_NAMES
+    vao->name = file;
+#endif
+    
+    return vao;
     
 };
 
@@ -59,6 +66,11 @@ HeShaderProgram* heAssetPoolGetShader(const std::string& name) {
     
     HeShaderProgram* s = &heAssetPool.shaderPool[name];
     heShaderCreateProgram(s, "res/shaders/" + name + "_v.glsl", "res/shaders/" + name + "_f.glsl");
+    
+#ifdef HE_ENABLE_NAMES
+    s->name = name;
+#endif
+    
     return s;
     
 };
@@ -110,7 +122,7 @@ void heThreadLoaderUpdate() {
     
     // textures
     for (auto& all : heThreadLoader.textures)
-        heTextureCreateFromBuffer(all.second, &all.first->textureId, all.first->width, all.first->height, all.first->channels, 
+        heTextureCreateFromBuffer(all.second, &all.first->textureId, all.first->width, all.first->height, all.first->channels,
                                   all.first->format);
     
     // vaos

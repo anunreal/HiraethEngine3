@@ -3,6 +3,7 @@
 #include "src/heRenderer.h"
 #include "src/heLoader.h"
 #include "src/heCore.h"
+#include "src/heDebugUtils.h"
 #include "GLEW/glew.h"
 #include <windows.h>
 #include <thread>
@@ -142,8 +143,9 @@ void modelStressTest(const std::string& file) {
     QueryPerformanceCounter(&t1);
     
     for(int i = 0; i < COUNT; ++i) {
-        HeVao* v = heMeshLoad(file + ".obj");
-        heVaoDestroy(v);
+        HeVao v;
+        heMeshLoad(file + ".obj", &v);
+        heVaoDestroy(&v);
     }
     
     // stop timer

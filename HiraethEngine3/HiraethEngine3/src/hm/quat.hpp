@@ -76,6 +76,7 @@ namespace hm {
     // calculates the euler angles from this quaternion (in degrees)
     template<typename T>
         static vec3<T> toEuler(const quat<T>& quat) {
+        
         vec3<T> euler;
         float sinr_cosp = 2.0f * (quat.w * quat.x + quat.y * quat.z);
         float cosr_cosp = 1.0f - 2.0f * (quat.x * quat.x + quat.y * quat.y);
@@ -91,6 +92,25 @@ namespace hm {
         float cosy_cosp = 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z);
         euler.y = atan2(siny_cosp, cosy_cosp);
         return euler;
+        
+    };
+    
+    static quatf parseQuatf(const std::string& input) {
+        
+        std::string arguments[4];
+        size_t index0 = input.find('/');
+        arguments[0] = input.substr(0, index0);
+        
+        // we need the actual offset, find will only give us the offset in the substr (add 1 for the last /)
+        size_t index1 = input.substr(index0 + 1).find('/') + index0 + 1;
+        arguments[1] = input.substr(index0 + 1, index1);
+        
+        size_t index2 = input.substr(index1 + 1).find('/') + index1 + 1;
+        arguments[2] = input.substr(index1 + 1, index2);
+        arguments[3] = input.substr(index2 + 1);
+        
+        return quatf(std::stof(arguments[0]), std::stof(arguments[1]), std::stof(arguments[2]), std::stof(arguments[3]));
+        
     };
     
 };

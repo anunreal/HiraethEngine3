@@ -99,34 +99,3 @@ void heDebugPrint(const std::string& message) {
     
 };
 
-
-b8 heCommandRun(const std::string& message) {
-    
-    b8 found = false;
-    
-    std::vector<std::string> args = heStringSplit(message, ' ');
-    if(args[0] == "print") {
-        if(args[1] == "lights") {
-            heDebugRequestInfo(HE_DEBUG_INFO_LIGHTS);
-            found = true;
-        } else if(args[1] == "instances") {
-            heDebugRequestInfo(HE_DEBUG_INFO_INSTANCES);
-            found = true;
-        } else if(args[1] == "camera") {
-            heDebugRequestInfo(HE_DEBUG_INFO_CAMERA);
-            found = true;
-        }
-    }
-    
-    return found;
-    
-};
-
-void heCommandThread(b8* running) {
-    
-    std::string line;
-    while((running == nullptr || *running) && std::getline(std::cin, line))
-        if(!heCommandRun(line))
-        HE_DEBUG("Invalid command!");
-    
-};

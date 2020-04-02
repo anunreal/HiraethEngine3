@@ -127,12 +127,12 @@ void parseInts(std::ifstream& stream, const uint8_t n, void* ptr) {
     
 };
 
-HeVao* heMeshLoad(const std::string& fileName) {
+void heMeshLoad(const std::string& fileName, HeVao* vao) {
     
     std::ifstream stream(fileName);
     if (!stream.good()) {
         HE_ERROR("Could not load model file [" + fileName + "]");
-        return nullptr;
+        return;
     }
     
     std::string string;
@@ -185,7 +185,6 @@ HeVao* heMeshLoad(const std::string& fileName) {
     
     b8 isMainThread = heIsMainThread();
     
-    HeVao* vao = &heAssetPool.meshPool[fileName];
     if(isMainThread) {
         heVaoCreate(vao);
         heVaoBind(vao);
@@ -198,8 +197,6 @@ HeVao* heMeshLoad(const std::string& fileName) {
     
     if(!isMainThread)
         heThreadLoaderRequestVao(vao);
-    
-    return vao;
     
 };
 
@@ -217,6 +214,10 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
     std::getline(stream, line);
     
     std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
+    
+#ifdef HE_ENABLE_NAMES
+    instance->name = assetName;
+#endif
     
     if(instance->material == nullptr)
         instance->material = &heAssetPool.materialPool[assetName];
@@ -270,6 +271,11 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
     b8 isMainThread = heIsMainThread();
     
     HeVao* vao = &heAssetPool.meshPool[fileName];
+    
+#ifdef HE_ENABLE_NAMES
+    vao->name = fileName;
+#endif
+    
     if(isMainThread) {
         heVaoCreate(vao);
         heVaoBind(vao);
@@ -323,7 +329,7 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
             HeD3LightSource* light = &level->lights.emplace_back();
             stream.get(c);
             light->type     = (HeLightSourceType) (c - '0');
-            light->colour.a = 255; // unneccesary for lights  
+            light->colour.a = 255; // unneccesary for lights
             light->update   = true;
             parseFloats(stream, 3, &light->vector);
             parseInts<uint8_t>(stream, 3, &light->colour);

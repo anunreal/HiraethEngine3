@@ -21,9 +21,9 @@ struct HeD3MeshBuilder {
 };
 
 
-// loads a 3d object from given file and stores the data in a vao from the asset pool. The name of the mesh in the 
+// loads a 3d object from given file and stores the data in a vao from the asset pool. The name of the mesh in the
 // asset pool will be the file name. This loads the vertices, uvs, normals and tangents of the model
-extern HE_API HeVao* heMeshLoad(const std::string& fileName);
+extern HE_API void heMeshLoad(const std::string& fileName, HeVao* vao);
 // loads an asset from given file. This asset must be a valid h3asset file. This will load a material and a mesh and
 // simply replace the existing ones in instance (should be nullptr)
 extern HE_API void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance);
@@ -33,7 +33,7 @@ extern HE_API void heD3InstanceLoad(const std::string& fileName, HeD3Instance* i
 // i:[asset_file],[position rotation scale]
 //   the asset must be placed in res/assets (that folder is not in name), subfolders are allowed
 //   position, rotation and scale are 9 floats with fixed size without any borders between them for faster parsing
-// 
+//
 // Lights:
 // l:[type][vector][colour][data]
 //   type is the type of the light as int (see HeLightSourceType)

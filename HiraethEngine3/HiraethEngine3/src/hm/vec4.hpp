@@ -66,7 +66,6 @@ namespace hm {
         
     };
     
-    
     typedef vec4<float> vec4f;
     typedef vec4<double> vec4d;
     typedef vec4<int32_t> vec4i;

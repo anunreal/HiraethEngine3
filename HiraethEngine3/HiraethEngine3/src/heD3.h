@@ -22,6 +22,10 @@ struct HeD3Instance {
     // This list should be updated whenever a light or this instance is moved. The size of this list is
     // determined by the light count in the render engine
     std::vector<unsigned int> lightIndices;
+    
+#ifdef HE_ENABLE_NAMES
+    std::string name;
+#endif
 };
 
 struct HeD3Camera {
