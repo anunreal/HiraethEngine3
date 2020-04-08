@@ -4,14 +4,15 @@
 #include "src/heLoader.h"
 #include "src/heCore.h"
 #include "src/heDebugUtils.h"
-#include "GLEW/glew.h"
+#include "src/hePhysics.h"
 #include <windows.h>
 #include <thread>
-
 #include "hnClient.h"
 
 static bool inputActive = true;
+static bool freeCam = false;
 hm::vec2i lastPosition;
+hm::vec3f velocity;
 
 void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     
@@ -20,24 +21,32 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
         heWindowToggleCursor(inputActive);
     }
     
-    if (!inputActive)
+    if(window->mouseInfo.rightButtonDown)
+        freeCam = !freeCam;
+    
+    /*
+    if (!inputActive) {
+        velocity = hm::vec3f(0);
         return;
+    }
+    */
     
-    POINT current_mouse_pos = {};
-    ::GetCursorPos(&current_mouse_pos);
-    hm::vec2i current(current_mouse_pos.x, current_mouse_pos.y);
-    hm::vec2f dmouse = hm::vec2f(current - lastPosition) * 0.05f;
+    if(inputActive) {
+        POINT current_mouse_pos = {};
+        ::GetCursorPos(&current_mouse_pos);
+        hm::vec2i current(current_mouse_pos.x, current_mouse_pos.y);
+        hm::vec2f dmouse = hm::vec2f(current - lastPosition) * 0.05f;
+        
+        heWindowSetCursorPosition(window, window->windowInfo.size / 2);
+        ::GetCursorPos(&current_mouse_pos);
+        lastPosition.x = (int) current_mouse_pos.x;
+        lastPosition.y = (int) current_mouse_pos.y;
+        
+        camera->rotation.x += dmouse.y;
+        camera->rotation.y += dmouse.x;
+    }
     
-    heWindowSetCursorPosition(window, window->windowInfo.size / 2);
-    ::GetCursorPos(&current_mouse_pos);
-    lastPosition.x = (int) current_mouse_pos.x;
-    lastPosition.y = (int) current_mouse_pos.y;
-    
-    camera->rotation.x += dmouse.y;
-    camera->rotation.y += dmouse.x;
-    
-    
-    hm::vec3f velocity;
+    velocity = hm::vec3f(0.f);
     double angle = hm::to_radians(camera->rotation.y);
     float speed = 4.0f * delta;
     
@@ -65,13 +74,13 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
         velocity.z += (float)std::cos(angle) * speed;
     }
     
-    if (window->keyboardInfo.keyStatus[HE_KEY_SPACE])
+    if (window->keyboardInfo.keyStatus[HE_KEY_E])
         velocity.y = speed;
     
     if (window->keyboardInfo.keyStatus[HE_KEY_Q])
         velocity.y = -speed;
     
-    camera->position += velocity;
+    //camera->position += velocity;
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     
 };
@@ -86,6 +95,7 @@ struct Player {
 
 HnClient client;
 HeD3Level level;
+HePhysicsActor actor;
 hm::quatf cameraRotation;
 std::map<unsigned int, Player> players;
 
@@ -163,7 +173,7 @@ void modelStressTest(const std::string& file) {
     HeD3Instance instance;
     
     for(int i = 0; i < COUNT; ++i) {
-        heD3InstanceLoad(file + ".h3asset", &instance);
+        heD3InstanceLoad(file + ".h3asset", &instance, nullptr);
         heVaoDestroy(instance.mesh);
     }
     
@@ -186,28 +196,23 @@ void createWorld(HeWindow* window) {
     camera->rotation = hm::vec3f(0);
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window->windowInfo.size.x / (float)window->windowInfo.size.y, 0.1f, 1000.0f);
+    heD3LevelLoad("res/level/level0.h3level", &level);
+    heD3Level = &level;
     
-    //heD3LightSourceCreatePoint(&level, hm::vec3f(100, 100, 20), 1.0f, 0.045f, 0.0075f, hm::colour(255, 5.0f));
-    //heD3LightSourceCreatePoint(&level, hm::vec3f(-5, 6, 7), 1.0f, 0.045f, 0.0075f, hm::colour(255, 0, 0, 2.0f));
+    HE_LOG("Successfully loaded lvl");
+    HePhysicsInfo actorShape;
+    actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
+    actorShape.capsule = hm::vec2f(0.75f, 2.0f);
     
-    if(false) {
-        HeD3Instance* levelModel = &level.instances.emplace_back();
-        levelModel->material = heMaterialCreatePbr("level", heAssetPoolGetTexture("res/textures/test/placeholder.png"), nullptr, heAssetPoolGetTexture("res/textures/blankArm.png"));
-        levelModel->mesh = heAssetPoolGetMesh("res/models/level.obj");
-        levelModel->transformation.scale = hm::vec3f(1);
-        
-        HeD3Instance* lampModel = &level.instances.emplace_back();
-        lampModel->transformation.position = hm::vec3f(-5, 0, 7);
-        lampModel->mesh = heAssetPoolGetMesh("res/models/lamp.obj");
-        lampModel->material = heAssetPoolGetMaterial("level");
-        
-        HeD3Instance* thingyModel = &level.instances.emplace_back();
-        thingyModel->transformation.position = hm::vec3f(-3, 1, -5);
-        heD3InstanceLoad("res/assets/road.h3asset", thingyModel);
-    } else
-        heD3LevelLoad("res/level/level0.h3level", &level);
+    hePhysicsActorCreate(&actor, actorShape);
+    hePhysicsLevelSetActor(&level.physics, &actor);
+    hePhysicsActorSetPosition(&actor, hm::vec3f(-5.f, 0.1f, 5.f));
+    //hePhysicsLevelEnableDebugDraw(&level.physics);
     
 };
+
+// TODO(Victor): Multiple shapes per component
+
 
 #define USE_NETWORKING 0
 
@@ -225,6 +230,7 @@ int main() {
     
     HeRenderEngine engine;
     heRenderEngineCreate(&engine, &window);
+    heRenderEngine = &engine;
     
     createWorld(&window);
     
@@ -234,6 +240,9 @@ int main() {
     std::thread thread(createClient);
 #endif
     
+    heGlErrorSaveAll();
+    // TODO(Victor): Check for possible errors during setup and print them
+    
     while (!window.shouldClose) {
         if (heThreadLoader.updateRequested)
             heThreadLoaderUpdate();
@@ -241,18 +250,50 @@ int main() {
         heWindowUpdate(&window);
         level.time += window.frameTime;
         
-        if (window.active)
-            checkWindowInput(&window, &level.camera, (float) window.frameTime);
+        { // input
+            if (window.active)
+                checkWindowInput(&window, &level.camera, (float) window.frameTime);
+            
+            hm::vec3f v = velocity * (float) window.frameTime * 30.f * (window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+            if(!freeCam)
+                hePhysicsActorSetVelocity(&actor, v);
+            else {
+                hePhysicsActorSetVelocity(&actor, hm::vec3f(0));
+                level.camera.position += v;
+			}
+            
+            if(heWindowKeyWasPressed(&window, HE_KEY_SPACE) && hePhysicsActorOnGround(&actor))
+                hePhysicsActorJump(&actor, 1);
+            
+            hePhysicsLevelUpdate(&level.physics, (float) window.frameTime);
+            if(!freeCam)
+                level.camera.position = hePhysicsActorGetPosition(&actor);
+        }
         
-        heRenderEnginePrepareD3(&engine);
-        heD3LevelRender(&level);
-        heRenderEngineFinishD3(&engine);
+        { // d3 rendering
+            heRenderEnginePrepareD3(&engine);
+            heD3LevelUpdate(&level);
+            heD3LevelRender(&level);
+            hePhysicsLevelDebugDraw(&level.physics);
+            heRenderEngineFinishD3(&engine);
+        }
+        
+        { // ui rendering
+            // TODO(Victor): check if there is any ui content to render
+            heRenderEnginePrepareUi(&engine);
+            heUiQueueRender(&engine);
+            heRenderEngineFinishUi(&engine);
+        }
+        
         
         heWindowSwapBuffers(&window);
         heWindowSyncToFps(&window);
+        
 #if USE_NETWORKING
         hnClientUpdateVariables(&client);
 #endif
+        
+        heGlErrorSaveAll();
     }
     
 #if USE_NETWORKING

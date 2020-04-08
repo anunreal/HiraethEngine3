@@ -96,15 +96,15 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src;$(SolutionDir)Dependencies\bullet\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork</AdditionalLibraryDirectories>
-      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -114,15 +114,15 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src;$(SolutionDir)Dependencies\bullet\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork</AdditionalLibraryDirectories>
-      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -134,8 +134,8 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_USE_WIN32;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src;$(SolutionDir)Dependencies\bullet\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
@@ -143,8 +143,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork</AdditionalLibraryDirectories>
-      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -156,8 +156,8 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_USE_WIN32;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src;$(SolutionDir)Dependencies\bullet\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;HE_ENABLE_LOGGING_ALL;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
@@ -165,8 +165,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork</AdditionalLibraryDirectories>
-      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -176,6 +176,7 @@
     <ClInclude Include="src\heDebugUtils.h" />
     <ClInclude Include="src\heGlLayer.h" />
     <ClInclude Include="src\heLoader.h" />
+    <ClInclude Include="src\hePhysics.h" />
     <ClInclude Include="src\heRenderer.h" />
     <ClInclude Include="src\heTypes.h" />
     <ClInclude Include="src\heUtils.h" />
@@ -189,6 +190,7 @@
     <ClInclude Include="src\hm\matrixmath.hpp" />
     <ClInclude Include="src\hm\quat.hpp" />
     <ClInclude Include="src\hm\setup.hpp" />
+    <ClInclude Include="src\hm\to_string.hpp" />
     <ClInclude Include="src\hm\vec2.hpp" />
     <ClInclude Include="src\hm\vec3.hpp" />
     <ClInclude Include="src\hm\vec4.hpp" />
@@ -201,6 +203,7 @@
     <ClCompile Include="src\heDebugUtils.cpp" />
     <ClCompile Include="src\heGlLayer.cpp" />
     <ClCompile Include="src\heLoader.cpp" />
+    <ClCompile Include="src\hePhysics.cpp" />
     <ClCompile Include="src\heRenderer.cpp" />
     <ClCompile Include="src\heUtils.cpp" />
     <ClCompile Include="src\heWin32Layer.cpp" />

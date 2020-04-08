@@ -111,19 +111,26 @@ b8 parseIntFixedWidth(std::ifstream& stream, T* result) {
 };
 
 // parses n floats and stores them in ptr
-void parseFloats(std::ifstream& stream, int n, void* ptr) {
+bool parseFloats(std::ifstream& stream, int n, void* ptr) {
     
-    for(uint8_t i = 0; i < n; ++i)
-        parseFloatFixedWidth(stream, &((float*)ptr)[i]);
+    for(uint8_t i = 0; i < n; ++i) {
+        if(!parseFloatFixedWidth(stream, &((float*)ptr)[i]))
+            return false;
+    }
+    
+    return true;
     
 };
 
 // parses n ints and stores them in ptr
 template<typename T>
-void parseInts(std::ifstream& stream, const uint8_t n, void* ptr) {
+bool parseInts(std::ifstream& stream, const uint8_t n, void* ptr) {
     
     for(uint8_t i = 0; i < n; ++i)
-        parseIntFixedWidth(stream, &((T*)ptr)[i]);
+        if(!parseIntFixedWidth(stream, &((T*)ptr)[i]))
+        return false;
+    
+    return true;
     
 };
 
@@ -190,10 +197,10 @@ void heMeshLoad(const std::string& fileName, HeVao* vao) {
         heVaoBind(vao);
     }
     
-    heVaoAddData(vao, mesh.verticesArray, 3);
-    heVaoAddData(vao, mesh.uvArray, 2);
-    heVaoAddData(vao, mesh.normalArray, 3);
-    heVaoAddData(vao, mesh.tangentArray, 3);
+    heVaoAddData(vao, mesh.verticesArray, 3, HE_VBO_USAGE_STATIC);
+    heVaoAddData(vao, mesh.uvArray,       2, HE_VBO_USAGE_STATIC);
+    heVaoAddData(vao, mesh.normalArray,   3, HE_VBO_USAGE_STATIC);
+    heVaoAddData(vao, mesh.tangentArray,  3, HE_VBO_USAGE_STATIC);
     
     if(!isMainThread)
         heThreadLoaderRequestVao(vao);
@@ -201,7 +208,7 @@ void heMeshLoad(const std::string& fileName, HeVao* vao) {
 };
 
 
-void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
+void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhysicsInfo* physics) {
     
     std::ifstream stream(fileName);
     if(!stream) {
@@ -209,6 +216,7 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
         return;
     }
     
+    HE_LOG("Loading instance " + fileName);
     
     std::string line;
     std::getline(stream, line);
@@ -265,6 +273,40 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
             builder.tangentArray.emplace_back(result);
     }
     
+    char c = stream.peek();
+    // check if file still has content and physics is not nullptr
+    if(c != '\n' && physics) {
+        parseFloatFixedWidth(stream, &physics->mass);
+        parseFloatFixedWidth(stream, &physics->friction);
+        parseFloatFixedWidth(stream, &physics->restitution);
+        char type;
+        stream.get(type);
+        
+        physics->type = (HePhysicsShapeType) int(type - '0');
+        
+        switch(physics->type) {
+            case HE_PHYSICS_SHAPE_CONCAVE_MESH:
+            case HE_PHYSICS_SHAPE_CONVEX_MESH: {
+                hm::vec3f vec;
+                while(parseFloats(stream, 3, &vec))
+                    physics->mesh.emplace_back(vec);
+                break;
+            };
+            
+            case HE_PHYSICS_SHAPE_BOX:
+            parseFloats(stream, 3, &physics->box);
+            break;
+            
+            case HE_PHYSICS_SHAPE_SPHERE:
+            parseFloatFixedWidth(stream, &physics->sphere);
+            break;
+            
+            case HE_PHYSICS_SHAPE_CAPSULE:
+            parseFloats(stream, 2, &physics->capsule);
+            break;
+        }
+    }
+    
     stream.close();
     
     
@@ -281,10 +323,10 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance) {
         heVaoBind(vao);
     }
     
-    heVaoAddData(vao, builder.verticesArray, 3);
-    heVaoAddData(vao, builder.uvArray, 2);
-    heVaoAddData(vao, builder.normalArray, 3);
-    heVaoAddData(vao, builder.tangentArray, 3);
+    heVaoAddData(vao, builder.verticesArray, 3, HE_VBO_USAGE_STATIC);
+    heVaoAddData(vao, builder.uvArray,       2, HE_VBO_USAGE_STATIC);
+    heVaoAddData(vao, builder.normalArray,   3, HE_VBO_USAGE_STATIC);
+    heVaoAddData(vao, builder.tangentArray,  3, HE_VBO_USAGE_STATIC);
     
     if(!isMainThread)
         heThreadLoaderRequestVao(vao);
@@ -322,7 +364,21 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
             parseFloats(stream, 3, &instance->transformation.scale);
             
             instance->transformation.rotation = hm::fromEulerRadians(rotation);
-            heD3InstanceLoad("res/assets/" + name, instance);
+            
+            HePhysicsInfo physics;
+            heD3InstanceLoad("res/assets/" + name, instance, &physics);
+            
+            if(physics.type != HE_PHYSICS_SHAPE_NONE) {
+                // some kind of physics info
+                if(!hePhysicsLevelIsSetup(&level->physics))
+                    hePhysicsLevelCreate(&level->physics);
+                
+                instance->physics = &level->physics.components.emplace_back();
+                hePhysicsComponentCreate(instance->physics, physics);
+                hePhysicsComponentSetTransform(instance->physics, instance->transformation);
+                hePhysicsLevelAddComponent(&level->physics, instance->physics);
+            }
+            
             stream.get(c); // skip next line
         } else if(type == 'l') {
             // light
@@ -339,6 +395,5 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
     }
     
     stream.close();
-    heD3LevelSetActive(level);
     
 };

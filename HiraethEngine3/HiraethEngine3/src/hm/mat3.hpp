@@ -42,6 +42,7 @@ namespace hm {
         {};
         
         // conversions
+        
         template<typename T>
             mat(mat<4, 4, T> const& mat) :
         columns{

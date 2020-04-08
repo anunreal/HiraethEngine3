@@ -7,7 +7,7 @@ HeThreadLoader heThreadLoader;
 
 
 // --- Materials
-HeMaterial* heMaterialCreatePbr(const std::string& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture) {
+HeMaterial* heMaterialCreatePbr(std::string const& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture) {
     
     auto it = heAssetPool.materialPool.find(name);
     if (it != heAssetPool.materialPool.end())
@@ -25,7 +25,7 @@ HeMaterial* heMaterialCreatePbr(const std::string& name, HeTexture* diffuseTextu
 
 // --- Assets
 
-HeVao* heAssetPoolGetMesh(const std::string& file) {
+HeVao* heAssetPoolGetMesh(std::string const& file) {
     
     auto it = heAssetPool.meshPool.find(file);
     if (it != heAssetPool.meshPool.end())
@@ -43,7 +43,7 @@ HeVao* heAssetPoolGetMesh(const std::string& file) {
     
 };
 
-HeTexture* heAssetPoolGetTexture(const std::string& file) {
+HeTexture* heAssetPoolGetTexture(std::string const& file) {
     
     auto it = heAssetPool.texturePool.find(file);
     if (it != heAssetPool.texturePool.end()) {
@@ -58,7 +58,7 @@ HeTexture* heAssetPoolGetTexture(const std::string& file) {
     
 };
 
-HeShaderProgram* heAssetPoolGetShader(const std::string& name) {
+HeShaderProgram* heAssetPoolGetShader(std::string const& name) {
     
     auto it = heAssetPool.shaderPool.find(name);
     if (it != heAssetPool.shaderPool.end())
@@ -75,7 +75,7 @@ HeShaderProgram* heAssetPoolGetShader(const std::string& name) {
     
 };
 
-HeShaderProgram* heAssetPoolGetShader(const std::string& name, const std::string& vShader, const std::string& fShader) {
+HeShaderProgram* heAssetPoolGetShader(std::string const& name, std::string const& vShader, std::string const& fShader) {
     
     auto it = heAssetPool.shaderPool.find(name);
     if (it != heAssetPool.shaderPool.end())
@@ -87,7 +87,19 @@ HeShaderProgram* heAssetPoolGetShader(const std::string& name, const std::string
     
 };
 
-HeMaterial* heAssetPoolGetMaterial(const std::string& name) {
+HeShaderProgram* heAssetPoolGetShader(std::string const& name, std::string const& vShader, std::string const& gShader, std::string const& fShader) {
+    
+    auto it = heAssetPool.shaderPool.find(name);
+    if (it != heAssetPool.shaderPool.end())
+        return &it->second;
+    
+    HeShaderProgram* s = &heAssetPool.shaderPool[name];
+    heShaderCreateProgram(s, vShader, gShader, fShader);
+    return s;
+    
+};
+
+HeMaterial* heAssetPoolGetMaterial(std::string const& name) {
     
     auto it = heAssetPool.materialPool.find(name);
     if (it != heAssetPool.materialPool.end())
@@ -129,9 +141,26 @@ void heThreadLoaderUpdate() {
     for(auto all : heThreadLoader.vaos) {
         heVaoCreate(all);
         heVaoBind(all);
-        all->verticesCount = (unsigned int) (all->vbos[0].data.size()) / all->vbos[0].dimensions;
         
-        unsigned int counter = 0;
+        HeVbo* vbo = &all->vbos[0];
+        uint32_t size = 0;
+        switch(vbo->type) {
+            case HE_UNIFORM_DATA_TYPE_FLOAT:
+            size = (uint32_t) vbo->dataf.size();
+            break;
+            
+            case HE_UNIFORM_DATA_TYPE_INT:
+            size = (uint32_t) vbo->datai.size();
+            break;
+            
+            case HE_UNIFORM_DATA_TYPE_UINT:
+            size = (uint32_t) vbo->dataui.size();
+            break;
+        }
+        
+        all->verticesCount = size / all->vbos[0].dimensions;
+        
+        uint32_t counter = 0;
         for(auto& vbos : all->vbos)
             heVaoAddVboData(&vbos, counter++);
         

@@ -72,6 +72,7 @@ typedef enum HeKeyCode {
 typedef enum HeUniformDataType {
     HE_UNIFORM_DATA_TYPE_NONE    = 0,
     HE_UNIFORM_DATA_TYPE_INT     = 0x1404,
+    HE_UNIFORM_DATA_TYPE_UINT    = 0x1405,
     HE_UNIFORM_DATA_TYPE_VEC2    = 0x8B50,
     HE_UNIFORM_DATA_TYPE_VEC3    = 0x8B51,
     HE_UNIFORM_DATA_TYPE_VEC4    = 0x8B52,
@@ -114,6 +115,31 @@ typedef enum HeDebugInfoFlags {
     HE_DEBUG_INFO_INSTANCES = 0b0010,
     HE_DEBUG_INFO_CAMERA    = 0b0100,
 } HeDebugInfoFlags;
+
+typedef enum HePhysicsShape {
+    HE_PHYSICS_SHAPE_NONE,
+    HE_PHYSICS_SHAPE_CONVEX_MESH,
+    HE_PHYSICS_SHAPE_CONCAVE_MESH,
+    HE_PHYSICS_SHAPE_BOX,
+    HE_PHYSICS_SHAPE_SPHERE,
+    HE_PHYSICS_SHAPE_CAPSULE,
+} HePhysicsShapeType;
+
+typedef enum HeVboUsage {
+    // modified once and used few times
+    HE_VBO_USAGE_STREAM = 0x88E0,
+    // modified once and used often
+    HE_VBO_USAGE_STATIC = 0x88E4,
+    // modified and used often
+    HE_VBO_USAGE_DYNAMIC = 0x88E8
+} HeVboUsage;
+
+typedef enum HeVaoType {
+    HE_VAO_TYPE_NONE,
+    HE_VAO_TYPE_POINTS    = 0x0000,
+    HE_VAO_TYPE_LINES     = 0x0001,
+    HE_VAO_TYPE_TRIANGLES = 0x0004
+} HeVaoType;
 
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\

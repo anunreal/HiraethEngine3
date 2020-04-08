@@ -5,7 +5,19 @@
 #include "glew/wglew.h"
 #include <map>
 #include <iostream>
+
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
 #include <windowsx.h>
+
+
+struct HeWin32Window {
+    // opengl stuff
+    HGLRC        context = nullptr;
+    HWND         handle = nullptr;
+    HDC          dc = nullptr;
+};
 
 
 // stores the last modification time of a file path
@@ -27,7 +39,7 @@ HeFileHandleMap handleMap;
 PFNWGLCREATECONTEXTATTRIBSARBPROC  _wglCreateContextAttribsARB = nullptr;
 PFNWGLCHOOSEPIXELFORMATARBPROC     _wglChoosePixelFormatARB = nullptr;
 PFNWGLSWAPINTERVALEXTPROC          _wglSwapIntervalEXT = nullptr;
-HINSTANCE                          classInstance;								
+HINSTANCE                          classInstance;
 std::map<HWND, HeWindow*>          windowHandleMap;
 std::map<HeWindow*, HeWin32Window> win32map;
 #define                            HE_RAW_INPUT 0
@@ -35,13 +47,13 @@ std::map<HeWindow*, HeWin32Window> win32map;
 
 // --- File System
 
-b8 heFileModified(const std::string& file) {
+b8 heWin32FileModified(const std::string& file) {
     
     auto it = handleMap.find(file);
     if(it == handleMap.end()) {
         // file was never requested before, load now
-        HANDLE handle = CreateFile(std::wstring(file.begin(), file.end()).c_str(), 
-                                   GENERIC_READ, 
+        HANDLE handle = CreateFile(std::wstring(file.begin(), file.end()).c_str(),
+                                   GENERIC_READ,
                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
                                    NULL,
                                    OPEN_EXISTING,
@@ -71,10 +83,17 @@ b8 heFileModified(const std::string& file) {
     
 };
 
+b8 heWin32FileExists(std::string const& file) {
+    
+    DWORD dwAttrib = GetFileAttributes((LPCWSTR) file.c_str());
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+    
+};
+
 
 // --- window stuff
 
-HeWin32Window* heWin32GetWindow(const HeWindow* window) {
+HeWin32Window* heWin32GetWindow(HeWindow const* window) {
     
     HeWin32Window* win32 = nullptr;
     
@@ -86,6 +105,33 @@ HeWin32Window* heWin32GetWindow(const HeWindow* window) {
     }
     
     return win32;
+    
+};
+
+HeKeyCode heWin32GetKeyCode(WPARAM wparam, LPARAM lparam) {
+    
+    // check if this is a special key with left and right (shift, control...)
+    WPARAM newVk = wparam;
+    const UINT scancode = (lparam & 0x00ff0000) >> 16;
+    const int extended = (lparam & 0x01000000) != 0;
+    
+    switch (wparam) {
+        case VK_SHIFT:
+        newVk = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX);
+        break;
+        case VK_CONTROL:
+        newVk = extended ? VK_RCONTROL : VK_LCONTROL;
+        break;
+        case VK_MENU:
+        newVk = extended ? VK_RMENU : VK_LMENU;
+        break;
+        default:
+        // not a key we map from generic to left/right specialized, just return it.
+        newVk = wparam;
+        break;
+    }
+    
+    return (HeKeyCode) newVk;
     
 };
 
@@ -137,7 +183,7 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
                     hm::vec2i pos(raw->data.mouse.lLastX, raw->data.mouse.lLastY);
                     window->mouseInfo.deltaMousePosition = pos - window->mouseInfo.mousePosition;
                     window->mouseInfo.mousePosition = pos;
-                } 
+                }
                 
                 break;
             };
@@ -162,13 +208,14 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
             }
             
             case WM_KEYDOWN: {
-                window->keyboardInfo.keyStatus[(HeKeyCode)wparam] = true;
-                window->keyboardInfo.keysPressed.emplace_back((HeKeyCode)wparam);
+                HeKeyCode key = heWin32GetKeyCode(wparam, lparam);
+                window->keyboardInfo.keyStatus[key] = true;
+                window->keyboardInfo.keysPressed.emplace_back(key);
                 break;
             };
             
             case WM_KEYUP: {
-                window->keyboardInfo.keyStatus[(HeKeyCode)wparam] = false;
+                window->keyboardInfo.keyStatus[heWin32GetKeyCode(wparam, lparam)] = false;
                 break;
             };
             
@@ -222,7 +269,7 @@ b8 heWin32SetupClassInstance() {
 
 void heWin32CreateDummyContext() {
     
-    HWND dummy_window = CreateWindowExA(0, 
+    HWND dummy_window = CreateWindowExA(0,
                                         "Hiraeth2D",
                                         "Dummy OpenGL Window",
                                         0,
@@ -340,16 +387,16 @@ b8 heWin32WindowCreateContext(HeWindow* window, HeWin32Window* win32) {
         sizeof(PIXELFORMATDESCRIPTOR),
         1,
         PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    //Flags
-        PFD_TYPE_RGBA,												   // The kind of framebuffer. RGBA or palette.
-        32,															   // Colordepth of the framebuffer.
+        PFD_TYPE_RGBA,  											   // The kind of framebuffer. RGBA or palette.
+        32,			 											   // Colordepth of the framebuffer.
         0, 0, 0, 0, 0, 0,
         0,
         0,
         0,
         0, 0, 0, 0,
-        24,															   // Number of bits for the depthbuffer
-        8,															   // Number of bits for the stencilbuffer
-        0,														       // Number of Aux buffers in the framebuffer.
+        24,			  											   // Number of bits for the depthbuffer
+        8,				  	 									   // Number of bits for the stencilbuffer
+        0,					   								       // Number of Aux buffers in the framebuffer.
         PFD_MAIN_PLANE,
         0,
         0, 0, 0
@@ -370,7 +417,6 @@ b8 heWin32WindowCreateContext(HeWindow* window, HeWin32Window* win32) {
     };
     
     win32->context = _wglCreateContextAttribsARB(win32->dc, 0, gl33_attribs);
-    
     wglMakeCurrent(win32->dc, win32->context);
     
     int glew = glewInit();
@@ -445,7 +491,7 @@ void heWin32WindowDestroy(HeWindow* window) {
     
 };
 
-void heWin32WindowEnableVsync(const int8_t timestamp) {
+void heWin32WindowEnableVsync(int8_t const timestamp) {
     
     if (!_wglSwapIntervalEXT)
         _wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
@@ -457,7 +503,7 @@ void heWin32WindowEnableVsync(const int8_t timestamp) {
     
 };
 
-void heWin32WindowSwapBuffers(const HeWindow* window) {
+void heWin32WindowSwapBuffers(HeWindow const* window) {
     
     HeWin32Window* win32 = heWin32GetWindow(window);
     if(win32 != nullptr)
@@ -465,7 +511,7 @@ void heWin32WindowSwapBuffers(const HeWindow* window) {
     
 };
 
-void heWin32WindowToggleCursor(const b8 hidden) {
+void heWin32WindowToggleCursor(b8 const hidden) {
     
     if (hidden)
         while (ShowCursor(false) >= 0);
@@ -474,7 +520,7 @@ void heWin32WindowToggleCursor(const b8 hidden) {
     
 };
 
-void heWin32WindowSetCursorPosition(HeWindow* window, const hm::vec2f& position) {
+void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position) {
     
     HeWin32Window* win32 = &win32map[window];
     hm::vec2i abs;
@@ -493,7 +539,7 @@ void heWin32WindowSetCursorPosition(HeWindow* window, const hm::vec2f& position)
     
 };
 
-hm::vec2i heWin32WindowCalculateBorderSize(const HeWindow* window) {
+hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window) {
     
     HeWin32Window* win32 = heWin32GetWindow(window);
     if(win32 != nullptr) {

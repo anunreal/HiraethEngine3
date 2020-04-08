@@ -107,12 +107,6 @@ namespace hm {
             result.z = vector.x * columns[0][2] + vector.y * columns[1][2] + vector.z * columns[2][2] + vector.w * columns[3][2];
             result.w = vector.x * columns[0][3] + vector.y * columns[1][3] + vector.z * columns[2][3] + vector.w * columns[3][3];
             
-            if (result.w != 1.0f) {
-                result.x /= result.w;
-                result.y /= result.w;
-                result.z /= result.w;
-            }
-            
             return result;
         };
     };

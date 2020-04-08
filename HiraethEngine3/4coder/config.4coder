@@ -42,7 +42,7 @@ indent_with_tabs = false;
 indent_width = 4;
 
 // Theme
-default_theme_name = "4coder";
+default_theme_name = "theme-hjortshoej";
 highlight_line_at_cursor = true;
 
 // Font

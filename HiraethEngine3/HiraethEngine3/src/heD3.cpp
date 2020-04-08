@@ -1,9 +1,9 @@
 #include "heD3.h"
 
-HeD3Level* heActiveLevel;
+HeD3Level* heD3Level = nullptr;
 
 
-HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, const hm::vec3f& direction, const hm::colour& colour) {
+HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, hm::vec3f const& direction, hm::colour const& colour) {
     
     HeD3LightSource* light = &level->lights.emplace_back();
     light->type            = HE_LIGHT_SOURCE_TYPE_DIRECTIONAL;
@@ -15,7 +15,7 @@ HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, const hm::ve
 };
 
 
-HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, const hm::vec3f& position, const hm::vec3f& direction, const float inAngle, const float outAngle, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour) {
+HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, hm::vec3f const& position, hm::vec3f const& direction, float const inAngle, float const outAngle, float const constLightValue, float const linearLightValue, float const quadraticLightValue, hm::colour const& colour) {
     
     HeD3LightSource* light = &level->lights.emplace_back();
     light->type            = HE_LIGHT_SOURCE_TYPE_SPOT;
@@ -34,7 +34,7 @@ HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, const hm::vec3f& po
     
 };
 
-HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, const hm::vec3f& position, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour) {
+HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, hm::vec3f const& position, float const constLightValue, float const linearLightValue, float const quadraticLightValue, hm::colour const& colour) {
     
     HeD3LightSource* light = &level->lights.emplace_back();
     light->type            = HE_LIGHT_SOURCE_TYPE_POINT;
@@ -47,6 +47,26 @@ HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, const hm::vec3f& p
     return light;
     
 };
+
+
+void heD3InstanceUpdate(HeD3Instance* instance) {
+    
+    // update physics
+    if(instance->physics) {
+        instance->transformation.position = hePhysicsComponentGetPosition(instance->physics);
+        instance->transformation.rotation = hePhysicsComponentGetRotation(instance->physics);
+    }
+    
+};
+
+void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position) {
+    
+    instance->transformation.position = position;
+    if(instance->physics)
+        hePhysicsComponentSetPosition(instance->physics, position);
+    
+};
+
 
 void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance) {
     
@@ -63,6 +83,18 @@ void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance) {
     
 };
 
-HeD3Level* heD3LevelGetActive() { return heActiveLevel; };
+void heD3LevelUpdate(HeD3Level* level) {
+    
+    // update all instances
+    for(auto& all : level->instances)
+        heD3InstanceUpdate(&all);
+    
+};
 
-void heD3LevelSetActive(HeD3Level* level) { heActiveLevel = level; };
+HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16_t const index) {
+    
+    auto begin = level->instances.begin();
+    std::advance(begin, index);
+    return &(*begin);
+    
+};

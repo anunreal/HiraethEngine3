@@ -1,6 +1,8 @@
 #pragma once
 #include <assert.h>
 
+#include "vec3.hpp"
+
 namespace hm {
     
     template<typename T>
@@ -8,12 +10,17 @@ namespace hm {
         T x, y, z, w;
         
         vec4() : x(0), y(0), z(0), w(0) {};
-        vec4(const T v) : x(v), y(v), z(v), w(v) {};
-        vec4(const T x, const T y, const T z, const T w) : x(x), y(y), z(z), w(w) {};
+        vec4(T const v) : x(v), y(v), z(v), w(v) {};
+        vec4(T const x, T const y, T const z, T const w) : x(x), y(y), z(z), w(w) {};
+        
+        //conversions
+        
+        template<typename T1>
+            vec4(vec3<T1> const& vec, float const w = 1.0f) : x((T) vec.x), y((T) vec.y), z((T) vec.z), w(w) {};
         
         // accessors
         
-        const T& operator[](const unsigned int index) const {
+        const T& operator[](uint8_t const index) const {
             switch (index) {
                 case 0:
                 return x;
@@ -34,7 +41,7 @@ namespace hm {
         };
         
         
-        T& operator[](const unsigned int index) {
+        T& operator[](uint8_t const index) {
             switch (index) {
                 case 0:
                 return x;
@@ -56,11 +63,11 @@ namespace hm {
         
         // operators
         
-        vec4 operator*(const float value) const {
+        vec4 operator*(float const value) const {
             return vec4(x * value, y * value, z * value, w * value);
         };
         
-        vec4 operator+(const vec4& vec) const {
+        vec4 operator+(vec4 const& vec) const {
             return vec4(x + vec.x, y + vec.y, z + vec.z, w + vec.w);
         };
         

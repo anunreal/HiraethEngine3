@@ -1,5 +1,6 @@
 #pragma once
 #include "setup.hpp"
+#include "vec2.hpp"
 #include <string>
 
 namespace hm {
@@ -11,8 +12,12 @@ namespace hm {
         vec3() : x(0), y(0), z(0) {};
         vec3(T v) : x(v), y(v), z(v) {};
         vec3(T x, T y, T z) : x(x), y(y), z(z) {};
-        vec3(const vec3& v) : x(v.x), y(v.y), z(v.z) {};
+        vec3(vec3 const& v) : x(v.x), y(v.y), z(v.z) {};
         
+        // conversions
+        
+        template<typename T1>
+            vec3(vec2<T1> const& vec, float const z = 1.f) : x(vec.x), y(vec.y), z(z) {};
         
         // accessors
         

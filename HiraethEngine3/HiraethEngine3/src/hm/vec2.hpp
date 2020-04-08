@@ -1,6 +1,5 @@
 #pragma once
 #include "setup.hpp"
-#include "vec4.hpp"
 
 namespace hm {
     
@@ -12,8 +11,6 @@ namespace hm {
         vec2(T v) : x(v), y(v) {};
         vec2(T x, T y) : x(x), y(y) {};
         vec2(const vec2& v) : x(v.x), y(v.y) {};
-        template<typename T1>
-            vec2(const vec4<T1>& v) : x((T)v.x), y((T)v.y) {};
         template<typename T1>
             vec2(const vec2<T1>& v) : x((T)v.x), y((T)v.y) {};
         
@@ -82,8 +79,8 @@ namespace hm {
     };
     
     
-    // decodes a vec2 from a int32_t (which should be previosuly recieved by encoding a vec2). Note that we can return 
-    // any vec2 type here, but the x and y coordinates will always be rounded (integers), because we cant store 
+    // decodes a vec2 from a int32_t (which should be previosuly recieved by encoding a vec2). Note that we can return
+    // any vec2 type here, but the x and y coordinates will always be rounded (integers), because we cant store
     // floating point numbers in the int32_t
     template<typename T>
         static inline vec2<T> decodeVec2(const int32_t val) {
@@ -93,7 +90,7 @@ namespace hm {
         return v;
     };
     
-    // Encodes an integer vec2 to an int32_t. Only int vec2 can be encoded because floats / double have commas (duh), 
+    // Encodes an integer vec2 to an int32_t. Only int vec2 can be encoded because floats / double have commas (duh),
     // so we'd have to calculate and store a precision, which would just be dumb
     static inline int32_t encodeVec2(const vec2i& vec) {
         return vec.x | (vec.y * (1 << 16));
@@ -108,12 +105,25 @@ namespace hm {
     // returns true if point is inside the rectangle defined by r0-r3. These points may be defined in any space and can
     // be rotated, however they must be defined in clockwise order
     template<typename T>
-        static bool pointInRectangle(const vec2<T>& r0, const vec2<T>& r1, const vec2<T>& r2, const vec2<T>& r3, 
+        static bool pointInRectangle(const vec2<T>& r0, const vec2<T>& r1, const vec2<T>& r2, const vec2<T>& r3,
                                      const vec2<T>& point) {
         return isLeft(r0, r1, point) > 0 &&
             isLeft(r1, r2, point) > 0 &&
             isLeft(r2, r3, point) > 0 &&
             isLeft(r3, r0, point) > 0;
+    };
+    
+    template<typename T>
+        static T length(vec2<T> const& vec) {
+        return std::sqrt(vec.x * vec.x + vec.y * vec.y);
+    };
+    
+    template<typename T>
+        static vec2<T> normalize(vec2<T> const& vec) {
+        
+        T l = length(vec);
+        return vec2<T>(vec.x / l, vec.y / l);
+        
     };
     
 };

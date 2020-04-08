@@ -2,6 +2,7 @@
 #define HE_D3_H
 
 #include "heAssets.h"
+#include "hePhysics.h"
 #include <list>
 
 struct HeD3Transformation {
@@ -14,14 +15,17 @@ struct HeD3Transformation {
 
 struct HeD3Instance {
     // pointer to a vao in the asset pool
-    HeVao* mesh = nullptr;
+    HeVao* mesh                 = nullptr;
     // pointer to a material in the asset pool
-    HeMaterial* material = nullptr;
+    HeMaterial* material        = nullptr;
+    // (possibly) a pointer to a member of the component list in the HeD3Level's physics level
+    HePhysicsComponent* physics = nullptr;
+    // world space transformation of this instance
     HeD3Transformation transformation;
     // a list of indices from the levels light list that apply to this instance.
     // This list should be updated whenever a light or this instance is moved. The size of this list is
     // determined by the light count in the render engine
-    std::vector<unsigned int> lightIndices;
+    std::vector<uint32_t> lightIndices;
     
 #ifdef HE_ENABLE_NAMES
     std::string name;
@@ -72,34 +76,41 @@ struct HeD3Level {
     std::list<HeD3Instance> instances;
     std::list<HeD3LightSource> lights;
     double time = 0.0;
+    HePhysicsLevel physics;
 };
 
+// the current active d3 level. Can be set and (then) used at any time
+extern HeD3Level* heD3Level;
 
 // sets all important information for a directional light for a new light source in level.
 // direction should be normalized and in world space
-extern HE_API HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, const hm::vec3f& direction, const hm::colour& colour);
+extern HE_API HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, hm::vec3f const& direction, hm::colour const& colour);
 // sets all important information for a spot light for a new light source in level.
 // position is in world space
 // direction of the light is in world space
 // inAngle and outAngle are the angles in degrees that light is spreaded. In the inner circle, everything will
 // be lit with full light, and then its interpolated to zero to outAngle.
-extern HE_API HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, const hm::vec3f& position, const hm::vec3f& direction, const float inAngle, const float outAngle,  const hm::colour& colour);
+extern HE_API HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, hm::vec3f const& position, hm::vec3f const& direction, float const inAngle, float const outAngle,  float const constLightValue, float const linearLightValue, float const quadraticLightValue, hm::colour const& colour);
 // sets all important information for a point light for a new source in level.
 // position is in world space
 // the three light values control how the light acts over distance.
 // the constLightValue should always be 1
 // the linear value controls the normal decay, can be around 0.045
 // the quadratic value controls the light in far distance, can be around 0.0075
-extern HE_API HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, const hm::vec3f& position, const float constLightValue, const float linearLightValue, const float quadraticLightValue, const hm::colour& colour);
+extern HE_API HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, hm::vec3f const& position, float const constLightValue, float const linearLightValue, float const quadraticLightValue, hm::colour const& colour);
 // removes the HeD3Instance that instance points to from the level, if it does exist there and instance is a
 // valid pointer.
-extern void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance);
+extern HE_API void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance);
+// updates all instances in given level (components). This should be called after the physics update (positions will be updated)
+// but before rendering
+extern HE_API void heD3LevelUpdate(HeD3Level* level);
+// returns the instance with given index from the list of instances in the level
+extern HE_API inline HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16_t const index);
 
-// returns a pointer to the active level
-extern inline HeD3Level* heD3LevelGetActive();
-// sets the active level. This is called when a level is loaded, but can be called at any time by the user.
-// The active level is used for commands (debugging), physics and so on. Usually a game should only have one
-// loaded level anyway
-extern inline void heD3LevelSetActive(HeD3Level* level);
+// updates all components of this instance
+extern HE_API void heD3InstanceUpdate(HeD3Instance* instance);
+// sets the new position of the entity. This should always be used over directly setting the instances position as this will
+// also update the components
+extern HE_API void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position);
 
 #endif

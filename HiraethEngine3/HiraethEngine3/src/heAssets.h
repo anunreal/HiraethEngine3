@@ -52,36 +52,39 @@ extern HeAssetPool heAssetPool;
 extern HeThreadLoader heThreadLoader;
 
 // --- Materials
-// creates a new pbr material if it doesnt already exists from given textures. This material will be stored in 
+// creates a new pbr material if it doesnt already exists from given textures. This material will be stored in
 // the material pool.
 // If a material with given name was already created before, that material will be returned
-extern HE_API HeMaterial* heMaterialCreatePbr(const std::string& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture);
+extern HE_API HeMaterial* heMaterialCreatePbr(std::string const& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture);
 
 
 // --- Assets
 
 // checks if given mesh was already loaded and returns it if so. Else this mesh will be loaded now from given file
-extern HE_API HeVao* heAssetPoolGetMesh(const std::string& file);
-// checks if given texture was already loaded and returns it if so. Else this texture will be loaded now from 
+extern HE_API HeVao* heAssetPoolGetMesh(std::string const& file);
+// checks if given texture was already loaded and returns it if so. Else this texture will be loaded now from
 // given file
-extern HE_API HeTexture* heAssetPoolGetTexture(const std::string& file);
-// checks if given shader was already loaded and returns it if so. Else this shader will be loaded, the filenames 
+extern HE_API HeTexture* heAssetPoolGetTexture(std::string const& file);
+// checks if given shader was already loaded and returns it if so. Else this shader will be loaded, the filenames
 // will be expected
 // to be name + "_v" / "_f" depending on the type and the files should be in the res/shaders/ folder
-extern HE_API HeShaderProgram* heAssetPoolGetShader(const std::string& name);
-// checks if given shader was already loaded and returns it if so. Else this shader will be loaded from the two 
+extern HE_API HeShaderProgram* heAssetPoolGetShader(std::string const& name);
+// checks if given shader was already loaded and returns it if so. Else this shader will be loaded from the two
 // given files.
 // The file names must be the full relative path (res/shaders/...) including the file ending
-extern HE_API HeShaderProgram* heAssetPoolGetShader(const std::string& name, const std::string& vShader, const std::string& fShader);
+extern HE_API HeShaderProgram* heAssetPoolGetShader(std::string const& name, std::string const& vShader, std::string const& fShader);
+// checks if given shader was already loaded and returns it if so. Else this shader will be loaded from the three given files (vertex, geometry and
+// fragment). The file names must be the full relative path (res/shaders/...) including the file ending
+extern HE_API HeShaderProgram* heAssetPoolGetShader(std::string const& name, std::string const& vShader, std::string const& gShader, std::string const& fShader);
 // returns the material with given name from the material pool or nullptr if no material with that name was found
 extern HE_API HeMaterial* heAssetPoolGetMaterial(const std::string& name);
 
 
 // --- ThreadLoader
 
-// creates a request for loading given texture into the gl context. This is called from a non-context thread. 
+// creates a request for loading given texture into the gl context. This is called from a non-context thread.
 // texture should point to
-// a texture in the texture pool, buffer is the texture buffer read from a file. This will simply put the entry in 
+// a texture in the texture pool, buffer is the texture buffer read from a file. This will simply put the entry in
 // the thread loader
 // and request an update for the heThreadLoader
 extern HE_API void heThreadLoaderRequestTexture(HeTexture* texture, unsigned char* buffer);
@@ -89,7 +92,7 @@ extern HE_API void heThreadLoaderRequestTexture(HeTexture* texture, unsigned cha
 // does nothing. Else a new request will be created and the requestUpdate of the thread loader is set to true. All
 // data should already uploaded to the vao at this point
 extern HE_API void heThreadLoaderRequestVao(HeVao* vao);
-// loads all resources in the thread loader into gl and clears the loader afterwards. This must be called from the 
+// loads all resources in the thread loader into gl and clears the loader afterwards. This must be called from the
 // thread the window was created in (the main thread)
 extern HE_API void heThreadLoaderUpdate();
 
