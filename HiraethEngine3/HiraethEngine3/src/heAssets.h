@@ -4,12 +4,14 @@
 #include "heGlLayer.h"
 
 struct HeMaterial {
+    // a type id, dependant of the shader. All materials with the same shader have the same type.
+    uint32_t type = 0;
     // pointer to a shader in the asset pool
     HeShaderProgram* shader = nullptr;
     // name of the sampler (without the t_ prefix) and a pointer to the asset pool
-    std::map<std::string, HeTexture*> textures;
+    std::unordered_map<std::string, HeTexture*> textures;
     // name of the uniform and some data
-    std::map<std::string, HeShaderData> uniforms;
+    std::unordered_map<std::string, HeShaderData> uniforms;
 };
 
 struct HeThreadLoaderVao {
@@ -18,16 +20,16 @@ struct HeThreadLoaderVao {
 };
 
 // maps the name of the mesh (usually a file) to its vao
-typedef std::map<std::string, HeVao> HeMeshPool;
+typedef std::unordered_map<std::string, HeVao> HeMeshPool;
 // maps the name of the file to the texture
-typedef std::map<std::string, HeTexture> HeTexturePool;
+typedef std::unordered_map<std::string, HeTexture> HeTexturePool;
 // maps the name of a shader to the program
-typedef std::map<std::string, HeShaderProgram> HeShaderPool;
+typedef std::unordered_map<std::string, HeShaderProgram> HeShaderPool;
 // maps any type of materials
-typedef std::map<std::string, HeMaterial> HeMaterialPool;
+typedef std::unordered_map<std::string, HeMaterial> HeMaterialPool;
 // maps a pointer to a texture in the texture pool to the content of the file it was loaded from
 // this is only used if the texture was loaded from a side-thread (not the thread the window was created in)
-typedef std::map<HeTexture*, unsigned char*> HeTextureRequests;
+typedef std::unordered_map<HeTexture*, unsigned char*> HeTextureRequests;
 // a list of pointers in the mesh pool of vaos that need to be loaded. The vao can be set up normally (via
 // heAddVaoData...), the data will be stored in the HeVbos of the vao. Once the thread loader loads this vao,
 // the data will be uploaded to gl and deleted
@@ -35,6 +37,7 @@ typedef std::map<HeTexture*, unsigned char*> HeTextureRequests;
 typedef std::vector<HeVao*> HeVaoRequests;
 
 struct HeAssetPool {
+    // pools for the different assets
     HeMeshPool meshPool;
     HeShaderPool shaderPool;
     HeTexturePool texturePool;
@@ -52,11 +55,13 @@ extern HeAssetPool heAssetPool;
 extern HeThreadLoader heThreadLoader;
 
 // --- Materials
+
 // creates a new pbr material if it doesnt already exists from given textures. This material will be stored in
 // the material pool.
 // If a material with given name was already created before, that material will be returned
 extern HE_API HeMaterial* heMaterialCreatePbr(std::string const& name, HeTexture* diffuseTexture, HeTexture* normalTexture, HeTexture* armTexture);
-
+// returns the type id for given shader. This is used for grouping materials by their shader.
+extern HE_API uint32_t heMaterialGetType(std::string const& shaderName);
 
 // --- Assets
 
@@ -65,19 +70,21 @@ extern HE_API HeVao* heAssetPoolGetMesh(std::string const& file);
 // checks if given texture was already loaded and returns it if so. Else this texture will be loaded now from
 // given file
 extern HE_API HeTexture* heAssetPoolGetTexture(std::string const& file);
-// checks if given shader was already loaded and returns it if so. Else this shader will be loaded, the filenames
-// will be expected
-// to be name + "_v" / "_f" depending on the type and the files should be in the res/shaders/ folder
+// checks if given shader was already loaded and returns it if so. Else this shader will be loaded from given file
+// (res/shaders/[name].glsl)
 extern HE_API HeShaderProgram* heAssetPoolGetShader(std::string const& name);
 // checks if given shader was already loaded and returns it if so. Else this shader will be loaded from the two
 // given files.
 // The file names must be the full relative path (res/shaders/...) including the file ending
 extern HE_API HeShaderProgram* heAssetPoolGetShader(std::string const& name, std::string const& vShader, std::string const& fShader);
-// checks if given shader was already loaded and returns it if so. Else this shader will be loaded from the three given files (vertex, geometry and
-// fragment). The file names must be the full relative path (res/shaders/...) including the file ending
+// checks if given shader was already loaded and returns it if so. Else this shader will be loaded from the three given files
+// (vertex, geometry and fragment). The file names must be the full relative path (res/shaders/...) including the file ending
 extern HE_API HeShaderProgram* heAssetPoolGetShader(std::string const& name, std::string const& vShader, std::string const& gShader, std::string const& fShader);
-// returns the material with given name from the material pool or nullptr if no material with that name was found
+// returns the material with given name from the material pool or a pointer to an empty material if it wasnt created before
 extern HE_API HeMaterial* heAssetPoolGetMaterial(const std::string& name);
+// returns the material with given name if it was created before or a new one (with an assigned id) if no material with that name
+// could be found
+extern HE_API HeMaterial* heAssetPoolGetNewMaterial(std::string const& name);
 
 
 // --- ThreadLoader

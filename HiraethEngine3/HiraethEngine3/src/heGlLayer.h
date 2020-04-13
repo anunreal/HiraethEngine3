@@ -1,7 +1,7 @@
 #ifndef HE_GL_LAYER_H
 #define HE_GL_LAYER_H
 
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include "hm/hm.hpp"
@@ -26,11 +26,11 @@ struct HeShaderProgram {
     std::vector<std::string> files;
     // maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
     // be stored in the map for faster lookup.
-    std::map<std::string, int16_t> uniforms;
+    std::unordered_map<std::string, int16_t> uniforms;
     // maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the
     // texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is
     // saved here so that we dont have to remember it
-    std::map<std::string, int16_t> samplers;
+    std::unordered_map<std::string, int8_t> samplers;
     
 #ifdef HE_ENABLE_NAMES
     std::string name;
@@ -39,20 +39,20 @@ struct HeShaderProgram {
 
 struct HeVbo {
     // the gl id
-    uint32_t           vboId         = 0;
+    uint32_t              vboId         = 0;
     // the amount of vertices (independant of dimensions) in this buffer
-    uint32_t           verticesCount = 0;
+    uint32_t              verticesCount = 0;
     // the dimensions of this vbo (2 for vec2, 3 for vec3...)
-    uint8_t            dimensions    = 0;
+    uint8_t               dimensions    = 0;
     // the usage of this vbo. Usually static (uploaded once, used many times)
-    HeVboUsage         usage         = HE_VBO_USAGE_STATIC;
+    HeVboUsage            usage         = HE_VBO_USAGE_STATIC;
     // the type of this vbo. For vectors this should be float.
     // the only other accepted type is int
-    HeUniformDataType  type          = HE_UNIFORM_DATA_TYPE_FLOAT;
+    HeUniformDataType     type          = HE_UNIFORM_DATA_TYPE_FLOAT;
     // filled if the vbo was loaded from a different thread and type is FLOAT
-    std::vector<float> dataf;
+    std::vector<float>    dataf;
     // filled if the vbo was loaded from a different thread and type is INT
-    std::vector<int32_t> datai;
+    std::vector<int32_t>  datai;
     // filled if the vbo was loaded from a different thread and type is UNSIGNED INT
     std::vector<uint32_t> dataui;
 };
@@ -93,6 +93,10 @@ struct HeFbo {
     HeFboFlags flags;
     // the size of this fbo (in pixels). Needs to be set before fbo creation
     hm::vec2i size;
+    
+#ifdef HE_ENABLE_NAMES
+    std::string name;
+#endif
 };
 
 struct HeTexture {
@@ -111,6 +115,10 @@ struct HeTexture {
     int32_t height = 0;
     // the number of channels in this texture. Can be 3 (rgb) or 4 (rgba)
     int32_t channels = 0;
+    
+#ifdef HE_ENABLE_NAMES
+    std::string name;
+#endif
 };
 
 
@@ -118,16 +126,26 @@ struct HeTexture {
 
 // loads a compute shader from given file
 extern HE_API void heShaderLoadCompute(HeShaderProgram* program, std::string const& computeShader);
-// loads a shader from given shader files
+// loads a vertex/fragment shader from given shader files. The code must be seperated into the different files for this to work.
+// This will bind the shader.
 extern HE_API void heShaderLoadProgram(HeShaderProgram* program, std::string const& vertexShader, std::string const& fragmentShader);
-//loads a complete shader program from given shader files
+// loads a vertex/geometry/fragment shader program from given shader files. The code must be seperated into the different files
+// for this to work. This will bind the shader
 extern HE_API void heShaderLoadProgram(HeShaderProgram* program, std::string const& vertexShader, std::string const& geometryShader, std::string const& fragmentShader);
+// loads a shader from given file. That file must containt all shader code, split up by definitions. The geometry stage can be added
+// but doesnt have to be. The different shader sources are split by a # and then the name of the stage (i.e. #vertex at the beginning
+// of the file, then #geometry and #fragment. This will bind the shader. When error checking, keep in mind that the file lines
+// printed are relative to the shader source, not the file beginning
+extern HE_API void heShaderLoadProgram(HeShaderProgram* program, std::string const& shaderFile);
 // creates a new shader by loading it from given files. This should only be used once (first creation) as it will store
 // important data for now. This should be used when the user loads shaders
 extern HE_API void heShaderCreateProgram(HeShaderProgram* program, std::string const& vertexShader, std::string const& framentShader);
 // creates a new shader by loading it from given files. This should only be used once (first creation) as it will store
 // important data for now. This should be used when the user loads shaders
 extern HE_API void heShaderCreateProgram(HeShaderProgram* program, std::string const& vertexShader, std::string const& geometryShader, std::string const& framentShader);
+// creates a new shader from given file. This should only be used once (first creation) as it will store
+// important data for now. This should be used when the user loads shaders
+extern HE_API void heShaderCreateProgram(HeShaderProgram* program, std::string const& file);
 // binds given shader. If shader hotswapping is reloaded and this shader was modified it will also reload it
 extern HE_API void heShaderBind(HeShaderProgram* program);
 // unbinds the currently bound shader
@@ -149,6 +167,9 @@ extern HE_API int heShaderGetUniformLocation(HeShaderProgram* program, std::stri
 // for faster lookups later. If the sampler wasnt found (spelling mistake or optimized away), -1 is returned.
 // If the sampler does exist, it will be bound to given texture slot (glActiveTexture(GL_TEXTURE0 + requestedSlot))
 extern HE_API int heShaderGetSamplerLocation(HeShaderProgram* program, std::string const& sampler, uint8_t const requestedSlot);
+
+// sets all samplers (loaded in the shader) to 0
+extern HE_API void heShaderClearSamplers(HeShaderProgram const* program);
 
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, std::string const& uniformName, void const* data, HeUniformDataType const dataType);
 extern HE_API void heShaderLoadUniform(HeShaderProgram* program, std::string const& uniformName, const float value);
@@ -213,9 +234,9 @@ extern HE_API void heVaoRender(HeVao const* vao);
 
 
 // adds a new colour texture attachment to given fbo
-extern HE_API void heFboCreateColourAttachment(HeFbo* fbo);
+extern HE_API void heFboCreateColourAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8);
 // adds a new (multisampled) colour buffer attachment to given fbo
-extern HE_API void heFboCreateMultisampledColourAttachment(HeFbo* fbo);
+extern HE_API void heFboCreateMultisampledColourAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8);
 // creates a new fbo. All parameters of the fbo must already be set (see parameter description). This will add
 // a (multisampled, if samples is bigger than 1) colour attachment and either a depth texture or a depth buffer
 // attachment to the fbo
@@ -266,6 +287,8 @@ extern HE_API void heImageTextureBindImage(HeTexture const* texture, int8_t cons
 extern HE_API void heTextureUnbind(int8_t const slot);
 // deletes given texture if its reference count is currently 1
 extern HE_API void heTextureDestroy(HeTexture* texture);
+// sets the gl label of given texture, if HE_ENABLE_NAMES is defined
+extern HE_API void heTextureLabel(HeTexture const* texture, std::string const& name);
 
 // before calling any of the following functions, a texture must be bound
 
@@ -289,10 +312,7 @@ extern HE_API void heTextureClampRepeat();
 // --- Utils
 
 // clears the buffers of current fbo to given colour. Type is the different buffers to be cleared
-// type = 0: The colour buffer is cleared
-// type = 1: The depth buffer is cleared
-// type = 2: Both the colour and the depth colour are cleared
-extern HE_API void heFrameClear(hm::colour const& colour, int8_t const type);
+extern HE_API void heFrameClear(hm::colour const& colour, HeFrameBufferBits const type);
 // sets the gl blend mode to given mode. Possible modes:
 // -1 = disable gl blending
 //  0 = normal blending (one minus source alpha)
@@ -302,11 +322,18 @@ extern HE_API void heBlendMode(int8_t const mode);
 // applies a gl blend mode to only given colour attachment of a fbo. Same modes as above apply
 extern HE_API void heBufferBlendMode(int8_t const attachmentIndex, int8_t const mode);
 // en- or disables depth testing
-extern HE_API void heEnableDepth(b8 const depth);
+extern HE_API void heDepthEnable(b8 const depth);
+// enables back face culling (good for performance)
+extern HE_API void heCullEnable(b8 const culling);
+// enables or disables the stencil buffer
+extern HE_API void _heStencilEnable(b8 const enable);
+// sets the stencil mask
+extern HE_API void _heStencilMask(uint32_t const mask);
+// describes how stencil testing works. Possible values for now are
+extern HE_API void _heStencilFunc(HeFragmentTestFunctions const function, uint32_t const threshold, uint32_t const mask);
 // sets the view port. lowerleft is the lower left corner of the new view port (in pixels, (0|0) is default
 // size is the viewport size in pixels (width, height)
 extern HE_API void heViewport(hm::vec2i const& lowerleft, hm::vec2i const& size);
-
 
 // --- Errors (only functional if HE_ENABLE_ERROR_CHECKING is defined)
 

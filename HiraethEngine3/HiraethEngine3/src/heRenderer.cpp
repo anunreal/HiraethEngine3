@@ -9,13 +9,22 @@ HeRenderEngine* heRenderEngine = nullptr;
 
 void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     
+    engine->quadVao = &heAssetPool.meshPool["quad_vao"];
+    
+#ifdef HE_ENABLE_NAMES
+    engine->resolvedFbo.name = "resolvedFbo";
+    engine->gBufferFbo.name  = "gbufferFbo";
+    engine->quadVao->name    = "quadVao";
+#endif
+    
     // common
     engine->window = window;
     engine->textureShader = heAssetPoolGetShader("gui_texture");
     engine->finalShader = heAssetPoolGetShader("d3_final", "res/shaders/quad_v.glsl", "res/shaders/final_f.glsl");
+    heShaderBind(engine->finalShader);
+    heShaderLoadUniform(engine->finalShader, "u_gamma", 1.0f);
     
     // quad vao
-    engine->quadVao = &heAssetPool.meshPool["quad_vao"];
     heVaoCreate(engine->quadVao);
     heVaoBind(engine->quadVao);
     heVaoAddData(engine->quadVao, { -1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, -1 }, 2);
@@ -24,23 +33,29 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     heUiQueueCreate(&engine->uiQueue);
     
     // hdr
-    engine->hdrFbo.samples = 1;
-    engine->hdrFbo.size    = window->windowInfo.size;
-    engine->hdrFbo.flags   = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER;
-    heFboCreate(&engine->hdrFbo);
-    
     engine->resolvedFbo.samples = 1;
     engine->resolvedFbo.size = window->windowInfo.size;
     engine->resolvedFbo.flags = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER;
     heFboCreate(&engine->resolvedFbo);
-    heEnableDepth(1);
+    
+    // d3
+    engine->gBufferShader = heAssetPoolGetShader("d3_gbuffer");
+    engine->gLightingShader = heAssetPoolGetShader("d3_lighting");
+    
+    engine->gBufferFbo.samples = 1;
+    engine->gBufferFbo.flags = HE_FBO_FLAG_HDR | HE_FBO_FLAG_DEPTH_RENDER_BUFFER;
+    engine->gBufferFbo.size = window->windowInfo.size;
+    heFboCreate(&engine->gBufferFbo); // creates vertex position texture
+    heFboCreateColourAttachment(&engine->gBufferFbo, HE_COLOUR_FORMAT_RGBA16); // creates normal texture
+    heFboCreateColourAttachment(&engine->gBufferFbo, HE_COLOUR_FORMAT_RGBA8); // creates diffuse texture
+    heFboCreateColourAttachment(&engine->gBufferFbo, HE_COLOUR_FORMAT_RGBA8); // creates arm texture
     
 };
 
 void heRenderEngineResize(HeRenderEngine* engine) {
     
-    if(engine->hdrFbo.size != engine->window->windowInfo.size) {
-        heFboResize(&engine->hdrFbo, engine->window->windowInfo.size);
+    if(engine->gBufferFbo.size != engine->window->windowInfo.size) {
+        heFboResize(&engine->gBufferFbo, engine->window->windowInfo.size);
         heFboResize(&engine->resolvedFbo, engine->window->windowInfo.size);
     }
     
@@ -50,20 +65,36 @@ void heRenderEngineDestroy(HeRenderEngine* engine) {
     
     heShaderDestroy(engine->textureShader);
     heShaderDestroy(engine->finalShader);
+    heShaderDestroy(engine->gBufferShader);
     heVaoDestroy(engine->quadVao);
-    heFboDestroy(&engine->hdrFbo);
+    heFboDestroy(&engine->gBufferFbo);
     heFboDestroy(&engine->resolvedFbo);
+    
+};
+
+void heRenderEnginePrepare(HeRenderEngine* engine) {
+    
+    heFrameClear(engine->window->windowInfo.backgroundColour, HE_FRAME_BUFFER_BIT_COLOUR | HE_FRAME_BUFFER_BIT_DEPTH);
+    
+};
+
+void heRenderEngineFinish(HeRenderEngine* engine) {
+    
+    heWindowSwapBuffers(engine->window);
     
 };
 
 void heShaderLoadMaterial(HeShaderProgram* shader, HeMaterial const* material) {
     
-    unsigned int count = 0;
+    heShaderClearSamplers(shader);
+    uint8_t count = 0;
     for (const auto& textures : material->textures)
-        heTextureBind(textures.second, heShaderGetSamplerLocation(material->shader, "t_" + textures.first, count++));
+        heTextureBind(textures.second, heShaderGetSamplerLocation(shader, "t_" + textures.first, count++));
     
     for (const auto& uniforms : material->uniforms)
         heShaderLoadUniform(shader, "u_" + uniforms.first, &uniforms.second);
+    
+    heShaderLoadUniform(shader, "u_materialType", material->type);
     
 };
 
@@ -85,25 +116,132 @@ void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource const* light, i
 
 void heD3InstanceRender(HeD3Instance* instance) {
     
-    if (instance->mesh != nullptr) {
-        // load instance data
-        hm::mat4f transMat = hm::createTransformationMatrix(instance->transformation.position,
-                                                            instance->transformation.rotation, instance->transformation.scale);
-        heShaderLoadUniform(instance->material->shader, "u_normMat", hm::transpose(hm::inverse(hm::mat3f(transMat))));
-        heShaderLoadUniform(instance->material->shader, "u_transMat", transMat);
+};
+
+void heD3LevelRender(HeRenderEngine* engine, HeD3Level* level) {
+    
+    // render all objects into the gbuffer
+    heShaderBind(engine->gBufferShader);
+    heShaderLoadUniform(engine->gBufferShader, "u_viewMat", level->camera.viewMatrix);
+    heShaderLoadUniform(engine->gBufferShader, "u_projMat", level->camera.projectionMatrix);
+    
+    for(auto const& all : level->instances) {
+        // render instance into the gbuffer
+        hm::mat4f transMat = hm::createTransformationMatrix(all.transformation.position, all.transformation.rotation, all.transformation.scale);
+        heShaderLoadUniform(engine->gBufferShader, "u_transMat", transMat);
+        heShaderLoadUniform(engine->gBufferShader, "u_normMat",  hm::transpose(hm::inverse(hm::mat3f(transMat))));
+        heShaderLoadMaterial(engine->gBufferShader, all.material);
         
-        
-        
-        // load material
-        heShaderLoadMaterial(instance->material->shader, instance->material);
-        
-        heVaoBind(instance->mesh);
-        heVaoRender(instance->mesh);
+        heVaoBind(all.mesh);
+        heVaoRender(all.mesh);
     }
+    
+    
+    heShaderBind(engine->gLightingShader);
+    heFboUnbind(engine->window->windowInfo.size);
+    heCullEnable(false);
+    
+    // TODO(Victor): avoid for loop here, maybe store changed lights?
+    uint8_t lightCount = 0;
+    for(auto& all : level->lights) {
+        if(all.update) {
+            all.update = false;
+            heShaderLoadLight(engine->gLightingShader, &all, lightCount);
+        }
+        
+        lightCount++;
+    }
+    
+    if(engine->outputTexture == 0) {
+        heTextureBind(engine->gBufferFbo.colourTextures[0], heShaderGetSamplerLocation(engine->gLightingShader, "t_worldSpace", 0));
+        heTextureBind(engine->gBufferFbo.colourTextures[1], heShaderGetSamplerLocation(engine->gLightingShader, "t_normals", 1));
+        heTextureBind(engine->gBufferFbo.colourTextures[2], heShaderGetSamplerLocation(engine->gLightingShader, "t_diffuse", 2));
+        heTextureBind(engine->gBufferFbo.colourTextures[3], heShaderGetSamplerLocation(engine->gLightingShader, "t_arm", 3));
+        heShaderLoadUniform(engine->gLightingShader, "u_cameraPos", level->camera.position);
+        heVaoBind(engine->quadVao);
+        heVaoRender(engine->quadVao);
+    } else
+        heUiRenderTexture(engine, engine->gBufferFbo.colourTextures[engine->outputTexture - 1], hm::vec2f(-.5f), hm::vec2f(-1.f));
     
 };
 
-void heD2TextureRender(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size) {
+void heRenderEnginePrepareD3(HeRenderEngine* engine) {
+    
+    heRenderEngineResize(engine);
+    heFboBind(&engine->gBufferFbo);
+    heFrameClear(hm::colour(0, 0, 0, 255), HE_FRAME_BUFFER_BIT_COLOUR | HE_FRAME_BUFFER_BIT_DEPTH);
+    heDepthEnable(true);
+    heBlendMode(-1);
+    heCullEnable(true);
+    
+};
+
+void heRenderEngineFinishD3(HeRenderEngine* engine) {
+    
+    //heFboUnbind(engine->window->windowInfo.size);
+    
+    /*
+    heVaoBind(engine->quadVao);
+    heShaderBind(engine->finalShader);
+    heTextureBind(engine->gBufferFbo.colourTextures[2], 0);
+    heVaoRender(engine->quadVao);
+    */
+    
+};
+
+void heRenderEnginePrepareUi(HeRenderEngine* engine) {
+    
+    //heFboBind(&engine->hdrFbo); // we only need the multisampled part of the fbo
+    //heFrameClear(hm::colour(0, 0, 0, 255), HE_FRAME_BUFFER_BIT_COLOUR);
+    heBlendMode(0);
+    
+};
+
+void heRenderEngineFinishUi(HeRenderEngine* engine) {
+    
+    //heFboUnbind(engine->window->windowInfo.size);
+    //heFboRender(&engine->hdrFbo, &engine->resolvedFbo);
+    
+    /*
+    heBlendMode(0);
+    heVaoBind(engine->quadVao);
+    heShaderBind(engine->finalShader);
+    heTextureBind(engine->resolvedFbo.colourTextures[0], 0);
+    heVaoRender(engine->quadVao);
+    */
+    
+};
+
+void heRenderEngineSetProperty(HeRenderEngine* engine, std::string const& name, int32_t const value) {
+    
+    
+    
+};
+
+
+void heUiQueueCreate(HeUiQueue* queue) {
+    
+    heVaoCreate(&queue->linesVao, HE_VAO_TYPE_LINES);
+    heVaoBind(&queue->linesVao);
+    HeVbo vbo;
+    heVboAllocate(&vbo, 0, 4, HE_VBO_USAGE_DYNAMIC); // coordinates (2 or 3), w component indicates 2d (0) or 3d (1)
+    heVaoAddVbo(&queue->linesVao, &vbo);
+    heVboAllocate(&vbo, 0, 1, HE_VBO_USAGE_DYNAMIC, HE_UNIFORM_DATA_TYPE_UINT); // colour
+    heVaoAddVbo(&queue->linesVao, &vbo);
+    heVboAllocate(&vbo, 0, 1, HE_VBO_USAGE_DYNAMIC); // width
+    heVaoAddVbo(&queue->linesVao, &vbo);
+    heVaoUnbind(&queue->linesVao);
+    queue->linesShader = heAssetPoolGetShader("gui_lines");
+    
+};
+
+void heUiRenderTexture(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size) {
+    
+    heUiRenderTexture(engine, texture->textureId, position, size);
+    
+};
+
+void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size) {
     
     hm::vec2f realPosition = position;
     if (realPosition.x >= 0)
@@ -127,125 +265,13 @@ void heD2TextureRender(HeRenderEngine* engine, HeTexture const* texture, hm::vec
     
 };
 
-void heD3LevelRender(HeD3Level* level) {
-    
-    std::vector<uint32_t> updatedLights;
-    std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
-    uint32_t lightIndex = 0;
-    
-    // check for lights that need to be updated
-    for(auto lights = level->lights.begin(); lights != level->lights.end(); ++lights) {
-        if(lights->update) {
-            updatedLights.emplace_back(lightIndex);
-            lights->update = false;
-        }
-        
-        lightIndex++;
-    }
-    
-    // map all instances to their shader
-    for(auto it = level->instances.begin(); it != level->instances.end(); ++it) {
-        if(it->material != nullptr)
-            shaderMap[it->material->shader].emplace_back(&(*it));
-    }
-    
-    
-    // loop through shaders, load data and then render all instances
-    for(const auto& all : shaderMap) {
-        heShaderBind(all.first);
-        heShaderLoadUniform(all.first, "u_time", level->time);
-        
-        // load camera
-        heShaderBind(all.first);
-        heShaderLoadUniform(all.first, "u_viewMat",   level->camera.viewMatrix);
-        heShaderLoadUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
-        heShaderLoadUniform(all.first, "u_cameraPos", level->camera.position);
-        
-        // load lights
-        for(uint32_t lights : updatedLights) {
-            auto it = level->lights.begin();
-            std::advance(it, lights);
-            heShaderLoadLight(all.first, &(*it), lights);
-        }
-        
-        for(HeD3Instance* instances : all.second)
-            heD3InstanceRender(instances);
-        
-    }
-    
-};
-
-void heRenderEnginePrepareD3(HeRenderEngine* engine) {
-    
-    heRenderEngineResize(engine);
-    heFboBind(&engine->hdrFbo);
-    heFrameClear(engine->window->windowInfo.backgroundColour, 2);
-    heEnableDepth(true);
-    
-};
-
-void heRenderEngineFinishD3(HeRenderEngine* engine) {
-    
-    heFboUnbind(engine->window->windowInfo.size);
-    heFboRender(&engine->hdrFbo, &engine->resolvedFbo);
-    
-    heVaoBind(engine->quadVao);
-    heShaderBind(engine->finalShader);
-    heTextureBind(engine->resolvedFbo.colourTextures[0], 0);
-    heVaoRender(engine->quadVao);
-    
-};
-
-void heRenderEnginePrepareUi(HeRenderEngine* engine) {
-    
-    heFboBind(&engine->hdrFbo); // we only need the multisampled part of the fbo
-    heFrameClear(hm::colour(0, 0, 0, 0), 2);
-    
-};
-
-void heRenderEngineFinishUi(HeRenderEngine* engine) {
-    
-    heFboUnbind(engine->window->windowInfo.size);
-    heFboRender(&engine->hdrFbo, &engine->resolvedFbo);
-    
-    heBlendMode(0);
-    heVaoBind(engine->quadVao);
-    heShaderBind(engine->finalShader);
-    heTextureBind(engine->resolvedFbo.colourTextures[0], 0);
-    heVaoRender(engine->quadVao);
-    
-};
-
-void heRenderEngineSetProperty(HeRenderEngine* engine, std::string const& name, int32_t const value) {
-    
-    
-    
-};
-
-
-void heUiQueueCreate(HeUiQueue* queue) {
-    
-    heVaoCreate(&queue->linesVao, HE_VAO_TYPE_LINES);
-    heVaoBind(&queue->linesVao);
-    HeVbo vbo;
-    heVboAllocate(&vbo, 0, 4, HE_VBO_USAGE_DYNAMIC); // coordinates (2 or 3), w component indicates 2d (0) or 3d (1)
-    heVaoAddVbo(&queue->linesVao, &vbo);
-    heVboAllocate(&vbo, 0, 1, HE_VBO_USAGE_DYNAMIC, HE_UNIFORM_DATA_TYPE_UINT); // colour
-    heVaoAddVbo(&queue->linesVao, &vbo);
-    heVboAllocate(&vbo, 0, 1, HE_VBO_USAGE_DYNAMIC); // width
-    heVaoAddVbo(&queue->linesVao, &vbo);
-    heVaoUnbind(&queue->linesVao);
-    queue->linesShader = heAssetPoolGetShader("gui_lines", "res/shaders/gui_lines_v.glsl", "res/shaders/gui_lines_g.glsl", "res/shaders/gui_lines_f.glsl");
-    
-};
-
 void heUiQueueRenderLines(HeRenderEngine* engine) {
     
     size_t size = engine->uiQueue.lines.size();
     if(size == 0)
         return;
     
-    heEnableDepth(false);
+    heDepthEnable(false);
     
     
     // build lines mesh

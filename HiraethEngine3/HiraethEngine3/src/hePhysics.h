@@ -23,7 +23,7 @@ class btDiscreteDynamicsWorld;
 struct HeD3Transformation;
 struct HeRenderEngine;
 
-struct HePhysicsInfo {
+struct HePhysicsShapeInfo {
     // the primitive type of this shape
     HePhysicsShape type;
     // a mass of 0 makes this object static (immovable)
@@ -46,21 +46,31 @@ struct HePhysicsInfo {
     // that objects should be able to go through
     std::vector<hm::vec3f> mesh;
     
-    HePhysicsInfo() : sphere(0.f), type(HE_PHYSICS_SHAPE_NONE) {};
+    HePhysicsShapeInfo() : sphere(0.f), type(HE_PHYSICS_SHAPE_NONE) {};
+};
+
+struct HePhysicsActorInfo {
+    // how high a character can step (in units)
+    float stepHeight = 0.2f;
+    // the force with which the character jumps. The actual jump height depents on the gravity
+    float jumpHeight = 8.0f;
+    // the offset of the camera from the bottom of the actors shape
+    float eyeOffset  = 1.8f;
 };
 
 struct HePhysicsComponent {
     btCollisionShape*     shape  = nullptr;
     btRigidBody*          body   = nullptr;
     btDefaultMotionState* motion = nullptr;
-    HePhysicsInfo         info;
+    HePhysicsShapeInfo    shapeInfo;
 };
 
 struct HePhysicsActor {
     btKinematicCharacterController* controller = nullptr;
 	btPairCachingGhostObject*       ghost      = nullptr;
     btConvexShape*                  shape      = nullptr;
-    HePhysicsInfo                   info;
+    HePhysicsShapeInfo              shapeInfo;
+    HePhysicsActorInfo              actorInfo;
 };
 
 struct HePhysicsLevel {
@@ -98,7 +108,7 @@ extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel const* level);
 extern HE_API inline b8 hePhysicsLevelIsSetup(HePhysicsLevel const* level);
 
 // creates a new physics component from a shape
-extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsInfo const& shape);
+extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& shape);
 // destroys given physics component. The component should be removed from all levels before this. This function simply deletes all
 // pointers and other data allocated
 extern HE_API void hePhysicsComponentDestroy(HePhysicsComponent* component);
@@ -112,19 +122,28 @@ extern HE_API hm::vec3f hePhysicsComponentGetPosition(HePhysicsComponent const* 
 extern HE_API hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component);
 
 // creates a new physics component from given shape
-extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsInfo const& shape);
+extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shape, HePhysicsActorInfo const& actorInfo);
 // destroys given actor. The actor should be removed from all levels before this. This function simply deletes all pointers and
 // other data allocated
 extern HE_API void hePhysicsActorDestroy(HePhysicsActor* actor);
 // updates the position of given actor
 extern HE_API void hePhysicsActorSetPosition(HePhysicsActor* actor, hm::vec3f const& position);
+// sets the eye position of this actor. This will simply subtract the eye offset from the position and then set the new position
+extern HE_API inline void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm::vec3f const& eyePosition);
 // sets the velocity (walk direction) of this actor
 extern HE_API inline void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity);
 // makes the given actor jump. The more force, the higher the actor will jump. If force is -1, the default force will be used
 extern HE_API inline void hePhysicsActorJump(HePhysicsActor* actor, float const force = -1);
 // returns the current position of the actor
 extern HE_API inline hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* actor);
+// returns the position of the eyes of this actor. The eye position depends on the eye offset in the actor information. The eye
+// position is usually where the camera should be placed
+extern HE_API inline hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor);
 // returns true if the actor currently stands on solid ground
 extern HE_API inline b8 hePhysicsActorOnGround(HePhysicsActor const* actor);
+
+// -- these functions simply update the actors settings
+
+extern HE_API inline void hePhysicsActorSetJumpHeight(HePhysicsActor* actor, float const height);
 
 #endif

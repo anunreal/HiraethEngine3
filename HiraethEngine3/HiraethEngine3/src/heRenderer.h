@@ -13,11 +13,7 @@ struct HeMaterial;
 
 /*
 
-TODO(Victor):
-Add UI rendering
-Add Post Process (Bloom)
-Deferred Render Engine
-Multiple Lights dynamically
+TODO(Victor): Add Ui Rendering, Add Post Process (Bloom), Deferred Render Engine
 
 */
 
@@ -35,7 +31,7 @@ struct HeUiLine {
     HeUiLine() : p0(0.f), p1(0.f), colour(0), width(0.f), d3(false) {};
     HeUiLine(hm::vec2f const& p0, hm::vec2f const& p1, hm::colour const& col, float const width) :
     p0(p0), p1(p1), colour(col), width(width), d3(false) {};
-    HeUiLine(hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& col, float const width) :
+	HeUiLine(hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& col, float const width) :
     p0(p0), p1(p1), colour(col), width(width), d3(true) {};
 };
 
@@ -55,19 +51,28 @@ struct HeRenderEngine {
     
     // a map of render properties. The name of the property (%name%, without the %) will be replaced
     // in every shader with the value stored (can be an int as string...)
-    std::map<std::string, std::string> renderProperties;
+    std::unordered_map<std::string, std::string> renderProperties;
     
     // the ui render queue for batch rendering
     HeUiQueue uiQueue;
     
-    /* hdr stuff */
-    
+    // the texture that should be drawn on screen. If this is 0, the final texture (with lightin applied) is drawn.
+    // 1: world space texture
+    // 2: normal texture
+    // 3: diffuse texture
+    // 4: arm texture
+    uint8_t outputTexture = 0;
     // a 16 bit multisampled fbo used for hdr rendering
-    HeFbo hdrFbo;
+    HeFbo gBufferFbo;
     // an 16 bit fbo used for post-process image manipulation
     HeFbo resolvedFbo;
     // used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
     HeShaderProgram* finalShader = nullptr;
+    // the shader used for rendering d3 objects into the gbuffer. This will put information like position, normals... into the
+    // gbuffer independant of the instances material
+    HeShaderProgram* gBufferShader = nullptr;
+    // the lighting shader after the gbuffer pass
+    HeShaderProgram* gLightingShader = nullptr;
 };
 
 // the current active render engine. Can be set and (then) used at any time
@@ -79,6 +84,10 @@ extern HE_API void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window
 extern HE_API void heRenderEngineResize(HeRenderEngine* engine);
 // destroys all the data of the render engine
 extern HE_API void heRenderEngineDestroy(HeRenderEngine* engine);
+// prepares the render engine for a new frame
+extern HE_API void heRenderEnginePrepare(HeRenderEngine* engine);
+// finishes up the frame by swapping the buffers
+extern HE_API void heRenderEngineFinish(HeRenderEngine* engine);
 // loads given material to given shader by uploading all textures and uniforms set in the material
 extern HE_API void heShaderLoadMaterial(HeShaderProgram* shader, HeMaterial const* material);
 // loads a 3d light source to given shader. If index is -1, the shader is assumed to only have one light as a uniform
@@ -87,12 +96,9 @@ extern HE_API void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource c
 // renders a single 3d instance using the instances mesh and material. Make sure that a shader is bound and
 // set up before this is called (camera and lights)
 extern HE_API void heD3InstanceRender(HeD3Instance* instance);
-// renders given texture to the currently bound fbo. The texture will be centered at position. Position and scale can
-// be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
-extern HE_API void heD2TextureRender(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
-extern HE_API void heD3LevelRender(HeD3Level* level);
+extern HE_API void heD3LevelRender(HeRenderEngine* engine, HeD3Level* level);
 // prepares the render engine for 3d rendering by binding the multisampled hdr fbo
 extern HE_API void heRenderEnginePrepareD3(HeRenderEngine* engine);
 // ends the render engine by drawing the fbo onto the screen
@@ -107,6 +113,12 @@ extern HE_API void heRenderEngineSetProperty(HeRenderEngine* engine, std::string
 
 // sets up this ui queue by creating the necessary vaos and shaders
 extern HE_API void heUiQueueCreate(HeUiQueue* queue);
+// renders given texture to the currently bound fbo. The texture will be centered at position. Position and scale can
+// be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
+extern HE_API inline void heUiRenderTexture(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size);
+// renders given texture to the currently bound fbo. The texture will be centered at position. Position and scale can
+// be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
+extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size);
 // renders all lines batched together
 extern HE_API void heUiQueueRenderLines(HeRenderEngine* queue);
 // renders all ui elements pushed

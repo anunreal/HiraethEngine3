@@ -29,6 +29,11 @@ extern HE_API void heDebugPrint(const std::string& message);
 extern HE_API std::string he_to_string(HeLightSourceType const& type);
 extern HE_API std::string he_to_string(HePhysicsShape const& type);
 
+// -- helper structs
+
+struct HeShaderData;
+extern HE_API std::string he_to_string(HeShaderData const* ptr);
+
 // -- structs -- (a big string, avoid copying with reference)
 
 struct HeD3LightSource;
@@ -40,8 +45,20 @@ extern HE_API void he_to_string(HeD3Instance const* ptr, std::string& output, st
 struct HeD3Camera;
 extern HE_API void he_to_string(HeD3Camera const* ptr, std::string& output, std::string const& prefix = "");
 
+struct HePhysicsShapeInfo;
+extern HE_API void he_to_string(HePhysicsShapeInfo const* ptr, std::string& output, std::string const& prefix = "");
+
+struct HePhysicsActorInfo;
+extern HE_API void he_to_string(HePhysicsActorInfo const* ptr, std::string& output, std::string const& prefix = "");
+
 struct HePhysicsComponent;
 extern HE_API void he_to_string(HePhysicsComponent const* ptr, std::string& output, std::string const& prefix = "");
+
+struct HePhysicsActor;
+extern HE_API void he_to_string(HePhysicsActor const* ptr, std::string& output, std::string const& prefix = "");
+
+struct HeMaterial;
+extern HE_API void he_to_string(HeMaterial const* ptr, std::string& output, std::string const& prefix = "");
 
 // tries to run a command. These commands are mainly for dynamic debugging (print debug info, set variables...).
 // If this is no valid command, false is returned

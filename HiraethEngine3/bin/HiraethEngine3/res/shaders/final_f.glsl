@@ -17,5 +17,5 @@ void main(void) {
 		colour = colour / (colour + 1.0);
 	
 	// gamma correction
-	out_colour  = vec4(pow(colour, vec3(1.0 / u_gamma)), in_colour.a);
+	out_colour = vec4(pow(colour, vec3(1.0 / u_gamma)), in_colour.a);
 }

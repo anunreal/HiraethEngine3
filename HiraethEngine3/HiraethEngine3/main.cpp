@@ -200,13 +200,16 @@ void createWorld(HeWindow* window) {
     heD3Level = &level;
     
     HE_LOG("Successfully loaded lvl");
-    HePhysicsInfo actorShape;
+    
+    HePhysicsShapeInfo actorShape;
     actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
     actorShape.capsule = hm::vec2f(0.75f, 2.0f);
     
-    hePhysicsActorCreate(&actor, actorShape);
+    HePhysicsActorInfo actorInfo;
+    
+    hePhysicsActorCreate(&actor, actorShape, actorInfo);
     hePhysicsLevelSetActor(&level.physics, &actor);
-    hePhysicsActorSetPosition(&actor, hm::vec3f(-5.f, 0.1f, 5.f));
+    hePhysicsActorSetEyePosition(&actor, hm::vec3f(-5.f, 0.1f, 5.f));
     //hePhysicsLevelEnableDebugDraw(&level.physics);
     
 };
@@ -248,6 +251,7 @@ int main() {
             heThreadLoaderUpdate();
         
         heWindowUpdate(&window);
+        heRenderEnginePrepare(&engine);
         level.time += window.frameTime;
         
         { // input
@@ -267,26 +271,25 @@ int main() {
             
             hePhysicsLevelUpdate(&level.physics, (float) window.frameTime);
             if(!freeCam)
-                level.camera.position = hePhysicsActorGetPosition(&actor);
+                level.camera.position = hePhysicsActorGetEyePosition(&actor);
         }
         
         { // d3 rendering
             heRenderEnginePrepareD3(&engine);
             heD3LevelUpdate(&level);
-            heD3LevelRender(&level);
+            heD3LevelRender(&engine, &level);
             hePhysicsLevelDebugDraw(&level.physics);
             heRenderEngineFinishD3(&engine);
         }
         
-        { // ui rendering
+        if(true) { // ui rendering
             // TODO(Victor): check if there is any ui content to render
             heRenderEnginePrepareUi(&engine);
             heUiQueueRender(&engine);
             heRenderEngineFinishUi(&engine);
         }
         
-        
-        heWindowSwapBuffers(&window);
+        heRenderEngineFinish(&engine);
         heWindowSyncToFps(&window);
         
 #if USE_NETWORKING

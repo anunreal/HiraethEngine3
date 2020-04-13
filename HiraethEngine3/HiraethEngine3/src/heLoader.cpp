@@ -4,7 +4,7 @@
 #include "heWindow.h"
 #include "heCore.h"
 #include <fstream>
-
+#include <limits>
 
 void parseObjVertex(const int ids[3], HeD3MeshBuilder& mesh) {
     
@@ -208,7 +208,7 @@ void heMeshLoad(const std::string& fileName, HeVao* vao) {
 };
 
 
-void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhysicsInfo* physics) {
+void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
     
     std::ifstream stream(fileName);
     if(!stream) {
@@ -227,11 +227,11 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhy
     instance->name = assetName;
 #endif
     
-    if(instance->material == nullptr)
-        instance->material = &heAssetPool.materialPool[assetName];
     
-    HeMaterial* material = instance->material;
-    material->shader = heAssetPoolGetShader(line);
+    // MATERIAL
+    instance->material = heAssetPoolGetNewMaterial(assetName);
+    //instance->material->shader = heAssetPoolGetShader(line);
+    instance->material->type = heMaterialGetType(line);
     
     std::getline(stream, line);
     while(!line.empty()) {
@@ -239,40 +239,82 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhy
         size_t pos = line.find('=');
         std::string name = line.substr(0, pos);
         std::string tex = line.substr(pos + 1);
-        material->textures[name] = heAssetPoolGetTexture("res/textures/assets/" + tex);
+        instance->material->textures[name] = heAssetPoolGetTexture("res/textures/assets/" + tex);
         std::getline(stream, line);
     }
     
-    HeD3MeshBuilder builder;
     
-    // parse vertices
-    {
-        float result = 0.f;
-        while(parseFloatFixedWidth(stream, &result))
-            builder.verticesArray.emplace_back(result);
+    // MESH
+    HeVao* vao = nullptr;
+    auto it = heAssetPool.meshPool.find(fileName);
+    if(it == heAssetPool.meshPool.end()) {
+        // load mesh
+        HeD3MeshBuilder builder;
+        
+        // parse vertices
+        {
+            float result = 0.f;
+            while(parseFloatFixedWidth(stream, &result))
+                builder.verticesArray.emplace_back(result);
+        }
+        
+        // parse uvs
+        {
+            float result = 0.f;
+            while(parseFloatFixedWidth(stream, &result))
+                builder.uvArray.emplace_back(result);
+        }
+        
+        // parse normals
+        {
+            float result = 0.f;
+            while(parseFloatFixedWidth(stream, &result))
+                builder.normalArray.emplace_back(result);
+        }
+        
+        
+        // parse tangents
+        {
+            float result = 0.f;
+            while(parseFloatFixedWidth(stream, &result))
+                builder.tangentArray.emplace_back(result);
+        }
+        
+        vao = &heAssetPool.meshPool[fileName];
+        
+#ifdef HE_ENABLE_NAMES
+        vao->name = fileName;
+#endif
+        
+        b8 isMainThread = heIsMainThread();
+        if(isMainThread) {
+            heVaoCreate(vao);
+            heVaoBind(vao);
+        }
+        
+        heVaoAddData(vao, builder.verticesArray, 3, HE_VBO_USAGE_STATIC);
+        heVaoAddData(vao, builder.uvArray,       2, HE_VBO_USAGE_STATIC);
+        heVaoAddData(vao, builder.normalArray,   3, HE_VBO_USAGE_STATIC);
+        heVaoAddData(vao, builder.tangentArray,  3, HE_VBO_USAGE_STATIC);
+        
+        if(!isMainThread)
+            heThreadLoaderRequestVao(vao);
+        
+    } else {
+        // mesh was already loaded before, retrieve from asset pool
+        vao = &heAssetPool.meshPool[fileName];
+        
+        // skip lines
+        stream.ignore(std::numeric_limits<std::streamsize>::max(), stream.widen('\n'));
+        stream.ignore(std::numeric_limits<std::streamsize>::max(), stream.widen('\n'));
+        stream.ignore(std::numeric_limits<std::streamsize>::max(), stream.widen('\n'));
+        stream.ignore(std::numeric_limits<std::streamsize>::max(), stream.widen('\n'));
     }
     
-    // parse uvs
-    {
-        float result = 0.f;
-        while(parseFloatFixedWidth(stream, &result))
-            builder.uvArray.emplace_back(result);
-    }
+    instance->mesh = vao;
     
-    // parse normals
-    {
-        float result = 0.f;
-        while(parseFloatFixedWidth(stream, &result))
-            builder.normalArray.emplace_back(result);
-    }
     
-    // parse tangents
-    {
-        float result = 0.f;
-        while(parseFloatFixedWidth(stream, &result))
-            builder.tangentArray.emplace_back(result);
-    }
-    
+    // PHYSICS
     char c = stream.peek();
     // check if file still has content and physics is not nullptr
     if(c != '\n' && physics) {
@@ -309,30 +351,6 @@ void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhy
     
     stream.close();
     
-    
-    b8 isMainThread = heIsMainThread();
-    
-    HeVao* vao = &heAssetPool.meshPool[fileName];
-    
-#ifdef HE_ENABLE_NAMES
-    vao->name = fileName;
-#endif
-    
-    if(isMainThread) {
-        heVaoCreate(vao);
-        heVaoBind(vao);
-    }
-    
-    heVaoAddData(vao, builder.verticesArray, 3, HE_VBO_USAGE_STATIC);
-    heVaoAddData(vao, builder.uvArray,       2, HE_VBO_USAGE_STATIC);
-    heVaoAddData(vao, builder.normalArray,   3, HE_VBO_USAGE_STATIC);
-    heVaoAddData(vao, builder.tangentArray,  3, HE_VBO_USAGE_STATIC);
-    
-    if(!isMainThread)
-        heThreadLoaderRequestVao(vao);
-    
-    instance->mesh = vao;
-    
 };
 
 void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
@@ -342,6 +360,11 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
         HE_ERROR("Could not find level file [" + fileName + "]");
         return;
     }
+    
+    // some kind of physics info
+    if(!hePhysicsLevelIsSetup(&level->physics))
+        hePhysicsLevelCreate(&level->physics);
+    b8 hasPhysics = false;
     
     char type;
     char c;
@@ -357,22 +380,16 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
             }
             
             HeD3Instance* instance = &level->instances.emplace_back();
-            hm::vec3f rotation;
             
             parseFloats(stream, 3, &instance->transformation.position);
-            parseFloats(stream, 3, &rotation);
+            parseFloats(stream, 4, &instance->transformation.rotation);
             parseFloats(stream, 3, &instance->transformation.scale);
             
-            instance->transformation.rotation = hm::fromEulerRadians(rotation);
-            
-            HePhysicsInfo physics;
+            HePhysicsShapeInfo physics;
             heD3InstanceLoad("res/assets/" + name, instance, &physics);
             
             if(physics.type != HE_PHYSICS_SHAPE_NONE) {
-                // some kind of physics info
-                if(!hePhysicsLevelIsSetup(&level->physics))
-                    hePhysicsLevelCreate(&level->physics);
-                
+                hasPhysics = true;
                 instance->physics = &level->physics.components.emplace_back();
                 hePhysicsComponentCreate(instance->physics, physics);
                 hePhysicsComponentSetTransform(instance->physics, instance->transformation);
@@ -393,6 +410,9 @@ void heD3LevelLoad(const std::string& fileName, HeD3Level* level) {
             parseFloats(stream, 8, &light->data);
         }
     }
+    
+    if(!hasPhysics)
+        hePhysicsLevelDestroy(&level->physics);
     
     stream.close();
     

@@ -9,6 +9,18 @@
 #define HE_API __declspec(dllimport)
 #endif
 
+// possible macro definitions:
+// HE_USE_WIN32
+// HE_ENABLE_ERROR_CHECKING
+// HE_ENABLE_HOTSWAWP_SHADER
+// HE_ENABLE_LOGGING_ALL
+// HE_ENABLE_LOG_MSG
+// HE_ENABLE_DEBUG_MSG
+// HE_ENABLE_WARNING_MSG
+// HE_ENABLE_ERROR_MSG
+// HE_ENABLE_NAMES
+
+
 typedef bool b8;
 
 typedef enum HeKeyCode {
@@ -141,11 +153,34 @@ typedef enum HeVaoType {
     HE_VAO_TYPE_TRIANGLES = 0x0004
 } HeVaoType;
 
+typedef enum HeFrameBufferBits {
+    HE_FRAME_BUFFER_BIT_COLOUR  = 0x4000,
+    HE_FRAME_BUFFER_BIT_DEPTH   = 0x0100,
+    HE_FRAME_BUFFER_BIT_STENCIL = 0x0400
+} HeFrameBufferBits;
+
+// functions for depth and stencil tests
+typedef enum HeFragmentTestFunctions {
+    // always passes
+    HE_FRAGMENT_TEST_ALWAYS = 0x0207,
+    // never passes
+    HE_FRAGMENT_TEST_NEVER  = 0x0200,
+    // passes if the given value is at least a threshold
+    HE_FRAGMENT_TEST_GEQUAL = 0x0206
+} HeFragmentTestFunctions;
+
+typedef enum HeShaderType {
+    HE_SHADER_TYPE_FRAGMENT = 0x8B30,
+    HE_SHADER_TYPE_VERTEX   = 0x8B31,
+    HE_SHADER_TYPE_GEOMETRY = 0x8DD9
+} HeShaderType;
+
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\
 inline T operator& (T a, T b) {return (T)((int) a & (int) b);};
 
 HE_ENABLE_BIT(HeFboFlags)
 HE_ENABLE_BIT(HeDebugInfoFlags)
+HE_ENABLE_BIT(HeFrameBufferBits)
 
 #endif

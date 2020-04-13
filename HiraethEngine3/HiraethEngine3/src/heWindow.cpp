@@ -37,8 +37,6 @@ void heWindowUpdate(HeWindow* window) {
     heWin32WindowUpdate(window);
 #endif
     
-    heFrameClear(window->windowInfo.backgroundColour, 2);
-    
 };
 
 void heWindowDestroy(HeWindow* window) {

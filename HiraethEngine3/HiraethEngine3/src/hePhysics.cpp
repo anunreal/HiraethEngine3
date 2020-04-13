@@ -30,8 +30,6 @@ class HePhysicsDebugDrawer : public btIDebugDraw {
     virtual void drawContactPoint(const btVector3& pointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) {
     	btVector3 to = pointOnB + normalOnB * distance;
         const btVector3& from = pointOnB;
-        glColor4f(color.getX(), color.getY(), color.getZ(), 1.0f);
-        
         drawLine(from, to, color);
     };
 	
@@ -46,7 +44,7 @@ class HePhysicsDebugDrawer : public btIDebugDraw {
 
 HePhysicsDebugDrawer hePhysicsDebugDrawer;
 
-btCollisionShape* heCreateShape(HePhysicsInfo const& shape) {
+btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
     
     btCollisionShape* bt = nullptr;
     btTriangleMesh* mesh; // only used if concave mesh
@@ -87,8 +85,11 @@ btCollisionShape* heCreateShape(HePhysicsInfo const& shape) {
         break;
         
         case HE_PHYSICS_SHAPE_CAPSULE:
-        btScalar width(shape.capsule.x / 2.f);
-        bt = new btCapsuleShape(width, shape.capsule.y - shape.capsule.x);
+        bt = new btCapsuleShape(shape.capsule.x / 2.f, shape.capsule.y - shape.capsule.x);
+        break;
+        
+        default:
+        HE_WARNING("Unknown physics shape type: " + std::to_string(shape.type));
         break;
     }
     
@@ -187,19 +188,15 @@ void hePhysicsLevelDisableDebugDraw(HePhysicsLevel* level) {
 
 void hePhysicsLevelDebugDraw(HePhysicsLevel const* level) {
     
-    if(level->enableDebugDraw) {
-        heEnableDepth(false);
+    if(level->enableDebugDraw)
         level->world->debugDrawWorld();
-        heEnableDepth(true);
-        glFinish();
-    }
     
 };
 
 b8 hePhysicsLevelIsSetup(HePhysicsLevel const* level) { return level->world != nullptr; };
 
 
-void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsInfo const& info) {
+void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& info) {
     
     component->shape = heCreateShape(info);
     
@@ -215,8 +212,8 @@ void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsInfo const
     rbInfo.m_friction    = info.friction;
     rbInfo.m_restitution = info.restitution;
     component->body      = new btRigidBody(rbInfo);
-    component->info      = info;
-    component->info.mesh.clear(); // save memory
+    component->shapeInfo = info;
+    component->shapeInfo.mesh.clear(); // save memory
     
 };
 
@@ -268,16 +265,18 @@ hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component) {
 };
 
 
-void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsInfo const& info) {
+void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shapeInfo, HePhysicsActorInfo const& actorInfo) {
     
     actor->ghost      = new btPairCachingGhostObject();
     actor->ghost->setWorldTransform(btTransform::getIdentity());
-    actor->shape      = (btConvexShape*) heCreateShape(info);
+    actor->shape      = (btConvexShape*) heCreateShape(shapeInfo);
     actor->ghost->setCollisionShape(actor->shape);
     actor->ghost->setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
-    actor->controller = new btKinematicCharacterController(actor->ghost, actor->shape, btScalar(.35f), btVector3(0, 1, 0));
-    actor->info       = info;
-    actor->info.mesh.clear(); // save memory
+    actor->controller = new btKinematicCharacterController(actor->ghost, actor->shape, btScalar(actorInfo.stepHeight), btVector3(0, 1, 0));
+    actor->controller->setJumpSpeed(actorInfo.jumpHeight);
+    actor->shapeInfo  = shapeInfo;
+    actor->shapeInfo.mesh.clear(); // save memory
+    actor->actorInfo  = actorInfo;
     
 };
 
@@ -302,6 +301,14 @@ void hePhysicsActorSetPosition(HePhysicsActor* actor, hm::vec3f const& position)
     
 };
 
+void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm::vec3f const& eyePosition) {
+    
+    hm::vec3f realPosition = eyePosition;
+    realPosition.y -= eyePosition.y - (actor->shapeInfo.capsule.y / 2.f);
+    hePhysicsActorSetPosition(actor, realPosition);
+    
+};
+
 void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity) {
     
     actor->controller->setWalkDirection(btVector3(velocity.x, velocity.y, velocity.z));
@@ -321,8 +328,23 @@ hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* actor) {
     
 };
 
+hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor) {
+    
+    hm::vec3f position = hePhysicsActorGetPosition(actor);
+    position.y += (actor->actorInfo.eyeOffset - actor->shapeInfo.capsule.y / 2.f);
+    return position;
+    
+};
+
 b8 hePhysicsActorOnGround(HePhysicsActor const* actor) {
     
     return actor->controller->onGround();
+    
+};
+
+void hePhysicsActorSetJumpHeight(HePhysicsActor* actor, float const height) {
+    
+    actor->actorInfo.jumpHeight = height;
+    actor->controller->setJumpSpeed(height);
     
 };

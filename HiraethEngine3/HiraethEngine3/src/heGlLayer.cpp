@@ -35,16 +35,50 @@ std::string heShaderLoadSource(std::string const& file) {
     
 };
 
-uint32_t heShaderLoadFromFile(std::string const& file, uint32_t type) {
+std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string const& file) {
     
-    std::string source = heShaderLoadSource(file);
-    if(source.empty())
-        return 0;
+    std::ifstream stream(file);
+    std::unordered_map<HeShaderType, std::string> sourceMap;
+    if (!stream) {
+        HE_ERROR("Could not find shader file [" + file + "]");
+        return sourceMap;
+    }
+    
+    std::string line;
+    
+    HeShaderType currentType;
+    while (std::getline(stream, line)) {
+        if(line[0] == '#') {
+            if(line.compare(1, 6, "vertex") == 0) {
+                currentType = HE_SHADER_TYPE_VERTEX;
+                continue;
+            } else if(line.compare(1, 8, "geometry") == 0) {
+                currentType = HE_SHADER_TYPE_GEOMETRY;
+                continue;
+            } else if(line.compare(1, 8, "fragment") == 0) {
+                currentType = HE_SHADER_TYPE_FRAGMENT;
+                continue;
+            }
+        }
+        
+        sourceMap[currentType] += line + "\n";
+    }
+    
+    stream.close();
+    return sourceMap;
+    
+};
+
+uint32_t heShaderLoadFromSource(std::string const& source, uint32_t type, std::string const& name = "") {
     
     const char* src_ptr = source.c_str();
     uint32_t id = glCreateShader(type);
     glShaderSource(id, 1, &src_ptr, NULL);
     glCompileShader(id);
+    
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_SHADER, id, (uint32_t) name.size(), name.c_str());
+#endif
     
     int32_t compileStatus;
     glGetShaderiv(id, GL_COMPILE_STATUS, &compileStatus);
@@ -52,12 +86,23 @@ uint32_t heShaderLoadFromFile(std::string const& file, uint32_t type) {
         char infoLog[512];
         memset(infoLog, 0, 512);
         glGetShaderInfoLog(id, 512, NULL, infoLog);
-        HE_ERROR("While compiling shader [" + file + "]:\n" + std::string(infoLog));
+        HE_ERROR("While compiling shader [" + name + "]:\n" + std::string(infoLog));
         return 0;
     } else
         return id;
     
 };
+
+uint32_t heShaderLoadFromFile(std::string const& file, uint32_t type) {
+    
+    std::string source = heShaderLoadSource(file);
+    if(source.empty())
+        return 0;
+    
+    return heShaderLoadFromSource(source, type, file);
+    
+};
+
 
 void heShaderCompileProgram(HeShaderProgram* program) {
     
@@ -88,6 +133,10 @@ void heShaderLoadCompute(HeShaderProgram* program, std::string const& computeSha
     heShaderCompileProgram(program);
     glDeleteShader(sid);
     
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_PROGRAM, program->programId, (uint32_t) program->name.size(), program->name.c_str());
+#endif
+    
 };
 
 void heShaderLoadProgram(HeShaderProgram* program, std::string const& vertexShader, std::string const& fragmentShader) {
@@ -104,6 +153,10 @@ void heShaderLoadProgram(HeShaderProgram* program, std::string const& vertexShad
     heShaderCompileProgram(program);
     glDeleteShader(vs);
     glDeleteShader(fs);
+    
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_PROGRAM, program->programId, (uint32_t) program->name.size(), program->name.c_str());
+#endif
     
 };
 
@@ -125,6 +178,37 @@ void heShaderLoadProgram(HeShaderProgram* program, std::string const& vertexShad
     glDeleteShader(gs);
     glDeleteShader(fs);
     
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_PROGRAM, program->programId, (uint32_t) program->name.size(), program->name.c_str());
+#endif
+    
+};
+
+void heShaderLoadProgram(HeShaderProgram* program, std::string const& file) {
+    
+    std::unordered_map<HeShaderType, std::string> source = heShaderLoadSourceAll(file);
+    uint32_t vs = heShaderLoadFromSource(source[HE_SHADER_TYPE_VERTEX], GL_VERTEX_SHADER, file);
+    uint32_t fs = heShaderLoadFromSource(source[HE_SHADER_TYPE_FRAGMENT], GL_FRAGMENT_SHADER, file);
+    int32_t gs = -1;
+    if(source.find(HE_SHADER_TYPE_GEOMETRY) != source.end())
+        gs = heShaderLoadFromSource(source[HE_SHADER_TYPE_GEOMETRY], GL_GEOMETRY_SHADER, file);
+    
+    if(vs == 0 || fs == 0 || gs == 0)
+        return;
+    
+    program->programId = glCreateProgram();
+    glAttachShader(program->programId, vs);
+    if(gs != -1) glAttachShader(program->programId, gs);
+    glAttachShader(program->programId, fs);
+    heShaderCompileProgram(program);
+    glDeleteShader(vs);
+    if(gs != -1) glDeleteShader(gs);
+    glDeleteShader(fs);
+    
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_PROGRAM, program->programId, (uint32_t) program->name.size(), program->name.c_str());
+#endif
+    
 };
 
 void heShaderCreateProgram(HeShaderProgram* program, std::string const& vertexShader, std::string const& fragmentShader) {
@@ -141,6 +225,13 @@ void heShaderCreateProgram(HeShaderProgram* program, std::string const& vertexSh
     program->files.emplace_back(geometryShader);
     program->files.emplace_back(fragmentShader);
     heShaderLoadProgram(program, vertexShader, geometryShader, fragmentShader);
+    
+};
+
+void heShaderCreateProgram(HeShaderProgram* program, std::string const& file) {
+    
+    program->files.emplace_back(file);
+    heShaderLoadProgram(program, file);
     
 };
 
@@ -218,10 +309,13 @@ void heShaderReload(HeShaderProgram* program) {
     
     // reload shader
     heShaderDestroy(program);
+    if(program->files.size() == 1)
+        // all in one file
+        heShaderLoadProgram(program, program->files[0]);
     if(program->files.size() == 2)
         // vertex -> fragment
         heShaderLoadProgram(program, program->files[0], program->files[1]);
-    else
+    else if(program->files.size() == 3)
         // vertex -> geometry -> fragment
     
         heShaderLoadProgram(program, program->files[0], program->files[1], program->files[2]);
@@ -235,7 +329,8 @@ void heShaderReload(HeShaderProgram* program) {
     std::string names;
     for(std::string const& all : program->files)
         names += all + ", ";
-    HE_DEBUG("Reloaded program (" + names.substr(0, names.size() - 3) + ")");
+    
+    HE_DEBUG("Reloaded program (" + names.substr(0, names.size() - 2) + ")");
     
 };
 
@@ -266,7 +361,16 @@ int heShaderGetUniformLocation(HeShaderProgram* program, std::string const& unif
     } else {
         location = glGetUniformLocation(program->programId, uniform.c_str());
         program->uniforms[uniform] = location;
+        
+        if(location == -1) {
+#ifdef HE_ENABLE_NAMES
+            HE_DEBUG("Could not find shader uniform [" + uniform + "] in shader [" + program->name + "]");
+#else
+            HE_DEBUG("Could not find shader uniform [" + uniform + "]");
+#endif
+        }
     }
+    
     return location;
     
 };
@@ -277,13 +381,28 @@ int heShaderGetSamplerLocation(HeShaderProgram* program, std::string const& samp
     if (program->samplers.find(sampler) != program->samplers.end()) {
         location = program->samplers[sampler];
     } else {
-        uint32_t uloc = glGetUniformLocation(program->programId, sampler.c_str());
+        int32_t uloc = glGetUniformLocation(program->programId, sampler.c_str());
         glProgramUniform1i(program->programId, uloc, requestedSlot);
         program->samplers[sampler] = requestedSlot;
         location = requestedSlot;
+        
+        if(uloc == -1) {
+#ifdef HE_ENABLE_NAMES
+            HE_DEBUG("Could not find shader sampler [" + sampler + "] in shader [" + program->name + "]");
+#else
+            HE_DEBUG("Could not find shader sampler [" + sampler + "]");
+#endif
+        }
     }
     
     return location;
+    
+};
+
+void heShaderClearSamplers(HeShaderProgram const* program) {
+    
+    for(auto const& all : program->samplers)
+        heTextureBind(nullptr, all.second);
     
 };
 
@@ -491,6 +610,10 @@ void heVaoCreate(HeVao* vao, HeVaoType const type) {
     glGenVertexArrays(1, &vao->vaoId);
     vao->type = type;
     
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_VERTEX_ARRAY, vao->vaoId, (uint32_t) vao->name.size(), vao->name.c_str());
+#endif
+    
 };
 
 void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
@@ -509,6 +632,16 @@ void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
         vbo->dataui.clear();
     }
     
+#ifdef HE_ENABLE_NAMES
+    int32_t currentVao;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVao);
+    char buf[256];
+    int32_t bytes;
+    glGetObjectLabel(GL_VERTEX_ARRAY, currentVao, 256, &bytes, (GLchar*) &buf);
+    std::string name = std::string(buf, bytes) + "[" + std::to_string(attributeIndex) + "]";
+    glObjectLabel(GL_BUFFER, vbo->vboId, (uint32_t) name.size(), name.c_str());
+#endif
+    
 };
 
 void heVaoAddVbo(HeVao* vao, HeVbo* vbo) {
@@ -521,6 +654,11 @@ void heVaoAddVbo(HeVao* vao, HeVbo* vbo) {
     vao->vbos.emplace_back(*vbo);
     if (vao->vbos.size() == 1)
         vao->verticesCount = vbo->verticesCount;
+    
+#ifdef HE_ENABLE_NAMES
+    std::string name = vao->name + "[" + std::to_string(vao->vbos.size()) + "]";
+    glObjectLabel(GL_BUFFER, vbo->vboId, (uint32_t) name.size(), name.c_str());
+#endif
     
 };
 
@@ -661,6 +799,13 @@ void heVaoDestroy(HeVao* vao) {
     
     glDeleteVertexArrays(1, &vao->vaoId);
     vao->vaoId = 0;
+    vao->verticesCount = 0;
+    vao->vbos.clear();
+    vao->type = HE_VAO_TYPE_NONE;
+    
+#ifdef HE_ENABLE_NAMES
+    vao->name.clear();
+#endif
     
 };
 
@@ -672,12 +817,12 @@ void heVaoRender(HeVao const* vao) {
 
 
 
-void heFboCreateColourAttachment(HeFbo* fbo) {
+void heFboCreateColourAttachment(HeFbo* fbo, HeColourFormat const format) {
     
     uint32_t id;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexImage2D(GL_TEXTURE_2D, 0, (fbo->flags & HE_FBO_FLAG_HDR) ? GL_RGBA16F : GL_RGBA8, fbo->size.x, fbo->size.y,
+    glTexImage2D(GL_TEXTURE_2D, 0, format, fbo->size.x, fbo->size.y,
                  0, GL_RGBA, GL_FLOAT, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -686,9 +831,14 @@ void heFboCreateColourAttachment(HeFbo* fbo) {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + (int)fbo->colourTextures.size(), GL_TEXTURE_2D, id, 0);
     fbo->colourTextures.emplace_back(id);
     
+#ifdef HE_ENABLE_NAMES
+    std::string name = fbo->name + "[" + std::to_string(fbo->colourTextures.size()) + "]";
+    glObjectLabel(GL_TEXTURE, id, (uint32_t) name.size(), name.c_str());
+#endif
+    
 };
 
-void heFboCreateMultisampledColourAttachment(HeFbo* fbo) {
+void heFboCreateMultisampledColourAttachment(HeFbo* fbo, HeColourFormat const format) {
     
     uint32_t id;
     glGenRenderbuffers(1, &id);
@@ -726,13 +876,14 @@ void heFboCreateDepthTextureAttachment(HeFbo* fbo) {
 
 void heFboCreate(HeFbo* fbo) {
     
+    HeColourFormat format = (fbo->flags & HE_FBO_FLAG_HDR) ? HE_COLOUR_FORMAT_RGBA16 : HE_COLOUR_FORMAT_RGBA8;
     glGenFramebuffers(1, &fbo->fboId);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo->fboId);
     
     if (fbo->samples == 1)
-        heFboCreateColourAttachment(fbo);
+        heFboCreateColourAttachment(fbo, format);
     else
-        heFboCreateMultisampledColourAttachment(fbo);
+        heFboCreateMultisampledColourAttachment(fbo, format);
     
     if (fbo->flags & HE_FBO_FLAG_DEPTH_RENDER_BUFFER)
         heFboCreateDepthBufferAttachment(fbo);
@@ -742,7 +893,9 @@ void heFboCreate(HeFbo* fbo) {
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         HE_ERROR("Fbo not set up correctly (" + std::to_string(glGetError()) + ")");
     
-    heFboUnbind();
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_FRAMEBUFFER, fbo->fboId, (uint32_t) fbo->name.size(), fbo->name.c_str());
+#endif
     
 };
 
@@ -848,10 +1001,15 @@ void heTextureLoadFromFile(HeTexture* texture, std::string const& fileName) {
     }
     
     texture->format = HE_COLOUR_FORMAT_RGBA8;
-    if (heIsMainThread())
+    if (heIsMainThread()) {
         // we are in some context thread, load it right now
         heTextureCreateFromBuffer(buffer, &texture->textureId, texture->width, texture->height, texture->channels, HE_COLOUR_FORMAT_RGBA8);
-    else
+        
+#ifdef HE_ENABLE_NAMES
+        glObjectLabel(GL_TEXTURE, texture->textureId, (uint32_t) texture->name.size(), texture->name.c_str());
+#endif
+        
+    } else
         // no context in the current thread, add it to the thread loader
         heThreadLoaderRequestTexture(texture, buffer);
     
@@ -887,6 +1045,10 @@ void heTextureLoadFromFile(HeTexture* texture, FILE* stream) {
     heTextureCreateFromBuffer(buffer, &texture->textureId, texture->width, texture->height, texture->channels, HE_COLOUR_FORMAT_RGBA8);
     
     stbi_image_free(buffer);
+    
+#ifdef HE_ENABLE_NAMES
+    glObjectLabel(GL_TEXTURE, texture->textureId, (uint32_t) texture->name.size(), texture->name.c_str());
+#endif
     
 };
 
@@ -932,6 +1094,12 @@ void heTextureDestroy(HeTexture* texture) {
         texture->height = 0;
         texture->channels = 0;
     }
+    
+};
+
+void heTextureLabel(HeTexture const* texture, std::string const& name) {
+    
+    glObjectLabel(GL_TEXTURE, texture->textureId, (uint32_t) name.size(), name.c_str());
     
 };
 
@@ -990,22 +1158,10 @@ void heTextureClampRepeat() {
 
 // --- Utils
 
-void heFrameClear(hm::colour const& colour, int8_t const type) {
+void heFrameClear(hm::colour const& colour, HeFrameBufferBits const type) {
     
     glClearColor(getR(&colour), getG(&colour), getB(&colour), getA(&colour));
-    switch (type) {
-        case 0:
-        glClear(GL_COLOR_BUFFER_BIT);
-        break;
-        
-        case 1:
-        glClear(GL_DEPTH_BUFFER_BIT);
-        break;
-        
-        case 2:
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        break;
-    }
+    glClear(type);
     
 };
 
@@ -1055,12 +1211,43 @@ void heBufferBlendMode(int8_t const attachmentIndex, int8_t const mode) {
     
 };
 
-void heEnableDepth(b8 const depth) {
+void heDepthEnable(b8 const depth) {
     
     if (depth)
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);
+    
+};
+
+void heCullEnable(b8 const culling) {
+    
+    if(culling) {
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+    } else
+        glDisable(GL_CULL_FACE);
+    
+};
+
+void heStencilEnable(b8 const depth) {
+    
+    if(depth)
+        glEnable(GL_STENCIL_TEST);
+    else
+        glDisable(GL_STENCIL_TEST);
+    
+};
+
+void heStencilMask(uint32_t const mask) {
+    
+    glStencilMask(mask);
+    
+};
+
+void heStencilFunc(HeFragmentTestFunctions const function, uint32_t const threshold, uint32_t const mask) {
+    
+    glStencilFunc(function, threshold, mask);
     
 };
 

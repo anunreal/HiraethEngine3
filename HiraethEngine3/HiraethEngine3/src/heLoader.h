@@ -27,7 +27,7 @@ extern HE_API void heMeshLoad(const std::string& fileName, HeVao* vao);
 // loads an asset from given file. This asset must be a valid h3asset file. This will load a material and a mesh and
 // simply replace the existing ones in instance (should be nullptr). If physics is not nullptr and there is physics info
 // in the asset file, the data will be parsed and stored in that pointer
-extern HE_API void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhysicsInfo* physics);
+extern HE_API void heD3InstanceLoad(const std::string& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics);
 // loads a level from given file. This file must be a valid h3level file. This will load all assets and lights in
 // that level. Specification for the level file format:
 // Instances:

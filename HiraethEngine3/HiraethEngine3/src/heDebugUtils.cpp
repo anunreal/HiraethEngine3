@@ -8,9 +8,7 @@ HeDebugInfo heDebugInfo;
 
 void heDebugRequestInfo(const HeDebugInfoFlags flags) {
     
-    //heDebugInfo.flags |= flags;
     // print debug information
-    
     if(flags == HE_DEBUG_INFO_LIGHTS) {
         heDebugPrint("=== LIGHTS === ");
         for(const auto& all : heD3Level->lights) {
@@ -24,10 +22,11 @@ void heDebugRequestInfo(const HeDebugInfoFlags flags) {
     
     if(flags == HE_DEBUG_INFO_INSTANCES) {
         heDebugPrint("=== INSTANCES ===");
+        uint16_t counter = 0;
         for(const auto& all : heD3Level->instances) {
             std::string string;
             he_to_string(&all, string);
-            heDebugPrint(string);
+            heDebugPrint('[' + std::to_string(counter++) + "] = " + string);
         }
         
         heDebugPrint("=== INSTANCES ===");
@@ -125,6 +124,39 @@ std::string he_to_string(HePhysicsShape const& type) {
 };
 
 
+std::string he_to_string(HeShaderData const* ptr) {
+    
+    std::string data;
+    
+    switch(ptr->type) {
+        case HE_UNIFORM_DATA_TYPE_INT:
+        case HE_UNIFORM_DATA_TYPE_UINT:
+        case HE_UNIFORM_DATA_TYPE_BOOL:
+        data = std::to_string(ptr->_int);
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_FLOAT:
+        data = std::to_string(ptr->_float);
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_VEC2:
+        data = hm::to_string(ptr->_vec2);
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_VEC3:
+        data = hm::to_string(ptr->_vec3);
+        break;
+        
+        case HE_UNIFORM_DATA_TYPE_COLOUR:
+        data = hm::to_string(ptr->_colour);
+        break;
+    }
+    
+    return data;
+    
+};
+
+
 void he_to_string(HeD3LightSource const* ptr, std::string& output, std::string const& prefix) {
     
     std::string type = he_to_string(ptr->type);;
@@ -156,9 +188,9 @@ void he_to_string(HeD3Instance const* ptr, std::string& output, std::string cons
 #ifdef HE_ENABLE_NAMES
     output += prefix + "\tname     = " + ptr->name + "\n";
     output += prefix + "\tmesh     = " + ptr->mesh->name + "\n";
-    output += prefix + "\tshader   = " + ptr->material->shader->name + "\n";
 #endif
     
+    he_to_string(ptr->material, output, prefix + '\t');
     output += prefix + "\tposition = " + hm::to_string(ptr->transformation.position) + "\n";
     output += prefix + "\trotation = " + hm::to_string(ptr->transformation.rotation) + "\n";
     output += prefix + "\tscale    = " + hm::to_string(ptr->transformation.scale) + "\n";
@@ -179,23 +211,67 @@ void he_to_string(HeD3Camera const* ptr, std::string& output, std::string const&
     
 };
 
+void he_to_string(HePhysicsShapeInfo const* ptr, std::string& output, std::string const& prefix) {
+    
+    output += prefix + "HePhysicsShapeInfo {\n";
+    output += prefix + "\tshape       = " + he_to_string(ptr->type) + "\n";
+    
+    if(ptr->type == HE_PHYSICS_SHAPE_BOX)
+        output += prefix + "\thalf-axis   = " + hm::to_string(ptr->box) + '\n';
+    else if(ptr->type == HE_PHYSICS_SHAPE_SPHERE)
+        output += prefix + "\tradius      = " + std::to_string(ptr->sphere) + '\n';
+    else if(ptr->type == HE_PHYSICS_SHAPE_CAPSULE)
+        output += prefix + "\tradii       = " + hm::to_string(ptr->capsule) + '\n';
+    
+    output += prefix + "\tmass        = " + std::to_string(ptr->mass) + '\n';
+    output += prefix + "\tfriction    = " + std::to_string(ptr->friction) + '\n';
+    output += prefix + "\trestitution = " + std::to_string(ptr->restitution) + '\n';
+    output += prefix + "};\n";
+    
+};
+
+void he_to_string(HePhysicsActorInfo const* ptr, std::string& output, std::string const& prefix) {
+    
+    output += prefix + "HePhysicsActorInfo {\n";
+    output += prefix + "\tstepHeight = " + std::to_string(ptr->stepHeight) + '\n';
+    output += prefix + "\tjumpHeight = " + std::to_string(ptr->jumpHeight) + '\n';
+    output += prefix + "\teyeOffset  = " + std::to_string(ptr->eyeOffset) + '\n';
+    output += prefix + "};\n";
+    
+};
+
 void he_to_string(HePhysicsComponent const* ptr, std::string& output, std::string const& prefix) {
     
-    HePhysicsInfo const& info = ptr->info;
-    
     output += prefix + "HePhysicsComponent {\n";
-    output += prefix + "\tshape       = " + he_to_string(info.type) + "\n";
+    he_to_string(&ptr->shapeInfo, output, prefix + '\t');
+    output += prefix + "};\n";
     
-    if(info.type == HE_PHYSICS_SHAPE_BOX)
-        output += prefix + "\thalf-axis   = " + hm::to_string(info.box) + '\n';
-    else if(info.type == HE_PHYSICS_SHAPE_SPHERE)
-        output += prefix + "\tradius      = " + std::to_string(info.sphere) + '\n';
-    else if(info.type == HE_PHYSICS_SHAPE_CAPSULE)
-        output += prefix + "\tradii       = " + hm::to_string(info.capsule) + '\n';
+};
+
+void he_to_string(HePhysicsActor const* ptr, std::string& output, std::string const& prefix) {
     
-    output += prefix + "\tmass        = " + std::to_string(info.mass) + '\n';
-    output += prefix + "\tfriction    = " + std::to_string(info.friction) + '\n';
-    output += prefix + "\trestitution = " + std::to_string(info.restitution) + '\n';
+    output += prefix + "HePhysicsActor {\n";
+    he_to_string(&ptr->shapeInfo, output, prefix + '\t');
+    he_to_string(&ptr->actorInfo, output, prefix + '\t');
+    output += prefix + "};\n";
+    
+};
+
+void he_to_string(HeMaterial const* ptr, std::string& output, std::string const& prefix) {
+    
+    output += prefix + "HeMaterial {\n";
+    output += prefix + "\ttype   = " + std::to_string(ptr->type) + '\n';
+#ifdef HE_ENABLE_NAMES
+    //output += prefix + "\tshader = " + ptr->shader->name + '\n';
+    output += prefix + "\ttextures:\n";
+    for(auto const& all : ptr->textures)
+        output += prefix + "\t\t" + all.first + " = " + all.second->name + '\n';
+#endif
+    
+    output += prefix + "\tuniforms:\n";
+    for(auto const& all : ptr->uniforms)
+        output += prefix + "\t\t" + all.first + " = " + he_to_string(&all.second) + '\n';
+    
     output += prefix + "};\n";
     
 };
@@ -245,12 +321,30 @@ b8 heCommandRun(std::string const& message) {
                 else
                     // quaternion
                     instance->transformation.rotation = hm::parseQuatf(args[3]);
+                if(instance->physics)
+                    hePhysicsComponentSetTransform(instance->physics, instance->transformation);
                 found = true;
             } else if(args[2] == "scale") {
                 instance->transformation.scale = hm::parseVec3f(args[3]);
                 found = true;
             }
-            
+        } else if(args[1] == "render") {
+            if(args[2] == "output") {
+                // update output texture
+                uint8_t tex = std::stoi(args[3]);
+                heRenderEngine->outputTexture = tex;
+                found = true;
+            }
+        } else if(args[1] == "actor") {
+            // update actors settings
+            HePhysicsActor* actor = heD3Level->physics.actor;
+            if(args[2] == "position") {
+                hePhysicsActorSetEyePosition(actor, hm::parseVec3f(args[3]));
+                found = true;
+            } else if(args[2] == "jumpHeight") {
+                hePhysicsActorSetJumpHeight(actor, std::stof(args[3]));
+                found = true;
+            }
         }
     } else if(args[0] == "enable") {
         // enable something in the engine

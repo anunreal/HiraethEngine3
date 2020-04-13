@@ -35,15 +35,20 @@ HeFileHandleMap handleMap;
 #ifndef HID_USAGE_GENERIC_MOUSE
 #define HID_USAGE_GENERIC_MOUSE        ((USHORT) 0x02)
 #endif
+#define                            HE_RAW_INPUT 0
 
 PFNWGLCREATECONTEXTATTRIBSARBPROC  _wglCreateContextAttribsARB = nullptr;
 PFNWGLCHOOSEPIXELFORMATARBPROC     _wglChoosePixelFormatARB = nullptr;
 PFNWGLSWAPINTERVALEXTPROC          _wglSwapIntervalEXT = nullptr;
 HINSTANCE                          classInstance;
+
+#ifdef HE_ENABLE_MULTIPLE_WINDOWS
 std::map<HWND, HeWindow*>          windowHandleMap;
 std::map<HeWindow*, HeWin32Window> win32map;
-#define                            HE_RAW_INPUT 0
-
+#else
+HeWindow* heWindow;
+HeWin32Window heWin32Window;
+#endif
 
 // --- File System
 
@@ -95,6 +100,7 @@ b8 heWin32FileExists(std::string const& file) {
 
 HeWin32Window* heWin32GetWindow(HeWindow const* window) {
     
+#ifdef HE_ENABLE_MULTIPLE_WINDOWS
     HeWin32Window* win32 = nullptr;
     
     for(auto& all : win32map) {
@@ -105,6 +111,9 @@ HeWin32Window* heWin32GetWindow(HeWindow const* window) {
     }
     
     return win32;
+#else
+    return &heWin32Window;
+#endif
     
 };
 
@@ -137,7 +146,13 @@ HeKeyCode heWin32GetKeyCode(WPARAM wparam, LPARAM lparam) {
 
 LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     
-    HeWindow* window = windowHandleMap[hwnd];
+    HeWindow* window;
+#ifdef HE_ENABLE_MULTIPLE_WINDOWS
+    window = windowHandleMap[hwnd];
+#else
+    window = heWindow;
+#endif
+    
     if (window != nullptr) {
         
         switch (msg) {
@@ -369,9 +384,6 @@ b8 heWin32WindowCreateHandle(HeWindow* window, HeWin32Window* win32) {
     
     ShowWindow(win32->handle, SW_SHOW);
     UpdateWindow(win32->handle);
-    hm::vec2i size = heWin32WindowCalculateBorderSize(window);
-    window->windowInfo.size.x -= size.x;
-    window->windowInfo.size.y -= size.y;
     window->shouldClose = false;
     
     return true;
@@ -439,7 +451,16 @@ b8 heWin32IsMainThread() {
 
 b8 heWin32WindowCreate(HeWindow* window) {
     
-    HeWin32Window* win32 = &win32map[window];
+    HeWin32Window* win32;
+    
+#ifdef HE_ENABLE_MULTIPLE_WINDOWS
+    win32 = &win32map[window];
+    windowHandleMap[win32->handle] = window;
+#else
+    win32 = &heWin32Window;
+    heWindow = window;
+#endif
+    
     if (!heWin32SetupClassInstance())
         return false;
     
@@ -456,7 +477,6 @@ b8 heWin32WindowCreate(HeWindow* window) {
     heWin32registerMouseInput(win32);
 #endif
     
-    windowHandleMap[win32->handle] = window;
     window->active = true;
     
     return true;
@@ -475,7 +495,7 @@ void heWin32WindowUpdate(HeWindow* window) {
 
 void heWin32WindowDestroy(HeWindow* window) {
     
-    HeWin32Window* win32 = &win32map[window];
+    HeWin32Window* win32 = heWin32GetWindow(window);
     HDC context = GetDC(win32->handle);
     wglMakeCurrent(context, NULL);
     ReleaseDC(win32->handle, context);
@@ -483,11 +503,17 @@ void heWin32WindowDestroy(HeWindow* window) {
     wglDeleteContext(win32->context);
     DestroyWindow(win32->handle);
     win32->handle = NULL;
+    
+#ifdef HE_ENABLE_MULTIPLE_WINDOWS
     windowHandleMap.erase(win32->handle);
     win32map.erase(window);
-    
     if (windowHandleMap.size() == 0)
         UnregisterClass(L"HiraethUI", classInstance);
+#else
+    heWindow = nullptr;
+    heWin32Window = HeWin32Window();
+    UnregisterClass(L"HiraethUI", classInstance);
+#endif
     
 };
 
@@ -522,7 +548,7 @@ void heWin32WindowToggleCursor(b8 const hidden) {
 
 void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position) {
     
-    HeWin32Window* win32 = &win32map[window];
+    HeWin32Window* win32 = heWin32GetWindow(window);
     hm::vec2i abs;
     abs.x = (position.x >= 0) ? (int)position.x : (int)(-position.x * window->windowInfo.size.x);
     abs.y = (position.y >= 0) ? (int)position.y : (int)(-position.y * window->windowInfo.size.y);
