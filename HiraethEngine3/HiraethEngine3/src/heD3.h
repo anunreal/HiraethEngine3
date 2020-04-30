@@ -71,12 +71,18 @@ struct HeD3LightSource {
     b8 active = true;
 };
 
+struct HeD3Skybox {
+    HeTexture* specular = nullptr;
+    HeTexture* irradiance = nullptr;
+};
+
 struct HeD3Level {
     HeD3Camera camera;
+    HeD3Skybox skybox;
+    HePhysicsLevel physics;
     std::list<HeD3Instance> instances;
     std::list<HeD3LightSource> lights;
     double time = 0.0;
-    HePhysicsLevel physics;
 };
 
 // the current active d3 level. Can be set and (then) used at any time
@@ -106,11 +112,17 @@ extern HE_API void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* insta
 extern HE_API void heD3LevelUpdate(HeD3Level* level);
 // returns the instance with given index from the list of instances in the level
 extern HE_API inline HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16_t const index);
+// returns the light source with given index from the list of lights in the level
+extern HE_API inline HeD3LightSource* heD3LevelGetLightSource(HeD3Level* level, uint16_t const index);
 
 // updates all components of this instance
 extern HE_API void heD3InstanceUpdate(HeD3Instance* instance);
 // sets the new position of the entity. This should always be used over directly setting the instances position as this will
 // also update the components
 extern HE_API void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position);
+
+// loads a skybox from given hdr image. This will unmap the equirectangular image onto a cube map and also create a blurred
+// irradiance map. This will load, run and destroy a compute shader and also create the cube maps
+extern HE_API void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile);
 
 #endif

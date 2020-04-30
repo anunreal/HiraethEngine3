@@ -120,7 +120,6 @@ namespace hm {
     
     // parses a vec3 from a string. The coordinates should be split by a single '/' char
     static inline vec3f parseVec3f(const std::string& input) {
-        //std::vector<std::string> args = heStringSplit(input);
         std::string arguments[3];
         size_t index0 = input.find('/');
         arguments[0] = input.substr(0, index0);

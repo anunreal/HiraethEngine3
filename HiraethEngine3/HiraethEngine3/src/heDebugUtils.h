@@ -27,14 +27,27 @@ extern HE_API void heDebugPrint(const std::string& message);
 // -- enums -- (returning string because these are simple)
 
 extern HE_API std::string he_to_string(HeLightSourceType const& type);
-extern HE_API std::string he_to_string(HePhysicsShape const& type);
+extern HE_API std::string he_to_string(HePhysicsShape    const& type);
+extern HE_API std::string he_to_string(HeColourFormat    const& type);
+extern HE_API std::string he_to_string(HeMemoryType      const& type);
+
 
 // -- helper structs
 
 struct HeShaderData;
 extern HE_API std::string he_to_string(HeShaderData const* ptr);
 
+
 // -- structs -- (a big string, avoid copying with reference)
+
+struct HeTexture;
+extern HE_API void he_to_string(HeTexture const* ptr, std::string& output, std::string const& prefix = "");
+
+struct HeFboAttachment;
+extern HE_API void he_to_string(HeFboAttachment const* ptr, std::string& output, std::string const& prefix = "");
+
+struct HeFbo;
+extern HE_API void he_to_string(HeFbo const* ptr, std::string& output, std::string const& prefix = "");
 
 struct HeD3LightSource;
 extern HE_API void he_to_string(HeD3LightSource const* ptr, std::string& output, std::string const& prefix = "");
@@ -60,6 +73,17 @@ extern HE_API void he_to_string(HePhysicsActor const* ptr, std::string& output, 
 struct HeMaterial;
 extern HE_API void he_to_string(HeMaterial const* ptr, std::string& output, std::string const& prefix = "");
 
+
+// -- other
+
+// returns given byte count formatted into bytes, kb or mb
+extern HE_API std::string he_bytes_to_string(uint64_t const bytes);
+// formats a float into a string with given precision
+extern HE_API std::string he_float_to_string(float const _float, uint8_t const precision);
+
+
+// -- commands
+
 // tries to run a command. These commands are mainly for dynamic debugging (print debug info, set variables...).
 // If this is no valid command, false is returned
 extern HE_API b8 heCommandRun(std::string const& command);
@@ -67,7 +91,7 @@ extern HE_API b8 heCommandRun(std::string const& command);
 // it will block io. The function will run as long as running is true. If running is a nullptr, the function will
 // run until the application closes
 extern HE_API void heCommandThread(b8* running);
-
-
+// print all errors in the queue (see heErrorSaveAll())
+extern HE_API void heErrorsPrint();
 
 #endif //HE_DEBUG_UTILS_H

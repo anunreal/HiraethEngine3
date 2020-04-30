@@ -59,8 +59,8 @@ void main(void) {
 		// probably no normal map found, use "default" normal
 		out_normal = vec4(pass_normal, 1);
 	else
-		out_normal = vec4(normalize(pass_tangentSpace * normalize(normalRgb * 2.0 - 1.0)), 1.0);
-	
+		out_normal = vec4(normalize(pass_tangentSpace * (normalRgb * 2.0 - 1.0)), 1.0);
+
 	out_position = vec4(pass_position, float(u_materialType));
 	out_diffuse  = texture(t_diffuse, pass_uv);
 	out_arm      = texture(t_arm, pass_uv);

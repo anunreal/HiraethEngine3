@@ -45,7 +45,6 @@ class HePhysicsDebugDrawer : public btIDebugDraw {
 HePhysicsDebugDrawer hePhysicsDebugDrawer;
 
 btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
-    
     btCollisionShape* bt = nullptr;
     btTriangleMesh* mesh; // only used if concave mesh
     btConvexHullShape* s; // only used if convex mesh
@@ -94,29 +93,25 @@ btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
     }
     
     return bt;
-    
 };
 
 
-
-void hePhysicsLevelCreate(HePhysicsLevel* level) {
-    
+void hePhysicsLevelCreate(HePhysicsLevel* level, HePhysicsLevelInfo const& info) {
     level->config     = new btDefaultCollisionConfiguration();
     level->dispatcher = new btCollisionDispatcher(level->config);
 	btVector3 worldMin(-1000, -1000, -1000);
 	btVector3 worldMax(1000, 1000, 1000);
-	btAxisSweep3* sweepBP = new btAxisSweep3(worldMin, worldMax);
-    level->broadphase = sweepBP;
-    //level->broadphase = new btDbvtBroadphase();
+	//btAxisSweep3* sweepBP = new btAxisSweep3(worldMin, worldMax);
+    //level->broadphase = sweepBP;
+    level->broadphase = new btDbvtBroadphase();
     level->solver     = new btSequentialImpulseConstraintSolver();
     level->world      = new btDiscreteDynamicsWorld(level->dispatcher, level->broadphase, level->solver, level->config);
-    level->world->setGravity(btVector3(0, -10, 0));
+    level->world->setGravity(btVector3(info.gravity.x, info.gravity.y, info.gravity.z));
     level->world->getDispatchInfo().m_allowedCcdPenetration = 0.0001f;
-    
+    level->info = info;
 };
 
 void hePhysicsLevelDestroy(HePhysicsLevel* level) {
-    
     delete level->world;
     level->world = nullptr;
     delete level->solver;
@@ -127,23 +122,17 @@ void hePhysicsLevelDestroy(HePhysicsLevel* level) {
     level->dispatcher = nullptr;
     delete level->config;
     level->config = nullptr;
-    
 };
 
 void hePhysicsLevelAddComponent(HePhysicsLevel* level, const HePhysicsComponent* component) {
-    
     level->world->addRigidBody(component->body);
-    
 };
 
 void hePhysicsLevelRemoveComponent(HePhysicsLevel* level, const HePhysicsComponent* component) {
-    
     level->world->removeRigidBody(component->body);
-    
 };
 
 void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor* actor) {
-    
     if(actor == nullptr) {
         // remove current actor
         level->world->removeCollisionObject(level->actor->ghost);
@@ -158,46 +147,37 @@ void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor* actor) {
         level->world->addCollisionObject(actor->ghost, btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);
         level->world->addAction(actor->controller);
         level->actor = actor;
+        level->actor->controller->setGravity(btVector3(level->info.gravity.x, level->info.gravity.y, level->info.gravity.z));
     }
-    
 };
 
 void hePhysicsLevelUpdate(HePhysicsLevel* level, const float delta) {
-    
     // seconds to ms
     level->world->stepSimulation(delta, 10);
-    
 };
 
 void hePhysicsLevelEnableDebugDraw(HePhysicsLevel* level, HeRenderEngine* engine) {
-    
     hePhysicsDebugDrawer.setDebugMode(btIDebugDraw::DBG_DrawAabb | btIDebugDraw::DBG_DrawWireframe);
     hePhysicsDebugDrawer.engine = engine;
     level->world->setDebugDrawer(&hePhysicsDebugDrawer);
     level->enableDebugDraw = true;
-    
 };
 
 void hePhysicsLevelDisableDebugDraw(HePhysicsLevel* level) {
-    
     hePhysicsDebugDrawer.setDebugMode(0);
     level->world->setDebugDrawer(nullptr);
     level->enableDebugDraw = false;
-    
 };
 
 void hePhysicsLevelDebugDraw(HePhysicsLevel const* level) {
-    
     if(level->enableDebugDraw)
         level->world->debugDrawWorld();
-    
 };
 
 b8 hePhysicsLevelIsSetup(HePhysicsLevel const* level) { return level->world != nullptr; };
 
 
 void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& info) {
-    
     component->shape = heCreateShape(info);
     
     // create rigid body
@@ -214,59 +194,47 @@ void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo 
     component->body      = new btRigidBody(rbInfo);
     component->shapeInfo = info;
     component->shapeInfo.mesh.clear(); // save memory
-    
 };
 
 void hePhysicsComponentDestroy(HePhysicsComponent* component) {
-    
     delete component->motion;
     component->motion = nullptr;
     delete component->shape;
     component->shape = nullptr;
     delete component->body;
     component->body = nullptr;
-    
 };
 
 void hePhysicsComponentSetPosition(HePhysicsComponent* component, hm::vec3f const& position) {
-    
     btTransform transform = component->body->getWorldTransform();
     transform.setOrigin(btVector3(position.x, position.y, position.z));
     component->body->setWorldTransform(transform);
     component->motion->setWorldTransform(transform);
     component->body->forceActivationState(ACTIVE_TAG);
     component->body->activate();
-    
 };
 
 void hePhysicsComponentSetTransform(HePhysicsComponent* component, HeD3Transformation const& transform) {
-    
     btTransform bttransform = component->body->getWorldTransform();
     bttransform.setOrigin(btVector3(transform.position.x, transform.position.y, transform.position.z));
     bttransform.setRotation(btQuaternion(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w));
     component->shape->setLocalScaling(btVector3(transform.scale.x, transform.scale.y, transform.scale.z));
     component->body->setWorldTransform(bttransform);
     component->motion->setWorldTransform(bttransform);
-    
 };
 
 hm::vec3f hePhysicsComponentGetPosition(HePhysicsComponent const* component) {
-    
     btVector3 const& transform = component->body->getWorldTransform().getOrigin();
     return hm::vec3f(transform.getX(), transform.getY(), transform.getZ());
-    
 };
 
 hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component) {
-    
     btQuaternion const& transform = component->body->getWorldTransform().getRotation();
     return hm::quat(transform.getX(), transform.getY(), transform.getZ(), transform.getW());
-    
 };
 
 
 void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shapeInfo, HePhysicsActorInfo const& actorInfo) {
-    
     actor->ghost      = new btPairCachingGhostObject();
     actor->ghost->setWorldTransform(btTransform::getIdentity());
     actor->shape      = (btConvexShape*) heCreateShape(shapeInfo);
@@ -277,74 +245,71 @@ void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shape
     actor->shapeInfo  = shapeInfo;
     actor->shapeInfo.mesh.clear(); // save memory
     actor->actorInfo  = actorInfo;
-    
 };
 
 void hePhysicsActorDestroy(HePhysicsActor* actor) {
-    
     delete actor->controller;
     actor->controller = nullptr;
     delete actor->shape;
     actor->shape = nullptr;
     delete actor->ghost;
     actor->ghost = nullptr;
-    
 };
 
 void hePhysicsActorSetPosition(HePhysicsActor* actor, hm::vec3f const& position) {
-    
+    if(!actor->controller)
+        return;
     btTransform transform;
     transform.setIdentity();
     transform.setOrigin(btVector3(position.x, position.y, position.z));
     actor->controller->warp(btVector3(position.x, position.y, position.z));
     actor->ghost->setWorldTransform(transform);
-    
 };
 
 void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm::vec3f const& eyePosition) {
-    
+    if(!actor->controller)
+        return;
     hm::vec3f realPosition = eyePosition;
     realPosition.y -= eyePosition.y - (actor->shapeInfo.capsule.y / 2.f);
     hePhysicsActorSetPosition(actor, realPosition);
-    
 };
 
 void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity) {
-    
+    if(!actor->controller)
+        return;
     actor->controller->setWalkDirection(btVector3(velocity.x, velocity.y, velocity.z));
-    
 };
 
-void hePhysicsActorJump(HePhysicsActor* actor, float const force) {
-    
+void hePhysicsActorJump(HePhysicsActor* actor) {
+    if(!actor->controller)
+        return;
     actor->controller->jump();
-    
 };
 
 hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* actor) {
-    
+    if(!actor->controller)
+        return hm::vec3f(0);
     btVector3 origin = actor->ghost->getWorldTransform().getOrigin();
     return hm::vec3f(origin.getX(), origin.getY(), origin.getZ());
-    
 };
 
 hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor) {
-    
+    if(!actor->controller)
+        return hm::vec3f(0);
     hm::vec3f position = hePhysicsActorGetPosition(actor);
     position.y += (actor->actorInfo.eyeOffset - actor->shapeInfo.capsule.y / 2.f);
     return position;
-    
 };
 
 b8 hePhysicsActorOnGround(HePhysicsActor const* actor) {
-    
+    if(!actor->controller)
+        return true;
     return actor->controller->onGround();
-    
 };
 
 void hePhysicsActorSetJumpHeight(HePhysicsActor* actor, float const height) {
-    
-    actor->actorInfo.jumpHeight = height;
-    actor->controller->setJumpSpeed(height);
-    
+    if(actor->controller) {
+        actor->actorInfo.jumpHeight = height;
+        actor->controller->setJumpSpeed(height);
+    }
 };

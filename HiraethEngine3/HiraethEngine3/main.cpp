@@ -5,8 +5,11 @@
 #include "src/heCore.h"
 #include "src/heDebugUtils.h"
 #include "src/hePhysics.h"
+#include "src/heBinary.h"
+#include "src/heWin32Layer.h"
 #include <windows.h>
 #include <thread>
+#include <vector>
 #include "hnClient.h"
 
 static bool inputActive = true;
@@ -15,7 +18,6 @@ hm::vec2i lastPosition;
 hm::vec3f velocity;
 
 void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
-    
     if (window->mouseInfo.leftButtonDown) {
         inputActive = !inputActive;
         heWindowToggleCursor(inputActive);
@@ -23,13 +25,6 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     
     if(window->mouseInfo.rightButtonDown)
         freeCam = !freeCam;
-    
-    /*
-    if (!inputActive) {
-        velocity = hm::vec3f(0);
-        return;
-    }
-    */
     
     if(inputActive) {
         POINT current_mouse_pos = {};
@@ -82,7 +77,6 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     
     //camera->position += velocity;
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
-    
 };
 
 
@@ -101,7 +95,6 @@ std::map<unsigned int, Player> players;
 
 
 void _onClientConnect(HnClient* client, HnLocalClient* local) {
-    
     HeD3Instance* instance = &level.instances.emplace_back();
     instance->mesh = heAssetPoolGetMesh("res/models/player.obj");
     instance->material = heAssetPoolGetMaterial("level");
@@ -111,7 +104,6 @@ void _onClientConnect(HnClient* client, HnLocalClient* local) {
     Player* p = &players[local->id];
     p->client = local;
     p->model = instance;
-    
 };
 
 void _onClientDisconnect(HnClient* client, HnLocalClient* local) {
@@ -120,7 +112,6 @@ void _onClientDisconnect(HnClient* client, HnLocalClient* local) {
 };
 
 void createClient() {
-    
     client.callbacks.clientConnect = &_onClientConnect;
     client.callbacks.clientDisconnect = &_onClientDisconnect;
     //hnConnectClient(&client, "tealfire.de", 9876);
@@ -135,72 +126,54 @@ void createClient() {
         cameraRotation = hm::fromEulerDegrees(-level.camera.rotation);
         hnClientUpdateInput(&client);
     };
-    
 };
 
-
-void modelStressTest(const std::string& file) {
-    const int COUNT = 10;
-    
-    LARGE_INTEGER frequency;        // ticks per second
-    LARGE_INTEGER t1, t2;           // ticks
-    double elapsedTime;
-    
-    // get ticks per second
-    QueryPerformanceFrequency(&frequency);
-    
-    // start timer
-    QueryPerformanceCounter(&t1);
-    
-    for(int i = 0; i < COUNT; ++i) {
-        HeVao v;
-        heMeshLoad(file + ".obj", &v);
-        heVaoDestroy(&v);
-    }
-    
-    // stop timer
-    QueryPerformanceCounter(&t2);
-    
-    // compute and print the elapsed time in millisec
-    double elapsedTimeObj = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
-    
-    
-    
-    
-    // start timer
-    QueryPerformanceCounter(&t1);
-    
+void modelStressTest(std::string const& file) {
+    const int8_t COUNT = 1;
     HeD3Instance instance;
     
+    heTimerStart();
+    
     for(int i = 0; i < COUNT; ++i) {
-        heD3InstanceLoad(file + ".h3asset", &instance, nullptr);
+        heD3InstanceLoadBinary("res/assets/bin/" + file + ".h3asset", &instance, nullptr);
         heVaoDestroy(instance.mesh);
     }
     
-    // stop timer
-    QueryPerformanceCounter(&t2);
+    double bin = heTimerGet();
     
-    // compute and print the elapsed time in millisec
-    elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
-    HN_LOG("OBJ loading took: " + std::to_string(elapsedTimeObj) + "ms");
-    HN_LOG("h3asset loading took: " + std::to_string(elapsedTime) + "ms");
+    heTimerStart();
+    
+    for(int i = 0; i < COUNT; ++i) {
+        heD3InstanceLoad("res/assets/" + file + ".h3asset", &instance, nullptr);
+        heVaoDestroy(instance.mesh);
+    }
+    
+    double ascii = heTimerGet();
+    HN_LOG("Binary loading took: " + std::to_string(bin)   + "ms (avg: " + std::to_string(bin   / COUNT) + ")");
+    HN_LOG("ascii  loading took: " + std::to_string(ascii) + "ms (avg: " + std::to_string(ascii / COUNT) + ")");
 };
 
+#define USE_PHYSICS 1
+#define USE_NETWORKING 0
 
 void createWorld(HeWindow* window) {
-    
-    //modelStressTest("res/assets/stage");
+    //modelStressTest("cerberus");
     
     HeD3Camera* camera = &level.camera;
     camera->position = hm::vec3f(0, 1, 0);
     camera->rotation = hm::vec3f(0);
     camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window->windowInfo.size.x / (float)window->windowInfo.size.y, 0.1f, 1000.0f);
-    heD3LevelLoad("res/level/level0.h3level", &level);
+    heTimerStart();
+    heD3LevelLoad("res/level/level0.h3level", &level, USE_PHYSICS);
+    heTimerPrint("LEVEL LOAD");
+    
+    heD3SkyboxCreate(&level.skybox, "res/textures/hdr/pink_sunrise.hdr");
     heD3Level = &level;
     
     HE_LOG("Successfully loaded lvl");
     
+#if USE_PHYSICS == 1
     HePhysicsShapeInfo actorShape;
     actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
     actorShape.capsule = hm::vec2f(0.75f, 2.0f);
@@ -211,15 +184,16 @@ void createWorld(HeWindow* window) {
     hePhysicsLevelSetActor(&level.physics, &actor);
     hePhysicsActorSetEyePosition(&actor, hm::vec3f(-5.f, 0.1f, 5.f));
     //hePhysicsLevelEnableDebugDraw(&level.physics);
-    
+#endif
 };
 
 // TODO(Victor): Multiple shapes per component
 
-
-#define USE_NETWORKING 0
-
 int main() {
+    //heBinaryConvertD3InstanceFile("res/assets/cerberus.h3asset", "res/assets/bin/cerberus.h3asset");
+
+    std::thread commandThread(heCommandThread, nullptr);
+    
     HeWindow window;
     HeWindowInfo windowInfo;
     windowInfo.title            = L"He3 Test";
@@ -230,22 +204,34 @@ int main() {
     
     heWindowCreate(&window);
     heWindowToggleCursor(true);
-    
+
+	heGlPrintInfo();
+	
     HeRenderEngine engine;
     heRenderEngineCreate(&engine, &window);
     heRenderEngine = &engine;
-    
-    createWorld(&window);
-    
-    std::thread commandThread(heCommandThread, nullptr);
+
+	createWorld(&window);
+
+	HeFont* font = heAssetPoolGetFont("Inconsolata");
+	
+    HE_LOG("Set up engine");
     
 #if USE_NETWORKING
     std::thread thread(createClient);
 #endif
     
-    heGlErrorSaveAll();
-    // TODO(Victor): Check for possible errors during setup and print them
+#if USE_PHYSICS == 0
+    freeCam = true;
+#endif
     
+    heGlErrorSaveAll();
+    heErrorsPrint();
+    
+    HE_DEBUG("Starting game loop");
+
+	float FONT_SIZE = 0.5f;
+	
     while (!window.shouldClose) {
         if (heThreadLoader.updateRequested)
             heThreadLoaderUpdate();
@@ -264,27 +250,45 @@ int main() {
             else {
                 hePhysicsActorSetVelocity(&actor, hm::vec3f(0));
                 level.camera.position += v;
-			}
+            }
             
             if(heWindowKeyWasPressed(&window, HE_KEY_SPACE) && hePhysicsActorOnGround(&actor))
-                hePhysicsActorJump(&actor, 1);
+                hePhysicsActorJump(&actor);
             
+#if USE_PHYSICS == 1
             hePhysicsLevelUpdate(&level.physics, (float) window.frameTime);
+#endif
             if(!freeCam)
                 level.camera.position = hePhysicsActorGetEyePosition(&actor);
         }
-        
-        { // d3 rendering
+
+        if(heWindowKeyWasPressed(&window, HE_KEY_R)) {
+            heTextureDestroy(level.skybox.specular);
+            heTextureDestroy(level.skybox.irradiance);
+            heD3SkyboxCreate(&level.skybox, "res/textures/hdr/pink_sunrise.hdr");    
+		}
+
+		if(heWindowKeyWasPressed(&window, HE_KEY_T))
+			FONT_SIZE += .1f;
+		if(heWindowKeyWasPressed(&window, HE_KEY_Z))
+			FONT_SIZE -= .1f;
+		
+        if(true) { // d3 rendering
             heRenderEnginePrepareD3(&engine);
             heD3LevelUpdate(&level);
             heD3LevelRender(&engine, &level);
+#if USE_PHYSICS == 1
             hePhysicsLevelDebugDraw(&level.physics);
+#endif
             heRenderEngineFinishD3(&engine);
         }
         
         if(true) { // ui rendering
             // TODO(Victor): check if there is any ui content to render
-            heRenderEnginePrepareUi(&engine);
+			heUiPushText(&engine, font, "Hi, I love you Klari <3", hm::vec2i(10, 150), 13, hm::colour(255));
+			heRenderEnginePrepareUi(&engine);
+			heUiRenderQuad(&engine, hm::vec2i(0, 0), hm::vec2i(0, 150), hm::vec2i(window.windowInfo.size.x, 0), hm::vec2i(window.windowInfo.size.x, 150), hm::colour(40, 40, 40, 200));
+            heUiRenderQuad(&engine, hm::vec2i(0, 150), hm::vec2i(0, 170), hm::vec2i(window.windowInfo.size.x, 150), hm::vec2i(window.windowInfo.size.x, 170), hm::colour(10, 10, 10, 255));
             heUiQueueRender(&engine);
             heRenderEngineFinishUi(&engine);
         }
@@ -297,6 +301,7 @@ int main() {
 #endif
         
         heGlErrorSaveAll();
+        heErrorsPrint();
     }
     
 #if USE_NETWORKING

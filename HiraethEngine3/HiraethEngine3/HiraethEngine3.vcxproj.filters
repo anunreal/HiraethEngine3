@@ -90,6 +90,9 @@
     <ClInclude Include="src\hm\to_string.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\heBinary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\heWindow.cpp">
@@ -126,6 +129,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\hePhysics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\heBinary.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

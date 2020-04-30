@@ -1,8 +1,8 @@
 #ifndef HE_RENDERER_H
 #define HE_RENDERER_H
 
-//#include "heD3.h"
 #include <string>
+#include <unordered_map>
 #include "heGlLayer.h"
 
 struct HeD3Level;
@@ -10,14 +10,13 @@ struct HeD3Camera;
 struct HeD3Instance;
 struct HeD3LightSource;
 struct HeMaterial;
+struct HeFont;
+struct HeWindow;
 
 /*
-
-TODO(Victor): Add Ui Rendering, Add Post Process (Bloom), Deferred Render Engine
-
+TODO(Victor):  Add Post Process (Bloom), Forward renderer
 */
 
-struct HeWindow; // avoid #include "heWindow.h"
 
 struct HeUiLine {
     hm::colour colour;
@@ -35,24 +34,43 @@ struct HeUiLine {
     p0(p0), p1(p1), colour(col), width(width), d3(true) {};
 };
 
+struct HeUiText {
+	std::string text;
+	hm::vec2i   position; // in window space
+	uint16_t    size; // in window space
+	hm::colour  colour;
+
+    HeUiText() : text(""), position(0), size(0), colour(0) {};
+	HeUiText(std::string const& text, hm::vec2i const& position, uint16_t const size, hm::colour const& colour) : text(text), position(position), size(size), colour(colour) {};
+};
+
 struct HeUiQueue {
-    std::vector<HeUiLine> lines;
     HeVao linesVao;
     HeShaderProgram* linesShader = nullptr;
+    std::vector<HeUiLine> lines;
+    
+	HeVao textVao;
+	HeShaderProgram* textShader  = nullptr;
+    std::unordered_map<HeFont const*, std::vector<HeUiText>> texts;
 };
 
 struct HeRenderEngine {
-    // a 2d quad vao used for 2d rendering
-    HeVao* quadVao = nullptr;
-    // used for 2d texture rendering
-    HeShaderProgram* textureShader = nullptr;
+    struct {
+        // a 2d quad vao used for 2d rendering
+        HeVao* quadVao = nullptr;
+        // a unit cube
+        HeVao* cubeVao = nullptr;
+		// a unit sphere
+        HeVao* sphereVao = nullptr;
+    } shapes;
+    
     // the window this engine operates on
     HeWindow* window = nullptr;
-    
-    // a map of render properties. The name of the property (%name%, without the %) will be replaced
-    // in every shader with the value stored (can be an int as string...)
-    std::unordered_map<std::string, std::string> renderProperties;
-    
+
+	// a simple rgba shader that renders a mesh with one rgba colour
+	HeShaderProgram* rgbaShader; 
+    // used for 2d texture rendering
+    HeShaderProgram* textureShader = nullptr;
     // the ui render queue for batch rendering
     HeUiQueue uiQueue;
     
@@ -67,16 +85,23 @@ struct HeRenderEngine {
     // an 16 bit fbo used for post-process image manipulation
     HeFbo resolvedFbo;
     // used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
-    HeShaderProgram* finalShader = nullptr;
+    HeShaderProgram* finalShader     = nullptr;
     // the shader used for rendering d3 objects into the gbuffer. This will put information like position, normals... into the
     // gbuffer independant of the instances material
-    HeShaderProgram* gBufferShader = nullptr;
+    HeShaderProgram* gBufferShader   = nullptr;
     // the lighting shader after the gbuffer pass
     HeShaderProgram* gLightingShader = nullptr;
+    // renders an hdr skybox of a level (cube map texture) 
+	HeShaderProgram* skyboxShader    = nullptr;
+    // the brdf integration texture (rg channels)
+    HeTexture* brdfIntegration = nullptr;
 };
 
 // the current active render engine. Can be set and (then) used at any time
 extern HeRenderEngine* heRenderEngine;
+
+
+// -- render engine
 
 // loads all important data for the render engine
 extern HE_API void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window);
@@ -111,24 +136,38 @@ extern HE_API void heRenderEngineFinishUi(HeRenderEngine* engine);
 // If a property is updated after the shaders are loaded, you can reload specific shaders manually
 extern HE_API void heRenderEngineSetProperty(HeRenderEngine* engine, std::string const& name, int32_t const value);
 
+
+// -- ui
+
 // sets up this ui queue by creating the necessary vaos and shaders
 extern HE_API void heUiQueueCreate(HeUiQueue* queue);
-// renders given texture to the currently bound fbo. The texture will be centered at position. Position and scale can
-// be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
+// updates the vao to hold the given vertices (makes two triangles). Binds the given vao first. The default arguments
+// build a quad that covers the whole screen
+extern HE_API inline void heUiSetQuadVao(HeVao* vao, hm::vec2f const& p0 = hm::vec2f(-1, 1), hm::vec2f const& p1 = hm::vec2f(1, 1), hm::vec2f const& p2 = hm::vec2f(-1, -1), hm::vec2f const& p3 = hm::vec2f(1, -1));
+
+// renders given texture to the currently bound fbo. This can either be a cube or a 2d texture. The texture will be centered at
+// position. Position and scale can be relativ (negativ) or absolute (positiv). This will load the texture shader
+// if it wasnt already
 extern HE_API inline void heUiRenderTexture(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size);
-// renders given texture to the currently bound fbo. The texture will be centered at position. Position and scale can
+// renders given 2d texture to the currently bound fbo. The texture will be centered at position. Position and scale can
 // be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
-extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size);
+extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size, bool const isCubeMap = false);
+// renders a quad with given vertices in window space with given colour
+extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2i const& p0, hm::vec2i const& p1, hm::vec2i const& p2, hm::vec2i const& p3, hm::colour const& colour);
+
 // renders all lines batched together
 extern HE_API void heUiQueueRenderLines(HeRenderEngine* queue);
+// renders all texts batched by their font
+extern HE_API void heUiQueueRenderTexts(HeRenderEngine* queue);
 // renders all ui elements pushed
 extern HE_API void heUiQueueRender(HeRenderEngine* engine);
-
 // pushes a new line to the render queue. The line will go from p0 to p1 (in pixels), width is in pixels
 extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::colour const& colour, float const width);
 // pushes a new line to the render queue. The line will be projected onto the screen using the camera of the current active d3 level.
 // p0 and p1 must be in world space, width is in pixels
 extern HE_API inline void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& colour, float const width);
+// pushes a new text with position in window space (pixels)
+extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeFont const* font, std::string const& text, hm::vec2i const& position, uint16_t const size, hm::colour const& colour);
 
 // transforms given vector from pixel space to clip space ([-1:1])
 extern HE_API inline hm::vec2f heSpaceScreenToClip(hm::vec2f const& pixelspace, HeWindow const* window);

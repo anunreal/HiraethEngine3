@@ -171,6 +171,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\heAssets.h" />
+    <ClInclude Include="src\heBinary.h" />
     <ClInclude Include="src\heCore.h" />
     <ClInclude Include="src\heD3.h" />
     <ClInclude Include="src\heDebugUtils.h" />
@@ -198,6 +199,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\heAssets.cpp" />
+    <ClCompile Include="src\heBinary.cpp" />
     <ClCompile Include="src\heCore.cpp" />
     <ClCompile Include="src\heD3.cpp" />
     <ClCompile Include="src\heDebugUtils.cpp" />

@@ -11,6 +11,8 @@
 
 // possible macro definitions:
 // HE_USE_WIN32
+// HE_USE_STBI
+// HE_USE_BINARY
 // HE_ENABLE_ERROR_CHECKING
 // HE_ENABLE_HOTSWAWP_SHADER
 // HE_ENABLE_LOGGING_ALL
@@ -81,38 +83,35 @@ typedef enum HeKeyCode {
     HE_KEY_F12	   = 0x7B
 } HeKeyCode;
 
-typedef enum HeUniformDataType {
-    HE_UNIFORM_DATA_TYPE_NONE    = 0,
-    HE_UNIFORM_DATA_TYPE_INT     = 0x1404,
-    HE_UNIFORM_DATA_TYPE_UINT    = 0x1405,
-    HE_UNIFORM_DATA_TYPE_VEC2    = 0x8B50,
-    HE_UNIFORM_DATA_TYPE_VEC3    = 0x8B51,
-    HE_UNIFORM_DATA_TYPE_VEC4    = 0x8B52,
-    HE_UNIFORM_DATA_TYPE_BOOL    = 0x8B56,
-    HE_UNIFORM_DATA_TYPE_FLOAT   = 0x1406,
-    HE_UNIFORM_DATA_TYPE_DOUBLE  = 0x1406,
-    HE_UNIFORM_DATA_TYPE_COLOUR  = 0x8B52,
-    HE_UNIFORM_DATA_TYPE_MAT4    = 0x8B5C,
-} HeUniformDataType;
-
-typedef enum HeFboFlags {
-    HE_FBO_FLAG_NONE                = 0,
-    HE_FBO_FLAG_HDR                 = 0b0001,
-    HE_FBO_FLAG_DEPTH_RENDER_BUFFER = 0b0010,
-    HE_FBO_FLAG_DEPTH_TEXTURE       = 0b0100
-} HeFboFlags;
+typedef enum HeDataType {
+    HE_DATA_TYPE_NONE    = 0,
+    HE_DATA_TYPE_INT     = 0x1404,
+    HE_DATA_TYPE_UINT    = 0x1405,
+    HE_DATA_TYPE_VEC2    = 0x8B50,
+    HE_DATA_TYPE_VEC3    = 0x8B51,
+    HE_DATA_TYPE_VEC4    = 0x8B52,
+    HE_DATA_TYPE_BOOL    = 0x8B56,
+    HE_DATA_TYPE_FLOAT   = 0x1406,
+    HE_DATA_TYPE_DOUBLE  = 0x1406,
+    HE_DATA_TYPE_COLOUR  = 0x8B52,
+    HE_DATA_TYPE_MAT4    = 0x8B5C,
+} HeDataType;
 
 typedef enum HeColourFormat {
     HE_COLOUR_FORMAT_NONE   = 0,
+    HE_COLOUR_FORMAT_RGB8   = 0x8051,
     HE_COLOUR_FORMAT_RGBA8  = 0x8058,
+    HE_COLOUR_FORMAT_RGB16  = 0x881B,
     HE_COLOUR_FORMAT_RGBA16 = 0x881A,
+    HE_COLOUR_FORMAT_RGB32  = 0x8815,
     HE_COLOUR_FORMAT_RGBA32 = 0x8814
 } HeColourFormat;
 
 typedef enum HeAccessType {
+    HE_ACCESS_NONE  = 0,
     HE_ACCESS_READ_ONLY  = 0x88B8,
-    HE_ACCESS_WRITE_ONLY,
-    HE_ACCESS_READ_WRITE,
+    HE_ACCESS_WRITE_ONLY = 0x88B9,
+    HE_ACCESS_READ_WRITE = 0x88BA
 } HeAccessType;
 
 typedef enum HeLightSourceType {
@@ -123,9 +122,11 @@ typedef enum HeLightSourceType {
 } HeSourceLightType;
 
 typedef enum HeDebugInfoFlags {
-    HE_DEBUG_INFO_LIGHTS    = 0b0001,
-    HE_DEBUG_INFO_INSTANCES = 0b0010,
-    HE_DEBUG_INFO_CAMERA    = 0b0100,
+    HE_DEBUG_INFO_LIGHTS    = 0b00001,
+    HE_DEBUG_INFO_INSTANCES = 0b00010,
+    HE_DEBUG_INFO_CAMERA    = 0b00100,
+    HE_DEBUG_INFO_ENGINE    = 0b01000,
+	HE_DEBUG_INFO_MEMORY    = 0b10000
 } HeDebugInfoFlags;
 
 typedef enum HePhysicsShape {
@@ -160,14 +161,18 @@ typedef enum HeFrameBufferBits {
 } HeFrameBufferBits;
 
 // functions for depth and stencil tests
-typedef enum HeFragmentTestFunctions {
+typedef enum HeFragmentTestFunction {
     // always passes
     HE_FRAGMENT_TEST_ALWAYS = 0x0207,
     // never passes
     HE_FRAGMENT_TEST_NEVER  = 0x0200,
     // passes if the given value is at least a threshold
-    HE_FRAGMENT_TEST_GEQUAL = 0x0206
-} HeFragmentTestFunctions;
+    HE_FRAGMENT_TEST_GEQUAL = 0x0206,
+    // passes if the given value is less or equal to a threshold
+    HE_FRAGMENT_TEST_LEQUAL = 0x0203,
+    // passes if the given value is less than the threshold
+    HE_FRAGMENT_TEST_LESS   = 0x0201,
+} HeFragmentTestFunction;
 
 typedef enum HeShaderType {
     HE_SHADER_TYPE_FRAGMENT = 0x8B30,
@@ -175,12 +180,32 @@ typedef enum HeShaderType {
     HE_SHADER_TYPE_GEOMETRY = 0x8DD9
 } HeShaderType;
 
+typedef enum HeMemoryType {
+	HE_MEMORY_TYPE_NONE = 0,
+    HE_MEMORY_TYPE_TEXTURE,
+	HE_MEMORY_TYPE_VAO,
+	HE_MEMORY_TYPE_FBO,
+	HE_MEMORY_TYPE_SHADER,
+	HE_MEMORY_TYPE_CONTEXT
+} HeMemoryType;
+
+typedef enum HeTextureParameter {
+	HE_TEXTURE_NONE               = 0,
+	HE_TEXTURE_FILTER_LINEAR      = 0b0000001,
+	HE_TEXTURE_FILTER_BILINEAR    = 0b0000010,
+	HE_TEXTURE_FILTER_TRILINEAR   = 0b0000100,
+	HE_TEXTURE_FILTER_ANISOTROPIC = 0b0001000,
+	HE_TEXTURE_CLAMP_EDGE         = 0b0010000,
+	HE_TEXTURE_CLAMP_BORDER       = 0b0100000,
+	HE_TEXTURE_CLAMP_REPEAT       = 0b1000000
+} HeTextureParameter;
+
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\
-inline T operator& (T a, T b) {return (T)((int) a & (int) b);};
+inline T operator& (T a, T b) {return (T)((int) a & (int) b);}
 
-HE_ENABLE_BIT(HeFboFlags)
-HE_ENABLE_BIT(HeDebugInfoFlags)
-HE_ENABLE_BIT(HeFrameBufferBits)
-
+HE_ENABLE_BIT(HeDebugInfoFlags);
+HE_ENABLE_BIT(HeFrameBufferBits);
+HE_ENABLE_BIT(HeTextureParameter);
+	
 #endif

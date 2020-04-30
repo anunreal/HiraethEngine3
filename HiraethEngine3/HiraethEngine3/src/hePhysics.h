@@ -53,9 +53,16 @@ struct HePhysicsActorInfo {
     // how high a character can step (in units)
     float stepHeight = 0.2f;
     // the force with which the character jumps. The actual jump height depents on the gravity
-    float jumpHeight = 8.0f;
+    float jumpHeight = 4.0f;
     // the offset of the camera from the bottom of the actors shape
     float eyeOffset  = 1.8f;
+};
+
+struct HePhysicsLevelInfo {
+    hm::vec3f gravity;
+    
+    HePhysicsLevelInfo() : gravity(0, -10, 0) {};
+    HePhysicsLevelInfo(hm::vec3f const& gravity) : gravity(gravity) {};
 };
 
 struct HePhysicsComponent {
@@ -82,12 +89,13 @@ struct HePhysicsLevel {
     b8 ghostPairCallbackSet = false;
     b8 enableDebugDraw      = false;
     
+    HePhysicsLevelInfo info;
     HePhysicsActor* actor   = nullptr;
     std::list<HePhysicsComponent> components;
 };
 
 // creates a new empty physics level with default settings (gravity)
-extern HE_API void hePhysicsLevelCreate(HePhysicsLevel* level);
+extern HE_API void hePhysicsLevelCreate(HePhysicsLevel* level, HePhysicsLevelInfo const& info);
 // destroys a physics level (cleans up the pointers)
 extern HE_API void hePhysicsLevelDestroy(HePhysicsLevel* level);
 // adds a physics component to the level. The component must already be set up before this
@@ -133,7 +141,7 @@ extern HE_API inline void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm
 // sets the velocity (walk direction) of this actor
 extern HE_API inline void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity);
 // makes the given actor jump. The more force, the higher the actor will jump. If force is -1, the default force will be used
-extern HE_API inline void hePhysicsActorJump(HePhysicsActor* actor, float const force = -1);
+extern HE_API inline void hePhysicsActorJump(HePhysicsActor* actor);
 // returns the current position of the actor
 extern HE_API inline hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* actor);
 // returns the position of the eyes of this actor. The eye position depends on the eye offset in the actor information. The eye

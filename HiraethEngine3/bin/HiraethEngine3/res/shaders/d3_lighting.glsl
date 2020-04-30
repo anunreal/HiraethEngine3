@@ -31,6 +31,9 @@ uniform sampler2D t_worldSpace;
 uniform sampler2D t_normals;
 uniform sampler2D t_diffuse;
 uniform sampler2D t_arm;
+uniform sampler2D t_brdf;
+uniform samplerCube t_irradiance;
+uniform samplerCube t_environment;
 uniform vec3 u_cameraPos;
 uniform Light u_lights[lightCount];
 
@@ -95,28 +98,15 @@ vec3 m1_fresnel(float cosTheta, vec3 F0) {
 	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-/*
-vec3 1_getLightColour(vec3 normal, vec3 lightDirection, vec3 viewDirection, vec3 halfway, vec3 F0, vec3 diffuse, vec3 lightColour, float roughness, float metallic) {
-	float d = NDF(normal, halfway, roughness);
-	float g = GS(normal, viewDirection, lightDirection, roughness);
-	vec3 f = fresnel(max(dot(halfway, viewDirection), 0.0), F0);
-	vec3 ks = f;
-	vec3 kd = vec3(1.0) - ks;
-	kd *= 1.0 - metallic;
-	
-	vec3 numerator = d * g * f;
-	float denominator = 4.0 * max(dot(normal, viewDirection), 0.0) * max(dot(normal, lightDirection), 0.0);
-	vec3 specular = numerator / max(denominator, 0.001);
-	float ndotl = max(dot(normal, lightDirection), 0.0);
-	return (kd * diffuse / pi + specular) * lightColour * ndotl;
-}
-*/
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}  
 
 vec3 m1_getLightColour(vec3 lightColour, vec3 lightDirection, vec3 normal, vec3 viewDirection, vec3 diffuse) {
 	vec4 arm = texture(t_arm, pass_uv);
 	float metallic = arm.b;
 	float roughness = arm.g;
-
+	
 	vec3 F0 = vec3(0.0);
 	F0 = mix(F0, diffuse.rgb, metallic);
 	
@@ -177,7 +167,7 @@ void main(void) {
 	
 	vec3 worldPos = worldPosTex.xyz;
 	vec3 normal   = normalize(texture(t_normals, pass_uv).rgb);
-	vec4 diffuse  = texture(t_diffuse, pass_uv);
+	vec4 albedo   = texture(t_diffuse, pass_uv);
 	vec3 viewDir  = normalize(u_cameraPos - worldPos);
 	vec3 totalLight = vec3(0.0);
 	
@@ -185,10 +175,27 @@ void main(void) {
 		Light l = u_lights[i];
 		vec4 lightDir = getLightVector(l, normal);
 		if(lightDir.w > 0.0)
-			totalLight += getLight(material, (l.colour.rgb * l.colour.a * lightDir.w), lightDir.xyz, normal, viewDir, diffuse.rgb); 
+			totalLight += getLight(material, (l.colour.rgb * l.colour.a * lightDir.w), lightDir.xyz, normal, viewDir, albedo.rgb); 
 	}
 	
+	vec4 arm = texture(t_arm, pass_uv);
+	float metallic = arm.b;
+	float roughness = arm.g;
 	float ao = getAo(material);
-	vec3 ambient = vec3(0.07) * diffuse.rgb * ao;
+	vec3 F0 = vec3(0.0);
+	F0 = mix(F0, albedo.rgb, metallic);
+	vec3 kS = fresnelSchlickRoughness(max(dot(normal, viewDir), 0.0), F0, roughness); 
+	vec3 kD = 1.0 - kS;
+	kD *= 1.0 - metallic;
+	vec3 irradiance = texture(t_irradiance, normal).rgb;
+	vec3 diffuse    = irradiance * albedo.rgb;
+	
+	float lod = 0.0;
+	vec3 prefilteredColour = textureLod(t_environment, reflect(-viewDir, normal), roughness * 4).rgb;
+	vec2 envBRDF = texture(t_brdf, vec2(dot(normal, viewDir), arm.g)).xy;
+	vec3 specular = prefilteredColour * (kS * envBRDF.x + envBRDF.y);
+	
+	vec3 ambient = (kD * diffuse + specular) * ao; 
 	out_colour = vec4(ambient + totalLight, 1.0);
+	out_colour.rgb = out_colour.rgb / (out_colour.rgb + vec3(1.0)); 
 }

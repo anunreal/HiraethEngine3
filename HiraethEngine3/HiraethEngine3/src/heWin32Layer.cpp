@@ -1,16 +1,25 @@
 #include "heWin32Layer.h"
 #include "heCore.h"
 #include "heGlLayer.h"
+#include "heUtils.h"
 #include "glew/glew.h"
 #include "glew/wglew.h"
+#include "heAssets.h"
 #include <map>
 #include <iostream>
+#include <filesystem>
 
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
 #include <windowsx.h>
 
+struct HeTimer {
+    static const uint8_t maxScopes = 10;
+    uint8_t currentScope           = 0;
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER entries[maxScopes];
+} heTimer;
 
 struct HeWin32Window {
     // opengl stuff
@@ -53,7 +62,6 @@ HeWin32Window heWin32Window;
 // --- File System
 
 b8 heWin32FileModified(const std::string& file) {
-    
     auto it = handleMap.find(file);
     if(it == handleMap.end()) {
         // file was never requested before, load now
@@ -73,33 +81,44 @@ b8 heWin32FileModified(const std::string& file) {
             GetFileTime(handle, nullptr, nullptr, &time);
             timeMap[file] = time;
         }
-        
         return false;
     } else {
-        
         FILETIME time;
         GetFileTime(handleMap[file], nullptr, nullptr, &time);
         const FILETIME& last = timeMap[file];
         b8 wasModified = (last.dwLowDateTime != time.dwLowDateTime || last.dwHighDateTime != time.dwHighDateTime);
         timeMap[file] = time;
         return wasModified;
-        
     }
-    
 };
 
 b8 heWin32FileExists(std::string const& file) {
-    
     DWORD dwAttrib = GetFileAttributes((LPCWSTR) file.c_str());
     return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-    
+};
+
+void heWin32FolderGetFiles(std::string const& folder, std::vector<std::string>& files, b8 const recursive) {
+    namespace fs = std::filesystem;
+    for(const auto& all : fs::directory_iterator(folder)) {
+        if(all.is_directory()) {
+            if(recursive)
+                heWin32FolderGetFiles(all.path().string(), files, true);
+        } else {
+            std::string path = all.path().string();
+            path = heStringReplaceAll(path, '\\', '/');
+            files.emplace_back(path);
+        }
+    }
+};
+
+void heWin32FolderCreate(std::string const& folder) {
+    CreateDirectoryA(folder.c_str(), NULL);
 };
 
 
 // --- window stuff
 
 HeWin32Window* heWin32GetWindow(HeWindow const* window) {
-    
 #ifdef HE_ENABLE_MULTIPLE_WINDOWS
     HeWin32Window* win32 = nullptr;
     
@@ -114,11 +133,9 @@ HeWin32Window* heWin32GetWindow(HeWindow const* window) {
 #else
     return &heWin32Window;
 #endif
-    
 };
 
 HeKeyCode heWin32GetKeyCode(WPARAM wparam, LPARAM lparam) {
-    
     // check if this is a special key with left and right (shift, control...)
     WPARAM newVk = wparam;
     const UINT scancode = (lparam & 0x00ff0000) >> 16;
@@ -141,11 +158,9 @@ HeKeyCode heWin32GetKeyCode(WPARAM wparam, LPARAM lparam) {
     }
     
     return (HeKeyCode) newVk;
-    
 };
 
 LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-    
     HeWindow* window;
 #ifdef HE_ENABLE_MULTIPLE_WINDOWS
     window = windowHandleMap[hwnd];
@@ -153,8 +168,7 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
     window = heWindow;
 #endif
     
-    if (window != nullptr) {
-        
+    if (window != nullptr) {        
         switch (msg) {
             
             case WM_SETFOCUS: {
@@ -242,7 +256,6 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
         return DefWindowProc(hwnd, msg, wparam, lparam);
     
     return 0;
-    
 };
 
 
@@ -255,7 +268,6 @@ void heWin32registerMouseInput(HeWin32Window* window) {
 
 
 b8 heWin32SetupClassInstance() {
-    
     if (classInstance == NULL) {
         WNDCLASSEX wex = { 0 };
         wex.cbSize = sizeof(WNDCLASSEX);
@@ -279,11 +291,9 @@ b8 heWin32SetupClassInstance() {
     };
     
     return true;
-    
 };
 
 void heWin32CreateDummyContext() {
-    
     HWND dummy_window = CreateWindowExA(0,
                                         "Hiraeth2D",
                                         "Dummy OpenGL Window",
@@ -354,12 +364,10 @@ void heWin32CreateDummyContext() {
     wglDeleteContext(dummy_context);
     ReleaseDC(dummy_window, dummy_dc);
     DestroyWindow(dummy_window);
-    
 };
 
 
 b8 heWin32WindowCreateHandle(HeWindow* window, HeWin32Window* win32) {
-    
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME | WS_MAXIMIZEBOX;
     
     win32->handle = CreateWindowEx(
@@ -387,11 +395,9 @@ b8 heWin32WindowCreateHandle(HeWindow* window, HeWin32Window* win32) {
     window->shouldClose = false;
     
     return true;
-    
 };
 
 b8 heWin32WindowCreateContext(HeWindow* window, HeWin32Window* win32) {
-    
     if (_wglCreateContextAttribsARB == nullptr)
         heWin32CreateDummyContext();
     
@@ -422,8 +428,8 @@ b8 heWin32WindowCreateContext(HeWindow* window, HeWin32Window* win32) {
     
     
     int gl33_attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-        WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+        WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+        WGL_CONTEXT_MINOR_VERSION_ARB, 2,
         WGL_CONTEXT_PROFILE_MASK_ARB, 0x00000001,
         0
     };
@@ -439,18 +445,14 @@ b8 heWin32WindowCreateContext(HeWindow* window, HeWin32Window* win32) {
     
     heBlendMode(0);
     return true;
-    
 };
 
 
 b8 heWin32IsMainThread() {
-    
     return wglGetCurrentContext() != NULL;
-    
 };
 
 b8 heWin32WindowCreate(HeWindow* window) {
-    
     HeWin32Window* win32;
     
 #ifdef HE_ENABLE_MULTIPLE_WINDOWS
@@ -476,25 +478,27 @@ b8 heWin32WindowCreate(HeWindow* window) {
 #ifdef HE_RAW_INPUT
     heWin32registerMouseInput(win32);
 #endif
-    
-    window->active = true;
-    
+
+	// estimate context size
+	uint32_t colourBuffers = heMemoryRoundUsage(window->windowInfo.size.x * window->windowInfo.size.y * 4) * 2;
+	uint32_t depthBuffers  = heMemoryRoundUsage(window->windowInfo.size.x * window->windowInfo.size.y * 3) * 2;
+	uint32_t stencilBuffer = heMemoryRoundUsage(window->windowInfo.size.x * window->windowInfo.size.y) * 2;
+	uint32_t size = colourBuffers + depthBuffers + stencilBuffer;
+	heMemoryTracker[HE_MEMORY_TYPE_CONTEXT] = size;
+	window->active = true;
+	heViewport(hm::vec2i(0), window->windowInfo.size);
     return true;
-    
 };
 
 void heWin32WindowUpdate(HeWindow* window) {
-    
     MSG msg;
     while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
 };
 
 void heWin32WindowDestroy(HeWindow* window) {
-    
     HeWin32Window* win32 = heWin32GetWindow(window);
     HDC context = GetDC(win32->handle);
     wglMakeCurrent(context, NULL);
@@ -514,11 +518,9 @@ void heWin32WindowDestroy(HeWindow* window) {
     heWin32Window = HeWin32Window();
     UnregisterClass(L"HiraethUI", classInstance);
 #endif
-    
 };
 
 void heWin32WindowEnableVsync(int8_t const timestamp) {
-    
     if (!_wglSwapIntervalEXT)
         _wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
     
@@ -526,28 +528,22 @@ void heWin32WindowEnableVsync(int8_t const timestamp) {
         _wglSwapIntervalEXT(timestamp);
     else
         HE_ERROR("Could not enable vsync");
-    
 };
 
 void heWin32WindowSwapBuffers(HeWindow const* window) {
-    
     HeWin32Window* win32 = heWin32GetWindow(window);
     if(win32 != nullptr)
         SwapBuffers(win32->dc);
-    
 };
 
 void heWin32WindowToggleCursor(b8 const hidden) {
-    
     if (hidden)
         while (ShowCursor(false) >= 0);
     else
         ShowCursor(true);
-    
 };
 
 void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position) {
-    
     HeWin32Window* win32 = heWin32GetWindow(window);
     hm::vec2i abs;
     abs.x = (position.x >= 0) ? (int)position.x : (int)(-position.x * window->windowInfo.size.x);
@@ -562,11 +558,9 @@ void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position)
     ScreenToClient(win32->handle, &p);
     window->mouseInfo.mousePosition.x = p.x;
     window->mouseInfo.mousePosition.y = p.y;
-    
 };
 
 hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window) {
-    
     HeWin32Window* win32 = heWin32GetWindow(window);
     if(win32 != nullptr) {
         RECT w, c;
@@ -575,5 +569,24 @@ hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window) {
         return hm::vec2i((w.right - w.left) - (c.right - c.left), (w.bottom - w.top) - (c.bottom - c.top));
     } else
         return hm::vec2i(0);
+};
+
+
+void heTimerStart() {
+    if(heTimer.frequency.QuadPart == 0)
+        QueryPerformanceFrequency(&heTimer.frequency);
     
+    QueryPerformanceCounter(&heTimer.entries[heTimer.currentScope]);
+    heTimer.currentScope++;
+};
+
+double heTimerGet() {
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    heTimer.currentScope--;
+    return (now.QuadPart - heTimer.entries[heTimer.currentScope].QuadPart) * 1000.0 / heTimer.frequency.QuadPart;
+};
+
+void heTimerPrint(std::string const& id) {
+    heLogCout(id + ": " + std::to_string(heTimerGet()) + "ms", "[TIMER]:");
 };

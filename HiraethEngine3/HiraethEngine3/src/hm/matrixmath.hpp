@@ -84,8 +84,8 @@ namespace hm {
         static mat<4, 4, T> createTransformationMatrix(const vec2<T>& position, const vec2<T>& scale) {
         
         mat<4, 4, T> mat(static_cast<T>(1));
-        mat = hm::scale(mat, scale);
         mat = hm::translate(mat, position);
+        mat = hm::scale(mat, scale);
         return mat;
         
     };
