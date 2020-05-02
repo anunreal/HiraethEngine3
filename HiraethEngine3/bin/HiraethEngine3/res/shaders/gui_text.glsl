@@ -31,11 +31,10 @@ in vec2 pass_uv;
 out vec4 out_colour;
 
 uniform sampler2D t_atlas;
-uniform vec2 	  u_alphaValues;
-uniform float 	  u_textSize;
+uniform float u_textSize;
 
 float calculateFontAlpha() {
-	float spread = 10;
+	float spread = 10.;
 	float dist = texture(t_atlas, pass_uv).a;
 	float smoothing = clamp(0.25 / (spread * u_textSize), 0, 1);
 	return smoothstep(0.5 - smoothing, 0.5 + smoothing, dist);

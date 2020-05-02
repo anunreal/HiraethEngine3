@@ -192,11 +192,11 @@ void heShaderLoadProgram(HeShaderProgram* program, std::string const& vertexShad
 
 void heShaderLoadProgram(HeShaderProgram* program, std::string const& file) {
     std::unordered_map<HeShaderType, std::string> source = heShaderLoadSourceAll(file);
-    uint32_t vs = heShaderLoadFromSource(source[HE_SHADER_TYPE_VERTEX], GL_VERTEX_SHADER, file);
-    uint32_t fs = heShaderLoadFromSource(source[HE_SHADER_TYPE_FRAGMENT], GL_FRAGMENT_SHADER, file);
+    uint32_t vs = heShaderLoadFromSource(source[HE_SHADER_TYPE_VERTEX], GL_VERTEX_SHADER, file + "#vertex");
+    uint32_t fs = heShaderLoadFromSource(source[HE_SHADER_TYPE_FRAGMENT], GL_FRAGMENT_SHADER, file + "#fragment");
     int32_t gs = -1;
     if(source.find(HE_SHADER_TYPE_GEOMETRY) != source.end())
-        gs = heShaderLoadFromSource(source[HE_SHADER_TYPE_GEOMETRY], GL_GEOMETRY_SHADER, file);
+        gs = heShaderLoadFromSource(source[HE_SHADER_TYPE_GEOMETRY], GL_GEOMETRY_SHADER, file + "#geoemtry");
     
     if(vs == 0 || fs == 0 || gs == 0)
         return;
@@ -1376,11 +1376,11 @@ int32_t heMemoryGetUsage() {
     glGetIntegerv(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX,&y);
     glGetIntegerv(GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX,&z);
 	//HE_LOG("X = " + std::to_string(x) + "/" + std::to_string(y) + "/" + std::to_string(z));
-//txt+=AnsiString().sprintf("GPU memory: %i/%i/%i MByte\r\n",x>>10,y>>10,z>>10); // GPU free/GPU total/GPU+CPU shared total
+    //txt+=AnsiString().sprintf("GPU memory: %i/%i/%i MByte\r\n",x>>10,y>>10,z>>10); // GPU free/GPU total/GPU+CPU shared total
     //x=0; glGetIntegerv(GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX,&x);
     //y=0; glGetIntegerv(GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX,&y);
     //txt+=AnsiString().sprintf("GPU blocks: %i used: %i MByte\r\n",x,y>>10);
-	return x * 1000;
+	return (z - x) * 1000;
 };
 
 void heGlPrintInfo() {

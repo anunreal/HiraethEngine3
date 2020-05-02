@@ -223,7 +223,6 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
                 window->mouseInfo.mousePosition = pos;
                 break;
             };
-            
 #endif
             
             case WM_LBUTTONDOWN: {
@@ -247,7 +246,17 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
                 window->keyboardInfo.keyStatus[heWin32GetKeyCode(wparam, lparam)] = false;
                 break;
             };
-            
+
+			case WM_CHAR: {
+				uint32_t unicode = (uint32_t) wparam;
+				
+				for(auto all : window->keyboardInfo.textInputCallbacks)
+					if(all(window, unicode))
+						break;
+				
+				break;
+			};
+
             default:
             return DefWindowProc(hwnd, msg, wparam, lparam);
         }

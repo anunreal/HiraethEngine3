@@ -106,6 +106,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -124,6 +127,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -146,6 +152,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -168,10 +177,14 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\heAssets.h" />
     <ClInclude Include="src\heBinary.h" />
+    <ClInclude Include="src\heConsole.h" />
     <ClInclude Include="src\heCore.h" />
     <ClInclude Include="src\heD3.h" />
     <ClInclude Include="src\heDebugUtils.h" />
@@ -200,6 +213,7 @@
   <ItemGroup>
     <ClCompile Include="src\heAssets.cpp" />
     <ClCompile Include="src\heBinary.cpp" />
+    <ClCompile Include="src\heConsole.cpp" />
     <ClCompile Include="src\heCore.cpp" />
     <ClCompile Include="src\heD3.cpp" />
     <ClCompile Include="src\heDebugUtils.cpp" />

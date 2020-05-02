@@ -5,6 +5,7 @@
 #include "heRenderer.h"
 #include "heBinary.h"
 #include "heWin32Layer.h"
+#include "heConsole.h"
 #include <sstream> // for he_float_to_string
 #include <iomanip> // for std::setprecision 
 
@@ -93,9 +94,11 @@ void heDebugPrint(const std::string& message) {
     output.push_back('\n');
     
     if (heDebugInfo.stream == nullptr) {
+		heConsolePrint(output);
         std::cout << output;
         std::cout.flush();
     } else {
+        heConsolePrint(output);
         *heDebugInfo.stream << output;
         heDebugInfo.stream->flush();
     }

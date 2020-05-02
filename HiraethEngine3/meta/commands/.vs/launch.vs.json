@@ -1,0 +1,13 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "mixed",
+      "name": "commands_meta.exe",
+      "project": "commands_meta.exe",
+      "projectTarget": "",
+      "args": [ "commands.meta" ]
+    }
+  ]
+}

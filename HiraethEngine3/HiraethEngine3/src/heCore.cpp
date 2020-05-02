@@ -1,4 +1,5 @@
 #include "heCore.h"
+#include "heConsole.h"
 #include <ctime>
 #include <iostream>
 #include <vector>
@@ -19,7 +20,10 @@ void heLogCout(std::string const& message, std::string const& prefix) {
     output.append(prefix);
     output.push_back(' ');
     output.append(message);
-    output.push_back('\n');
+
+	heConsolePrint(output);
+
+	output.push_back('\n');
     std::cout << output;
     std::cout.flush();
     

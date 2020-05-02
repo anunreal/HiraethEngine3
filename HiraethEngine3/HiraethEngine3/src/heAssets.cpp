@@ -115,6 +115,47 @@ void heFontLoad(HeFont* font, std::string const& name) {
 	stream.close();
 };
 
+b8 heFontHasCharacter(HeFont const* font, uint32_t const asciiCode) {
+	return asciiCode == 32 || font->characters.find(asciiCode) != font->characters.end();
+};
+
+hm::vec2i heFontGetCharacterSize(HeFont const* font, char const asciiCode, uint32_t const size) {
+	float scale = size / (float)(font->size);
+	if(asciiCode == 32)
+		return hm::vec2i(font->spaceWidth * scale, 0);
+
+	auto it = font->characters.find((uint32_t) asciiCode);
+	if(it == font->characters.end()) {
+		HE_LOG("Char not found: " + std::to_string(asciiCode) + " -> " + std::string(asciiCode, 1));
+		return hm::vec2i(0);
+	}
+		
+	HeFont::Character const* _char = &it->second;
+	//return hm::vec2i(hm::vec2f(_char->size - hm::vec2i(font->padding.x, font->padding.y)) * scale);
+	return hm::vec2i((uint32_t) ((_char->xadvance) * scale), (uint32_t) ((_char->size.y - font->padding.y) * scale));
+};
+
+uint32_t heFontGetStringWidthInPixels(HeFont const* font, std::string const& string, uint32_t const size) {
+	float width = 0;
+
+	float scale = size / (float)font->size;
+	
+	for(char const all : string) {
+		if(all == 32)
+			width += font->spaceWidth * scale;
+		else {
+			auto it = font->characters.find((uint32_t) (all));
+			if(it == font->characters.end())
+				continue;
+
+			HeFont::Character const* _char = &it->second;
+			width += _char->xadvance * scale;
+		}		
+	}
+	
+	return (uint32_t) width;
+};
+
 
 // -- Assets
 

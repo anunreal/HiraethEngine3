@@ -24,9 +24,9 @@ struct HeFont {
 	};
 
 	std::unordered_map<uint32_t, Character> characters;
+	hm::vec4<uint8_t> padding;
 	uint8_t size, lineHeight, baseLine;
 	uint8_t spaceWidth;
-	hm::vec4<uint8_t> padding;
 	
 	HeTexture* atlas = nullptr;
 	
@@ -76,6 +76,7 @@ extern HeAssetPool heAssetPool;
 extern HeThreadLoader heThreadLoader;
 extern HeMemoryTracker heMemoryTracker;
 
+
 // -- Materials
 
 // creates a new pbr material if it doesnt already exists from given textures. This material will be stored in
@@ -85,11 +86,17 @@ extern HE_API HeMaterial* heMaterialCreatePbr(std::string const& name, HeTexture
 // returns the type id for given shader. This is used for grouping materials by their shader.
 extern HE_API uint32_t heMaterialGetType(std::string const& shaderName);
 
+
 // -- fonts
 
 // tries to load a font with given name.
 extern HE_API void heFontLoad(HeFont* font, std::string const& name);
-
+// returns true if the given font can display the given ascii code
+extern HE_API inline b8 heFontHasCharacter(HeFont const* font, uint32_t const asciiCode);
+// returns the size of given ascii character in pixels or a zero vector if that character is not in the given font
+extern HE_API inline hm::vec2i heFontGetCharacterSize(HeFont const* font, char const asciiCode, uint32_t const size);
+// returns the width of given string in pixels with this font, with given size applied (in pixels)
+extern HE_API uint32_t heFontGetStringWidthInPixels(HeFont const* font, std::string const& string, uint32_t const size);
 
 // -- Assets
 

@@ -36,3 +36,4 @@ bin-int/
 *.exp
 *.ilk
 *.pdb
+/HiraethEngine3/bin/HiraethEngine3/testrelease.zip

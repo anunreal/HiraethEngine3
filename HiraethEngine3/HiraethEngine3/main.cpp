@@ -7,15 +7,32 @@
 #include "src/hePhysics.h"
 #include "src/heBinary.h"
 #include "src/heWin32Layer.h"
+#include "src/heConsole.h"
 #include <windows.h>
 #include <thread>
 #include <vector>
 #include "hnClient.h"
 
+
+struct Player {
+    HnLocalClient* client = nullptr;
+    HeD3Instance* model   = nullptr;
+    std::string name;
+};
+
 static bool inputActive = true;
 static bool freeCam = false;
 hm::vec2i lastPosition;
 hm::vec3f velocity;
+
+HnClient client;
+HeD3Level level;
+HePhysicsActor actor;
+hm::quatf cameraRotation;
+std::map<unsigned int, Player> players;
+
+#define USE_PHYSICS 1
+#define USE_NETWORKING 0
 
 void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     if (window->mouseInfo.leftButtonDown) {
@@ -40,7 +57,10 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
         camera->rotation.x += dmouse.y;
         camera->rotation.y += dmouse.x;
     }
-    
+
+	if(heConsoleGetState() != HE_CONSOLE_STATE_CLOSED)
+		return;
+	
     velocity = hm::vec3f(0.f);
     double angle = hm::to_radians(camera->rotation.y);
     float speed = 4.0f * delta;
@@ -74,25 +94,17 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, const float delta) {
     
     if (window->keyboardInfo.keyStatus[HE_KEY_Q])
         velocity.y = -speed;
-    
-    //camera->position += velocity;
-    camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
+
+	hm::vec3f v = velocity * (float) window->frameTime * 30.f * (window->keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+	if(!freeCam)
+		hePhysicsActorSetVelocity(&actor, v);
+		if(heWindowKeyWasPressed(window, HE_KEY_SPACE) && hePhysicsActorOnGround(&actor))
+			hePhysicsActorJump(&actor);
+	else {
+		hePhysicsActorSetVelocity(&actor, hm::vec3f(0));
+		camera->position += v;
+	}
 };
-
-
-struct Player {
-    HnLocalClient* client = nullptr;
-    HeD3Instance* model   = nullptr;
-    std::string name;
-};
-
-
-HnClient client;
-HeD3Level level;
-HePhysicsActor actor;
-hm::quatf cameraRotation;
-std::map<unsigned int, Player> players;
-
 
 void _onClientConnect(HnClient* client, HnLocalClient* local) {
     HeD3Instance* instance = &level.instances.emplace_back();
@@ -153,9 +165,6 @@ void modelStressTest(std::string const& file) {
     HN_LOG("ascii  loading took: " + std::to_string(ascii) + "ms (avg: " + std::to_string(ascii / COUNT) + ")");
 };
 
-#define USE_PHYSICS 1
-#define USE_NETWORKING 0
-
 void createWorld(HeWindow* window) {
     //modelStressTest("cerberus");
     
@@ -183,15 +192,12 @@ void createWorld(HeWindow* window) {
     hePhysicsActorCreate(&actor, actorShape, actorInfo);
     hePhysicsLevelSetActor(&level.physics, &actor);
     hePhysicsActorSetEyePosition(&actor, hm::vec3f(-5.f, 0.1f, 5.f));
-    //hePhysicsLevelEnableDebugDraw(&level.physics);
 #endif
 };
 
 // TODO(Victor): Multiple shapes per component
 
 int main() {
-    //heBinaryConvertD3InstanceFile("res/assets/cerberus.h3asset", "res/assets/bin/cerberus.h3asset");
-
     std::thread commandThread(heCommandThread, nullptr);
     
     HeWindow window;
@@ -230,7 +236,7 @@ int main() {
     
     HE_DEBUG("Starting game loop");
 
-	float FONT_SIZE = 0.5f;
+	heConsoleCreate(font);
 	
     while (!window.shouldClose) {
         if (heThreadLoader.updateRequested)
@@ -241,39 +247,21 @@ int main() {
         level.time += window.frameTime;
         
         { // input
-            if (window.active)
+            if (window.active) {
                 checkWindowInput(&window, &level.camera, (float) window.frameTime);
-            
-            hm::vec3f v = velocity * (float) window.frameTime * 30.f * (window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
-            if(!freeCam)
-                hePhysicsActorSetVelocity(&actor, v);
-            else {
-                hePhysicsActorSetVelocity(&actor, hm::vec3f(0));
-                level.camera.position += v;
             }
-            
-            if(heWindowKeyWasPressed(&window, HE_KEY_SPACE) && hePhysicsActorOnGround(&actor))
-                hePhysicsActorJump(&actor);
-            
-#if USE_PHYSICS == 1
-            hePhysicsLevelUpdate(&level.physics, (float) window.frameTime);
-#endif
-            if(!freeCam)
-                level.camera.position = hePhysicsActorGetEyePosition(&actor);
-        }
 
-        if(heWindowKeyWasPressed(&window, HE_KEY_R)) {
-            heTextureDestroy(level.skybox.specular);
-            heTextureDestroy(level.skybox.irradiance);
-            heD3SkyboxCreate(&level.skybox, "res/textures/hdr/pink_sunrise.hdr");    
+			if(heWindowKeyWasPressed(&window, HE_KEY_F1))
+				heConsoleToggleOpen((window.keyboardInfo.keyStatus[HE_KEY_LSHIFT]) ? HE_CONSOLE_STATE_OPEN_FULL : HE_CONSOLE_STATE_OPEN);
 		}
-
-		if(heWindowKeyWasPressed(&window, HE_KEY_T))
-			FONT_SIZE += .1f;
-		if(heWindowKeyWasPressed(&window, HE_KEY_Z))
-			FONT_SIZE -= .1f;
 		
         if(true) { // d3 rendering
+#if USE_PHYSICS == 1
+	        hePhysicsLevelUpdate(&level.physics, (float) window.frameTime);
+#endif
+			if(!freeCam)
+		        level.camera.position = hePhysicsActorGetEyePosition(&actor);
+            level.camera.viewMatrix = hm::createViewMatrix(level.camera.position, level.camera.rotation);
             heRenderEnginePrepareD3(&engine);
             heD3LevelUpdate(&level);
             heD3LevelRender(&engine, &level);
@@ -285,10 +273,8 @@ int main() {
         
         if(true) { // ui rendering
             // TODO(Victor): check if there is any ui content to render
-			heUiPushText(&engine, font, "Hi, I love you Klari <3", hm::vec2i(10, 150), 13, hm::colour(255));
 			heRenderEnginePrepareUi(&engine);
-			heUiRenderQuad(&engine, hm::vec2i(0, 0), hm::vec2i(0, 150), hm::vec2i(window.windowInfo.size.x, 0), hm::vec2i(window.windowInfo.size.x, 150), hm::colour(40, 40, 40, 200));
-            heUiRenderQuad(&engine, hm::vec2i(0, 150), hm::vec2i(0, 170), hm::vec2i(window.windowInfo.size.x, 150), hm::vec2i(window.windowInfo.size.x, 170), hm::colour(10, 10, 10, 255));
+			heConsoleRender((float) window.frameTime);
             heUiQueueRender(&engine);
             heRenderEngineFinishUi(&engine);
         }

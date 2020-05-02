@@ -415,8 +415,6 @@ void heUiQueueRenderLines(HeRenderEngine* engine) {
 };
 
 void heUiQueueRenderTexts(HeRenderEngine* engine) {
-	std::vector<float> vertices;
-	std::vector<uint32_t> colours;
 	hm::vec2f windowSize(engine->window->windowInfo.size);
 	
 	heShaderBind(engine->uiQueue.textShader);
@@ -427,16 +425,28 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
 	    heTextureBind(all.first->atlas, heShaderGetSamplerLocation(engine->uiQueue.textShader, "t_atlas", 0));	
 		
 	    for (HeUiText const& texts : all.second) {
+			std::vector<float> vertices;
+			std::vector<uint32_t> colours;
+
 			float scale = texts.size / (float) all.first->size;
 			hm::vec2f cursor = hm::vec2f(all.first->padding.x, all.first->padding.y) * scale;
 			cursor += texts.position;
-			for (char const chars : texts.text) {
-                if (chars == 32) {
+			for (char chars : texts.text) {
+				if(chars < 0)
+					chars = '?'; // for now replace unknown chars with this
+
+				if (chars == 32) {
                     // space
                     cursor.x += all.first->spaceWidth * scale;
 					continue;
 				}
 				
+				if(chars == 10) {
+                    // new line
+					cursor.x = (float) texts.position.x;
+					cursor.y += all.first->lineHeight * scale;
+					continue;	
+				}
 				auto it = all.first->characters.find((uint32_t) (chars));
 				if(it == all.first->characters.end()) {
 					HE_DEBUG("Could not find character [" + std::to_string(chars) + "] in font [" + all.first->name + "]");
@@ -504,14 +514,7 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
                 cursor.x += c->xadvance * scale;
 			}
 
-			float textSize = 1.f;
-			float f = 1.f - textSize;
-			if (f < 0.f) f = 0.f;
-			float boldness = 0.50f + (0.12f * f);
-			float softness = 0.01f + (0.22f * f);
-
 			heShaderLoadUniform(engine->uiQueue.textShader, "u_textSize", scale);
-			heShaderLoadUniform(engine->uiQueue.textShader, "u_alphaValues", hm::vec2f(boldness, softness));
 			heVaoUpdateData(&engine->uiQueue.textVao, vertices, 0);
 			heVaoUpdateDataUint(&engine->uiQueue.textVao, colours, 1);
 			heVaoRender(&engine->uiQueue.textVao);

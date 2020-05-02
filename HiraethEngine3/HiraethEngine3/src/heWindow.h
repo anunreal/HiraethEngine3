@@ -6,6 +6,10 @@
 #include <map>
 #include <vector>
 
+struct HeWindow;
+
+typedef bool(*HeWindowTextInputCallback)(HeWindow*, uint32_t const);
+
 struct HeWindowInfo {
     // the background colour of the window
     hm::colour   backgroundColour;
@@ -36,6 +40,7 @@ struct HeKeyboardInfo {
     // a vector of all keys that were pushed down in the last frame, useful for i.e. typing. This vector is cleard in
     // the heUpdateWindow function
     std::vector<HeKeyCode> keysPressed;
+	std::vector<HeWindowTextInputCallback> textInputCallbacks;
 };
 
 // This is the platform independant window

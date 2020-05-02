@@ -69,18 +69,19 @@ typedef enum HeKeyCode {
     HE_KEY_ESCAPE    = 0x1B,
     HE_KEY_ENTER     = 0x0D,
     HE_KEY_BACKSPACE = 0x08,
-    HE_KEY_F1		= 0x70,
-    HE_KEY_F2		= 0x71,
-    HE_KEY_F3		= 0x72,
-    HE_KEY_F4		= 0x73,
-    HE_KEY_F5		= 0x74,
-    HE_KEY_F6		= 0x75,
-    HE_KEY_F7		= 0x76,
-    HE_KEY_F8		= 0x77,
-    HE_KEY_F9		= 0x78,
-    HE_KEY_F10	   = 0x79,
-    HE_KEY_F11	   = 0xFA,
-    HE_KEY_F12	   = 0x7B
+	HE_KEY_CONTROL   = 0xA2,
+    HE_KEY_F1		 = 0x70,
+    HE_KEY_F2		 = 0x71,
+    HE_KEY_F3		 = 0x72,
+    HE_KEY_F4		 = 0x73,
+    HE_KEY_F5		 = 0x74,
+    HE_KEY_F6		 = 0x75,
+    HE_KEY_F7		 = 0x76,
+    HE_KEY_F8		 = 0x77,
+    HE_KEY_F9		 = 0x78,
+    HE_KEY_F10	     = 0x79,
+    HE_KEY_F11	     = 0xFA,
+    HE_KEY_F12	     = 0x7B
 } HeKeyCode;
 
 typedef enum HeDataType {
@@ -199,6 +200,12 @@ typedef enum HeTextureParameter {
 	HE_TEXTURE_CLAMP_BORDER       = 0b0100000,
 	HE_TEXTURE_CLAMP_REPEAT       = 0b1000000
 } HeTextureParameter;
+
+typedef enum HeConsoleState {
+	HE_CONSOLE_STATE_CLOSED,
+	HE_CONSOLE_STATE_OPEN,
+	HE_CONSOLE_STATE_OPEN_FULL,
+} HeConsoleState;
 
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\
