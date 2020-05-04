@@ -7,14 +7,14 @@
 #include <vector>
 
 struct HeBinaryBuffer {
-    char*           ptr       = nullptr;
-    uint32_t        maxSize   = 0; // the size of ptr
-    uint32_t        offset    = 0; // the current offset from which to read
-    uint32_t        size      = 0; // the amount of valid data in ptr
-    HeAccessType    access    = HE_ACCESS_NONE;
-    
-    std::ofstream   out;
-    std::ifstream   in;
+	char*			ptr	      = nullptr;
+	uint32_t		maxSize   = 0; // the size of ptr
+	uint32_t		offset	  = 0; // the current offset from which to read
+	uint32_t		size	  = 0; // the amount of valid data in ptr
+	HeAccessType	access	  = HE_ACCESS_NONE;
+	
+	std::ofstream	out;
+	std::ifstream	in;
 };
 
 
@@ -39,11 +39,11 @@ extern HE_API inline void heBinaryBufferReadFromFile(HeBinaryBuffer* buffer);
 extern HE_API void heBinaryBufferAdd(HeBinaryBuffer* buffer, void const* input, uint32_t size);
 // adds given char to the binary buffer. This will also write the buffer if it has reached its pointers limit
 extern HE_API void heBinaryBufferAdd(HeBinaryBuffer* buffer, char input);
-// adds  a string to a binary buffer
+// adds	 a string to a binary buffer
 extern HE_API void heBinaryBufferAddString(HeBinaryBuffer* buffer, std::string const& in);
-// adds  a float to a binary buffer (~4 bytes (sizeof(float))
+// adds	 a float to a binary buffer (~4 bytes (sizeof(float))
 extern HE_API void heBinaryBufferAddFloat(HeBinaryBuffer* buffer, float const in);
-// adds  an int to a binary buffer (4 bytes)
+// adds	 an int to a binary buffer (4 bytes)
 extern HE_API void heBinaryBufferAddInt(HeBinaryBuffer* buffer, int32_t const in);
 // adds a float buffer to the given binary buffer. This will first write the size of the buffer (in bytes) and then the contents
 extern HE_API void heBinaryBufferAddFloatBuffer(HeBinaryBuffer* buffer, std::vector<float> const& floats);
@@ -72,6 +72,7 @@ extern HE_API b8 heBinaryBufferGetFloatBuffer(HeBinaryBuffer* buffer, std::vecto
 extern HE_API void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const& outFile);
 // converts any texture to binary
 extern HE_API void heBinaryConvertTexture(std::string const& inFile, std::string const& outFile);
+
 
 // -- loaders
 

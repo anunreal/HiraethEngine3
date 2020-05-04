@@ -8,6 +8,7 @@
 
 /* NOTE: ALL THESE FUNCTIONS ARE ONLY DEFINED IF HE_USE_WIN32 IS DEFINED */
 
+
 // -- filesystem
 
 // returns true if the file was modified since the last time it was checked (with this function). If this is
@@ -21,9 +22,10 @@ extern HE_API b8 heWin32FileExists(std::string const& file);
 extern HE_API void heWin32FolderGetFiles(std::string const& folder, std::vector<std::string>& files, b8 const recursive);
 extern HE_API void heWin32FolderCreate(std::string const& path);
 
+
 // -- window
 
-// creates the windows class with name Hiraeth2D if it wasnt created before
+// creates the windows class with name HiraethEngine3 if it wasnt created before
 extern HE_API b8 heWin32SetupClassInstance();
 // creates a dummy context needed for retrieving function pointers (context creation with attributes...)
 extern HE_API void heWin32CreateDummyContext();
@@ -38,13 +40,21 @@ extern HE_API void heWin32WindowToggleCursor(b8 const hidden);
 extern HE_API void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position);
 extern HE_API hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window);
 
+
 // -- basic profiler
 
 // starts a new time entry
-extern HE_API void heTimerStart();
+extern HE_API void heWin32TimerStart();
 // gets the latest time entry (last in first out) in milliseconds
-extern HE_API double heTimerGet();
+extern HE_API double heWin32TimerGet();
 // prints the latest time entry
-extern HE_API inline void heTimerPrint(std::string const& id);
+extern HE_API inline void heWin32TimerPrint(std::string const& id);
+
+
+// -- utils
+
+// returns a string from the clipboard (if available) or an empty string if no text is in the clipboard
+extern HE_API std::string heWin32ClipboardGet();
+
 
 #endif

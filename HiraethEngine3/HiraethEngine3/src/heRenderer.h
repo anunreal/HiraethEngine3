@@ -14,87 +14,87 @@ struct HeFont;
 struct HeWindow;
 
 /*
-TODO(Victor):  Add Post Process (Bloom), Forward renderer
+  TODO(Victor):	 Add Post Process (Bloom), Forward renderer
 */
 
 
 struct HeUiLine {
-    hm::colour colour;
-    // two end points of the line in screen space
-    hm::vec3f p0, p1;
-    // width of the line in screen space
-    float width;
-    // if this is true, the line is in 2d (screen space) else this is in 3d (world space)
-    b8 d3;
-    
-    HeUiLine() : p0(0.f), p1(0.f), colour(0), width(0.f), d3(false) {};
-    HeUiLine(hm::vec2f const& p0, hm::vec2f const& p1, hm::colour const& col, float const width) :
-    p0(p0), p1(p1), colour(col), width(width), d3(false) {};
+	hm::colour colour;
+	// two end points of the line in screen space
+	hm::vec3f p0, p1;
+	// width of the line in screen space
+	float width;
+	// if this is true, the line is in 2d (screen space) else this is in 3d (world space)
+	b8 d3;
+	
+	HeUiLine() : p0(0.f), p1(0.f), colour(0), width(0.f), d3(false) {};
+	HeUiLine(hm::vec2f const& p0, hm::vec2f const& p1, hm::colour const& col, float const width) :
+		p0(p0), p1(p1), colour(col), width(width), d3(false) {};
 	HeUiLine(hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& col, float const width) :
-    p0(p0), p1(p1), colour(col), width(width), d3(true) {};
+		p0(p0), p1(p1), colour(col), width(width), d3(true) {};
 };
 
 struct HeUiText {
 	std::string text;
-	hm::vec2i   position; // in window space
-	uint16_t    size; // in window space
-	hm::colour  colour;
+	hm::vec2i	position; // in window space
+	uint16_t	size; // in window space
+	hm::colour	colour;
 
-    HeUiText() : text(""), position(0), size(0), colour(0) {};
+	HeUiText() : text(""), position(0), size(0), colour(0) {};
 	HeUiText(std::string const& text, hm::vec2i const& position, uint16_t const size, hm::colour const& colour) : text(text), position(position), size(size), colour(colour) {};
 };
 
 struct HeUiQueue {
-    HeVao linesVao;
-    HeShaderProgram* linesShader = nullptr;
-    std::vector<HeUiLine> lines;
-    
+	HeVao linesVao;
+	HeShaderProgram* linesShader = nullptr;
+	std::vector<HeUiLine> lines;
+	
 	HeVao textVao;
-	HeShaderProgram* textShader  = nullptr;
-    std::unordered_map<HeFont const*, std::vector<HeUiText>> texts;
+	HeShaderProgram* textShader	 = nullptr;
+	std::unordered_map<HeFont const*, std::vector<HeUiText>> texts;
 };
 
 struct HeRenderEngine {
-    struct {
-        // a 2d quad vao used for 2d rendering
-        HeVao* quadVao = nullptr;
-        // a unit cube
-        HeVao* cubeVao = nullptr;
+	struct {
+		// a 2d quad vao used for 2d rendering
+		HeVao* quadVao = nullptr;
+		// a unit cube
+		HeVao* cubeVao = nullptr;
 		// a unit sphere
-        HeVao* sphereVao = nullptr;
-    } shapes;
-    
-    // the window this engine operates on
-    HeWindow* window = nullptr;
+		HeVao* sphereVao = nullptr;
+	} shapes;
+	
+	// the window this engine operates on
+	HeWindow* window = nullptr;
 
 	// a simple rgba shader that renders a mesh with one rgba colour
 	HeShaderProgram* rgbaShader; 
-    // used for 2d texture rendering
-    HeShaderProgram* textureShader = nullptr;
-    // the ui render queue for batch rendering
-    HeUiQueue uiQueue;
-    
-    // the texture that should be drawn on screen. If this is 0, the final texture (with lightin applied) is drawn.
-    // 1: world space texture
-    // 2: normal texture
-    // 3: diffuse texture
-    // 4: arm texture
-    uint8_t outputTexture = 0;
-    // a 16 bit multisampled fbo used for hdr rendering
-    HeFbo gBufferFbo;
-    // an 16 bit fbo used for post-process image manipulation
-    HeFbo resolvedFbo;
-    // used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
-    HeShaderProgram* finalShader     = nullptr;
-    // the shader used for rendering d3 objects into the gbuffer. This will put information like position, normals... into the
-    // gbuffer independant of the instances material
-    HeShaderProgram* gBufferShader   = nullptr;
-    // the lighting shader after the gbuffer pass
-    HeShaderProgram* gLightingShader = nullptr;
-    // renders an hdr skybox of a level (cube map texture) 
-	HeShaderProgram* skyboxShader    = nullptr;
-    // the brdf integration texture (rg channels)
-    HeTexture* brdfIntegration = nullptr;
+	// used for 2d texture rendering
+	HeShaderProgram* textureShader = nullptr;
+	// the ui render queue for batch rendering
+	HeUiQueue uiQueue;
+	
+	// the texture that should be drawn on screen. If this is 0, the final texture (with lightin applied) is drawn.
+	// 1: world space texture
+	// 2: normal texture
+	// 3: diffuse texture
+	// 4: arm texture
+	uint8_t outputTexture = 0;
+	// a 16 bit multisampled fbo used for hdr rendering
+	HeFbo gBufferFbo;
+	// an 16 bit fbo used for post-process image manipulation
+	HeFbo resolvedFbo;
+	// used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
+	HeShaderProgram* finalShader	 = nullptr;
+	// the shader used for rendering d3 objects into the gbuffer. This will put information like position, normals... into the
+	// gbuffer independant of the instances material
+	HeShaderProgram* gBufferShader	 = nullptr;
+	// the lighting shader after the gbuffer pass
+	HeShaderProgram* gLightingShader = nullptr;
+	// renders an hdr skybox of a level (cube map texture) 
+	HeShaderProgram* skyboxShader	 = nullptr;
+	// the brdf integration texture (rg channels)
+	HeTexture* brdfIntegration = nullptr;
 };
 
 // the current active render engine. Can be set and (then) used at any time
@@ -153,7 +153,7 @@ extern HE_API inline void heUiRenderTexture(HeRenderEngine* engine, HeTexture co
 // be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
 extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size, bool const isCubeMap = false);
 // renders a quad with given vertices in window space with given colour
-extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2i const& p0, hm::vec2i const& p1, hm::vec2i const& p2, hm::vec2i const& p3, hm::colour const& colour);
+extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour);
 
 // renders all lines batched together
 extern HE_API void heUiQueueRenderLines(HeRenderEngine* queue);

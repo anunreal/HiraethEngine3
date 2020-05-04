@@ -16,14 +16,15 @@ struct HeMaterial {
 
 struct HeFont {
     struct Character {
-        uint32_t id;             // ascii id
+        int32_t id;             // ascii id
 		hm::vec4f uv;            // in texture space
 		hm::vec2<uint32_t> size;  // in pixel space
 		hm::vec2<int32_t> offset; // in pixel space
 		uint8_t xadvance;        // in pixel space
 	};
 
-	std::unordered_map<uint32_t, Character> characters;
+	//	std::unordered_map<uint32_t, Character> characters;
+	std::unordered_map<int32_t, Character> characters;
 	hm::vec4<uint8_t> padding;
 	uint8_t size, lineHeight, baseLine;
 	uint8_t spaceWidth;
@@ -92,11 +93,12 @@ extern HE_API uint32_t heMaterialGetType(std::string const& shaderName);
 // tries to load a font with given name.
 extern HE_API void heFontLoad(HeFont* font, std::string const& name);
 // returns true if the given font can display the given ascii code
-extern HE_API inline b8 heFontHasCharacter(HeFont const* font, uint32_t const asciiCode);
+extern HE_API inline b8 heFontHasCharacter(HeFont const* font, int32_t const asciiCode);
 // returns the size of given ascii character in pixels or a zero vector if that character is not in the given font
-extern HE_API inline hm::vec2i heFontGetCharacterSize(HeFont const* font, char const asciiCode, uint32_t const size);
+extern HE_API inline hm::vec2f heFontGetCharacterSize(HeFont const* font, int32_t const asciiCode, uint32_t const size);
 // returns the width of given string in pixels with this font, with given size applied (in pixels)
-extern HE_API uint32_t heFontGetStringWidthInPixels(HeFont const* font, std::string const& string, uint32_t const size);
+extern HE_API float heFontGetStringWidthInPixels(HeFont const* font, std::string const& string, uint32_t const size);
+
 
 // -- Assets
 

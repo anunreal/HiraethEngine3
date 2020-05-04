@@ -1,13 +1,10 @@
 
-void command_hello(std::string const& in) {
-	heConsolePrint("Hello!: " + in);
+void command_set_position(int index, hm::vec3f const& position) {
+	HeD3Instance* instance = heD3LevelGetInstance(heD3Level, index);
+	heD3InstanceSetPosition(instance, position);
 };
 
-void command_add(int a, int b) {
-	heConsolePrint("Add: " + std::to_string((a + b)));
-};
-
-void command_klari(int count) {
-	for(int i = 0; i < count; ++i)
-		heConsolePrint("<3");
+void command_set_jumpheight(float height) {
+	 HePhysicsActor* actor = heD3Level->physics.actor;
+	 actor->actorInfo.jumpHeight = height;
 };

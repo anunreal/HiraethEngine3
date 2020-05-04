@@ -1,4 +1,4 @@
-cloc-1.80.exe HiraethEngine3\src --by-file
-cloc-1.80.exe HiraethEngine3\src
-cloc-1.80.exe HiraethNetwork\src
+cloc-1.80.exe --by-file        HiraethEngine3\src
+cloc-1.80.exe --by-file        HiraethNetwork\src
+cloc-1.80.exe --include-lang="C++,C/C++ Header" --by-file HiraethEngine3\src HiraethNetwork\src meta
 pause

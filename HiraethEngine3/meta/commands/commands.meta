@@ -1,8 +1,0 @@
-
-void command_hello(std::string const& in) {
-	heConsolePrint("Hello!: " + in);
-};
-
-void command_add(int a, int b) {
-	heConsolePrint("Add: " + std::to_string((a + b)));
-};

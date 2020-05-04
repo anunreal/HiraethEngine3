@@ -92,7 +92,7 @@ HeD3LightSource* heD3LevelGetLightSource(HeD3Level* level, uint16_t const index)
 };
 
 void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile) {
-    heTimerStart();
+    heWin32TimerStart();
 
 	const hm::vec2i OUT_RES(512);
 	const uint8_t MIP_COUNT = 5;
@@ -150,5 +150,5 @@ void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile) {
 	heTextureDestroy(&hdr);
 	HE_LOG("Computed successfully");
 
-    heTimerPrint("Skybox creation");
+    heWin32TimerPrint("Skybox creation");
 };
