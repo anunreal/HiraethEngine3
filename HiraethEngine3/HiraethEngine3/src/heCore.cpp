@@ -21,7 +21,7 @@ void heLogCout(std::string const& message, std::string const& prefix) {
     output.push_back(' ');
     output.append(message);
 
-	//	heConsolePrint(output);
+	heConsolePrint(output);
 
 	output.push_back('\n');
     std::cout << output;

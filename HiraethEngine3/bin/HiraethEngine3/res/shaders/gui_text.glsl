@@ -36,7 +36,7 @@ uniform float u_textSize;
 float calculateFontAlpha() {
 	float spread = 10.;
 	float dist = texture(t_atlas, pass_uv).a;
-	float smoothing = clamp(0.25 / (spread * u_textSize), 0, 1);
+	float smoothing = 0.25 / (spread * u_textSize);
 	return smoothstep(0.5 - smoothing, 0.5 + smoothing, dist);
 }
 

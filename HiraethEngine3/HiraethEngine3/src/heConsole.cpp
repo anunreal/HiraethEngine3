@@ -6,8 +6,8 @@
 #include "heWin32Layer.h"
 #include "meta/commands.cpp"
 
-#define TYPE_BAR_HEIGHT	   27
-#define BACK_LOG_FONT_SIZE 15
+uint32_t TYPE_BAR_HEIGHT    = 27;
+uint32_t BACK_LOG_FONT_SIZE = 15;
 
 struct HeConsoleCommand {
 	std::string name;
@@ -25,24 +25,30 @@ struct HeConsole {
 	float timeSinceLastInput = 0.f;
 	
 	std::string inputString;
+	uint32_t cursorPosition = 0; // in chars, from the beginning of the input string
+
 	std::vector<std::string> history;
 	int32_t historyIndex = -1; // when this is -1, we type a new command. Else this is the index of the history that we are currently seeing
-	uint32_t cursorPosition = 0; // in chars, from the beginning of the input string
 	
 	std::vector<std::string> backlog;
 	std::vector<HeConsoleCommand> commands;
-	HeFont* backlogFont;
+	HeScaledFont backlogFont;
 	int32_t backlogIndex = 0; // the index of the message that should be drawn first (lowest on screen)
+
+	int32_t autoCompleteCycle = 0;  // everytime we press tab, we increase the cycle (index to autoCompleteOptions)
+	std::vector<std::string> autoCompleteOptions; // a list of all currently fitting commands. This gets cleared everytime we type something, because we need to update the options
 };
 
 HeConsole heConsole;
 
-bool heConsoleTextInputCallback(HeWindow* window, uint32_t const input) {
+b8 heConsoleTextInputCallback(HeWindow* window, uint32_t const input) {
 	if(heConsole.state != HE_CONSOLE_STATE_CLOSED) {
-		if(heFontHasCharacter(heConsole.backlogFont, input)) {
+		if(heScaledFontHasCharacter(&heConsole.backlogFont, input)) {
 			heConsole.inputString.insert(heConsole.inputString.begin() + heConsole.cursorPosition, input);
 			heConsole.timeSinceLastInput = 0.f;
 			heConsole.cursorPosition++;
+			heConsole.autoCompleteOptions.clear();
+			heConsole.autoCompleteCycle = 0;
 		}
 		return true;
 	} else {
@@ -50,11 +56,11 @@ bool heConsoleTextInputCallback(HeWindow* window, uint32_t const input) {
 	}
 };
 
-bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
+b8 heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 	if(heConsole.state != HE_CONSOLE_STATE_CLOSED) {
 		if(input == HE_KEY_BACKSPACE) {
 			// backspace
-			if(heConsole.inputString.size() > 0) {
+			if(heConsole.cursorPosition > 0) {
 				if(window->keyboardInfo.keyStatus[HE_KEY_LCONTROL]) {
 					size_t index = heConsole.inputString.substr(0, heConsole.cursorPosition).find_last_of(' ');
 					if (index == std::string::npos)
@@ -66,8 +72,11 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 					heConsole.inputString.erase(heConsole.inputString.begin() + heConsole.cursorPosition - 1);
 					heConsole.cursorPosition--;
 				}
+				heConsole.autoCompleteCycle = 0;
+				heConsole.autoCompleteOptions.clear();
 			}
 			heConsole.timeSinceLastInput = 0.f;
+
 		} else if(input == HE_KEY_ENTER) {
 			// run command
 			if(heConsole.inputString.size() > 0) {
@@ -75,11 +84,13 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 				heConsoleCommandRun(heConsole.inputString);
 				heConsole.history.insert(heConsole.history.begin(), heConsole.inputString);
 				heConsole.inputString.clear();
-				heConsole.cursorPosition = 0;
-				heConsole.historyIndex   = -1;
-				//heConsole.backlogIndex   = (int32_t) heConsole.backlog.size();
-				heConsole.backlogIndex   = 0;
+				heConsole.cursorPosition    = 0;
+				heConsole.historyIndex      = -1;
+				heConsole.backlogIndex      = 0;
+				heConsole.autoCompleteCycle = 0;
+				heConsole.autoCompleteOptions.clear();
 			}
+
 		} else if(input == HE_KEY_ARROW_UP) {
 			// move up in history
 			if((int32_t) heConsole.history.size() > heConsole.historyIndex + 1) {
@@ -87,6 +98,7 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 				heConsole.cursorPosition = (uint32_t) heConsole.inputString.size();
 			}
 			heConsole.timeSinceLastInput = 0.f;
+
 		} else if(input == HE_KEY_ARROW_DOWN) {
 			// move down in history
 			if(--heConsole.historyIndex >= 0) {
@@ -98,6 +110,7 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 				heConsole.historyIndex   = -1;
 			}
 			heConsole.timeSinceLastInput = 0.f;
+
 		} else if(input == HE_KEY_ARROW_LEFT) {
 			// move cursor left
 			if(heConsole.cursorPosition > 0) {
@@ -110,6 +123,7 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 				heConsole.cursorPosition = (uint32_t) newIndex;
 			}
 			heConsole.timeSinceLastInput = 0.f;
+
 		} else if(input == HE_KEY_ARROW_RIGHT) {
 			// move cursor right
 			if(heConsole.cursorPosition < heConsole.inputString.size()) {
@@ -125,12 +139,14 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 				heConsole.cursorPosition = (uint32_t) newIndex;
 			}
 			heConsole.timeSinceLastInput = 0.f;
+
 		} else if(input == HE_KEY_V && window->keyboardInfo.keyStatus[HE_KEY_LCONTROL]) {
 			// paste into console
 			std::string clipboard = heWin32ClipboardGet();
 			heConsole.inputString.insert(heConsole.cursorPosition, clipboard);
 			heConsole.cursorPosition += (uint32_t) clipboard.size();
 			heConsole.timeSinceLastInput = 0.f;
+
 		} else if(input == HE_KEY_DELETE) {
 			// remove rhs
 			if(heConsole.cursorPosition < heConsole.inputString.size()) {
@@ -149,6 +165,24 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 				}
 			}
 			heConsole.timeSinceLastInput = 0.f;
+
+		} else if(input == HE_KEY_TAB) {
+			// try auto complete?
+			if(heConsole.autoCompleteOptions.empty()) {
+				// evaluate options
+				for(HeConsoleCommand const& all : heConsole.commands) {
+					if(all.name.compare(0, heConsole.inputString.size(), heConsole.inputString) == 0)
+						heConsole.autoCompleteOptions.emplace_back(all.name);
+				}
+			}
+
+			if(!heConsole.autoCompleteOptions.empty()) {
+				heConsole.inputString = heConsole.autoCompleteOptions[heConsole.autoCompleteCycle++];
+				heConsole.cursorPosition = (uint32_t) heConsole.inputString.size();
+				if(heConsole.autoCompleteCycle == heConsole.autoCompleteOptions.size())
+					heConsole.autoCompleteCycle = 0;
+			}
+
 		}
 
 		return true;
@@ -157,7 +191,6 @@ bool heConsoleKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 };
 
 b8 heConsoleScrollCallback(HeWindow* window, int8_t const direction, hm::vec2i const& position) {
-	// window->windowInfo.size.y * heConsole.currentY
 	int32_t verticalSize = (int32_t) (heConsole.currentY * window->windowInfo.size.y);
 	if(heConsole.state != HE_CONSOLE_STATE_CLOSED && position.y < verticalSize) {
 		if(direction < 0 && heConsole.backlogIndex > 0) {
@@ -176,7 +209,7 @@ b8 heConsoleScrollCallback(HeWindow* window, int8_t const direction, hm::vec2i c
 
 
 void heConsoleCreate(HeFont* backlogFont) {
-	heConsole.backlogFont = backlogFont;
+	heFontCreateScaled(backlogFont, &heConsole.backlogFont, BACK_LOG_FONT_SIZE);
 	heRenderEngine->window->keyboardInfo.textInputCallbacks.emplace_back(&heConsoleTextInputCallback);
 	heRenderEngine->window->keyboardInfo.keyPressCallbacks.emplace_back(&heConsoleKeyPressCallback);
 	heRenderEngine->window->mouseInfo.scrollCallbacks.emplace_back(&heConsoleScrollCallback);
@@ -227,7 +260,6 @@ void heConsoleRender(float const delta) {
 	
 	HeWindow* window = heRenderEngine->window;
 	uint32_t sizeY = (uint32_t) (heConsole.currentY * window->windowInfo.size.y);
-	float textScale = BACK_LOG_FONT_SIZE / (float) heConsole.backlogFont->size;
 
 	{ // render background
 		heUiRenderQuad(heRenderEngine, hm::vec2i(0, 0), hm::vec2i(0, sizeY), hm::vec2i(window->windowInfo.size.x, 0), hm::vec2i(window->windowInfo.size.x, sizeY), hm::colour(40, 40, 40, 200));
@@ -235,15 +267,15 @@ void heConsoleRender(float const delta) {
 	}
 
 	{ // render backlog
-		float textY = sizeY - (heConsole.backlogFont->lineHeight * textScale);
+		float textY = sizeY - heConsole.backlogFont.lineHeight;
 
 		// messages
 		int32_t index = (int32_t) (heConsole.backlog.size() - heConsole.backlogIndex - 1);
 		uint32_t displayedCount = 0;
 		while(textY > 0 && index >= 0) {
-			heUiPushText(heRenderEngine, heConsole.backlogFont, heConsole.backlog[index], hm::vec2i(10, (int32_t) textY), BACK_LOG_FONT_SIZE, hm::colour(255, 255, 255, 200));
+			heUiPushText(heRenderEngine, &heConsole.backlogFont, heConsole.backlog[index], hm::vec2i(10, (int32_t) textY), hm::colour(255, 255, 255, 200));
 			index--;
-			textY -= (heConsole.backlogFont->lineHeight * textScale);
+			textY -= heConsole.backlogFont.lineHeight;
 			displayedCount++;
 		}
 
@@ -267,12 +299,11 @@ void heConsoleRender(float const delta) {
 	{ // render input
 		// cursor
 		hm::vec2f padding = hm::vec2f(0, 3);
-		hm::vec2f size    = hm::vec2f(heFontGetCharacterSize(heConsole.backlogFont, 'M', BACK_LOG_FONT_SIZE).x, heConsole.backlogFont->lineHeight * textScale - padding.y * 2);
+		hm::vec2f size    = hm::vec2f(heScaledFontGetCharacterSize(&heConsole.backlogFont, 'M').x, heConsole.backlogFont.lineHeight - padding.y * 2);
 		hm::vec2f offset  = hm::vec2f(10, (float) sizeY) + padding;
 		if(heConsole.inputString.size() > 0) {
 			uint32_t cursorPos = heConsole.cursorPosition;
-			offset.x += heFontGetStringWidthInPixels(heConsole.backlogFont, heConsole.inputString.substr(0, cursorPos), BACK_LOG_FONT_SIZE);
-			offset.x += 4 * textScale;
+			offset.x += heScaledFontGetStringWidthInPixels(&heConsole.backlogFont, heConsole.inputString.substr(0, cursorPos)) + 4 * heConsole.backlogFont.scale;
 		}
 
 		uint8_t alpha = 255;
@@ -284,7 +315,7 @@ void heConsoleRender(float const delta) {
 		heConsole.timeSinceLastInput += delta;
 
 		// input string
-		heUiPushText(heRenderEngine, heConsole.backlogFont, heConsole.inputString, hm::vec2i(10, (int32_t) sizeY), BACK_LOG_FONT_SIZE, hm::colour(255, 255, 255, 255));	
+		heUiPushText(heRenderEngine, &heConsole.backlogFont, heConsole.inputString, hm::vec2i(10, (int32_t) sizeY), hm::colour(255, 255, 255, 255));	
 	}
 };
 

@@ -12,5 +12,9 @@ extern HE_API std::string heStringReplaceAll(std::string const& input, std::stri
 extern HE_API std::string heStringReplaceAll(std::string const& input, char const from, char const to);
 // returns true if check is the beginning of base
 extern inline HE_API b8 heStringStartsWith(const std::string& base, const std::string& check);
+// removes all whitespace from the left of the string
+extern inline HE_API void heStringEatSpacesLeft(std::string& string);
+// removes all whitespace from the right of the string
+extern inline HE_API void heStringEatSpacesRight(std::string& string);
 
 #endif

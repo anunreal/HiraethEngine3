@@ -77,6 +77,7 @@ typedef enum HeKeyCode {
 	HE_KEY_ARROW_DOWN  = 0x28,
 	HE_KEY_END         = 0x23,
 	HE_KEY_DELETE      = 0x2E,
+	HE_KEY_TAB         = 0x09,
 	HE_KEY_F1		   = 0x70,
 	HE_KEY_F2		   = 0x71,
 	HE_KEY_F3		   = 0x72,

@@ -6,7 +6,7 @@
 namespace hm {
 	
 	template<typename T>
-		struct vec3 {
+	struct vec3 {
 		T x, y, z;
 		
 		vec3() : x(0), y(0), z(0) {};
@@ -17,19 +17,19 @@ namespace hm {
 		// conversions
 		
 		template<typename T1>
-			vec3(vec2<T1> const& vec, float const z = 1.f) : x(vec.x), y(vec.y), z(z) {};
+		vec3(vec2<T1> const& vec, float const z = 1.f) : x(vec.x), y(vec.y), z(z) {};
 		
 		// accessors
 		
 		const T& operator[](const unsigned int index) const {
 			switch (index) {
-				case 0:
+			case 0:
 				return x;
 				
-				case 1:
+			case 1:
 				return y;
 				
-				case 2:
+			case 2:
 				return z;
 			}
 			
@@ -41,13 +41,13 @@ namespace hm {
 		
 		T& operator[](const unsigned int index) {
 			switch (index) {
-				case 0:
+			case 0:
 				return x;
 				
-				case 1:
+			case 1:
 				return y;
 				
-				case 2:
+			case 2:
 				return z;
 			}
 			
@@ -97,22 +97,22 @@ namespace hm {
 	typedef vec3<int32_t> vec3i;
 	
 	template<typename T>
-		static inline vec3<T> length(const vec3<T>& vector) {
+	static inline vec3<T> length(const vec3<T>& vector) {
 		return std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
 	};
 	
 	template<typename T>
-		static inline vec3<T> to_radians(const vec3<T>& vector) {
+	static inline vec3<T> to_radians(const vec3<T>& vector) {
 		return vec3<T>(to_radians(vector.x), to_radians(vector.y), to_radians(vector.z));
 	};
 	
 	template<typename T>
-		static inline vec3<T> normalize(const vec3<T>& vector) {
+	static inline vec3<T> normalize(const vec3<T>& vector) {
 		return vector / length(vector);
 	};
 	
 	template<typename T>
-		static inline vec3<T> cross(const vec3<T>& left, const vec3<T>& right) {
+	static inline vec3<T> cross(const vec3<T>& left, const vec3<T>& right) {
 		return vec3<T>(left.y * right.z - left.z * right.y,
 					   left.z * right.x - left.x * right.z,
 					   left.x * right.y - left.y * right.x);

@@ -8,3 +8,10 @@ void command_set_jumpheight(float height) {
 	 HePhysicsActor* actor = heD3Level->physics.actor;
 	 actor->actorInfo.jumpHeight = height;
 };
+
+void command_toggle_physics_debug() {
+	if(heD3Level->physics.enableDebugDraw)
+		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
+	else
+		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
+};

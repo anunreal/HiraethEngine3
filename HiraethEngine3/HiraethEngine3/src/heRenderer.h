@@ -10,7 +10,7 @@ struct HeD3Camera;
 struct HeD3Instance;
 struct HeD3LightSource;
 struct HeMaterial;
-struct HeFont;
+struct HeScaledFont;
 struct HeWindow;
 
 /*
@@ -37,11 +37,10 @@ struct HeUiLine {
 struct HeUiText {
 	std::string text;
 	hm::vec2i	position; // in window space
-	uint16_t	size; // in window space
 	hm::colour	colour;
 
-	HeUiText() : text(""), position(0), size(0), colour(0) {};
-	HeUiText(std::string const& text, hm::vec2i const& position, uint16_t const size, hm::colour const& colour) : text(text), position(position), size(size), colour(colour) {};
+	HeUiText() : text(""), position(0), colour(0) {};
+	HeUiText(std::string const& text, hm::vec2i const& position, hm::colour const& colour) : text(text), position(position), colour(colour) {};
 };
 
 struct HeUiQueue {
@@ -51,7 +50,7 @@ struct HeUiQueue {
 	
 	HeVao textVao;
 	HeShaderProgram* textShader	 = nullptr;
-	std::unordered_map<HeFont const*, std::vector<HeUiText>> texts;
+	std::unordered_map<HeScaledFont const*, std::vector<HeUiText>> texts;
 };
 
 struct HeRenderEngine {
@@ -167,7 +166,7 @@ extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const
 // p0 and p1 must be in world space, width is in pixels
 extern HE_API inline void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& colour, float const width);
 // pushes a new text with position in window space (pixels)
-extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeFont const* font, std::string const& text, hm::vec2i const& position, uint16_t const size, hm::colour const& colour);
+extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2i const& position, hm::colour const& colour);
 
 // transforms given vector from pixel space to clip space ([-1:1])
 extern HE_API inline hm::vec2f heSpaceScreenToClip(hm::vec2f const& pixelspace, HeWindow const* window);

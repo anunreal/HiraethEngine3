@@ -419,32 +419,31 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
 	
 	for (auto const& all : engine->uiQueue.texts) {
 		// prepare font
-		heTextureBind(all.first->atlas, heShaderGetSamplerLocation(engine->uiQueue.textShader, "t_atlas", 0));	
+		heTextureBind(all.first->font->atlas, heShaderGetSamplerLocation(engine->uiQueue.textShader, "t_atlas", 0));	
 		
 		for (HeUiText const& texts : all.second) {
 			std::vector<float> vertices;
 			std::vector<uint32_t> colours;
 			
-			float scale = texts.size / (float) all.first->size;
-			hm::vec2f cursor = hm::vec2f(all.first->padding.x, all.first->padding.y) * scale;
+			hm::vec2f cursor = hm::vec2f(all.first->padding.x, all.first->padding.y);
 			cursor += texts.position;
 			for (unsigned char chars : texts.text) {
 				if (chars == 32) {
 					// space
-					cursor.x += all.first->spaceWidth * scale;
+					cursor.x += all.first->spaceWidth;
 					continue;
 				}
 				
 				if(chars == 10) {
 					// new line
 					cursor.x = (float) texts.position.x;
-					cursor.y += all.first->lineHeight * scale;
+					cursor.y += all.first->lineHeight;
 					continue;	
 				}
 
-				auto it = all.first->characters.find(chars);
-				if(it == all.first->characters.end()) {
-					HE_DEBUG("Could not find character [" + std::to_string(chars) + "] in font [" + all.first->name + "]");
+				auto it = all.first->font->characters.find(chars);
+				if(it == all.first->font->characters.end()) {
+					HE_DEBUG("Could not find character [" + std::to_string(chars) + "] in font [" + all.first->font->name + "]");
 					continue;
 				}
 				
@@ -452,10 +451,10 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
 				
 				// build quads
 				hm::vec2f p0, p1, p2, p3, uv0, uv1, uv2, uv3;
-				p0	= hm::vec2f(c->offset) * scale + cursor;
-				p1	= hm::vec2f(p0.x + c->size.x * scale, p0.y);
-				p2	= hm::vec2f(p0.x					, p0.y + c->size.y * scale);
-				p3	= hm::vec2f(p0.x + c->size.x * scale, p0.y + c->size.y * scale);
+				p0	= hm::vec2f(c->offset) * all.first->scale + cursor;
+				p1	= hm::vec2f(p0.x + c->size.x * all.first->scale, p0.y);
+				p2	= hm::vec2f(p0.x					           , p0.y + c->size.y * all.first->scale);
+				p3	= hm::vec2f(p0.x + c->size.x * all.first->scale, p0.y + c->size.y * all.first->scale);
 				
 				uv0 = hm::vec2f(c->uv.x, c->uv.y);
 				uv1 = hm::vec2f(c->uv.z, c->uv.y);
@@ -506,10 +505,10 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
 				colours.emplace_back(col);
 				colours.emplace_back(col);
 				
-				cursor.x += c->xadvance * scale;
+				cursor.x += c->xadvance * all.first->scale;
 			}
 			
-			heShaderLoadUniform(engine->uiQueue.textShader, "u_textSize", scale);
+			heShaderLoadUniform(engine->uiQueue.textShader, "u_textSize", all.first->scale);
 			heVaoUpdateData(&engine->uiQueue.textVao, vertices, 0);
 			heVaoUpdateDataUint(&engine->uiQueue.textVao, colours, 1);
 			heVaoRender(&engine->uiQueue.textVao);
@@ -522,6 +521,7 @@ void heUiQueueRender(HeRenderEngine* engine) {
 	heDepthEnable(false);
 	heUiQueueRenderLines(engine);
 	heUiQueueRenderTexts(engine);
+
 	// clear queue
 	engine->uiQueue.lines.clear();
 	engine->uiQueue.texts.clear();
@@ -536,8 +536,8 @@ void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const
 	engine->uiQueue.lines.emplace_back(p0, p1, colour, width);
 };
 
-void heUiPushText(HeRenderEngine* engine, HeFont const* font, std::string const& text, hm::vec2i const& position, uint16_t const size, hm::colour const& colour) {
-	engine->uiQueue.texts[font].emplace_back(HeUiText(text, position, size, colour));
+void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2i const& position, hm::colour const& colour) {
+	engine->uiQueue.texts[font].emplace_back(HeUiText(text, position, colour));
 };
 
 

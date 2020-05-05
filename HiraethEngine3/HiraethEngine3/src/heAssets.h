@@ -26,14 +26,24 @@ struct HeFont {
 	//	std::unordered_map<uint32_t, Character> characters;
 	std::unordered_map<int32_t, Character> characters;
 	hm::vec4<uint8_t> padding;
-	uint8_t size, lineHeight, baseLine;
-	uint8_t spaceWidth;
+	uint8_t size, lineHeight, baseLine, spaceWidth;
 	
 	HeTexture* atlas = nullptr;
 	
 #ifdef HE_ENABLE_NAMES
 	std::string name;
 #endif
+};
+
+struct HeScaledFont {
+	HeFont const* font  = nullptr;
+	uint8_t       size  = 0; // the size of this scaled font in pixels
+	float         scale = 1.f; // relative scale from the native font, calculated by this size / the font size 
+	
+	// all of these are in pixels, scaled up or down from the original values in font
+	
+	float lineHeight, baseLine, spaceWidth; 
+	hm::vec4f padding;	
 };
 
 // maps the name of the mesh (usually a file) to its vao
@@ -92,12 +102,20 @@ extern HE_API uint32_t heMaterialGetType(std::string const& shaderName);
 
 // tries to load a font with given name.
 extern HE_API void heFontLoad(HeFont* font, std::string const& name);
+// creates a scaled version of the font with given size in pixels.
+extern HE_API void heFontCreateScaled(HeFont const* font, HeScaledFont* scaled, uint32_t const size);
 // returns true if the given font can display the given ascii code
 extern HE_API inline b8 heFontHasCharacter(HeFont const* font, int32_t const asciiCode);
+// returns true if the given font can display the given ascii code
+extern HE_API inline b8 heScaledFontHasCharacter(HeScaledFont const* font, int32_t const asciiCode);
 // returns the size of given ascii character in pixels or a zero vector if that character is not in the given font
-extern HE_API inline hm::vec2f heFontGetCharacterSize(HeFont const* font, int32_t const asciiCode, uint32_t const size);
+extern HE_API inline hm::vec2i heFontGetCharacterSize(HeFont const* font, int32_t const asciiCode);
+// returns the size of given ascii character in pixels or a zero vector if that character is not in the given font
+extern HE_API inline hm::vec2f heScaledFontGetCharacterSize(HeScaledFont const* font, int32_t const asciiCode);
 // returns the width of given string in pixels with this font, with given size applied (in pixels)
-extern HE_API float heFontGetStringWidthInPixels(HeFont const* font, std::string const& string, uint32_t const size);
+extern HE_API int32_t heFontGetStringWidthInPixels(HeFont const* font, std::string const& string);
+// returns the width of given string in pixels with this font, with given size applied (in pixels)
+extern HE_API float heScaledFontGetStringWidthInPixels(HeScaledFont const* font, std::string const& string);
 
 
 // -- Assets

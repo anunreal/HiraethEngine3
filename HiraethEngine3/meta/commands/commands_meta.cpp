@@ -19,7 +19,8 @@ struct Command {
 	std::string name;
 	std::string procName;
 	std::vector<DataType> arguments;
-
+	std::vector<std::string> argumentNames;
+	
 	std::vector<std::string> functionCode;
 };
 
@@ -104,6 +105,30 @@ DataType parse_data_type(std::string& type) {
 	return DATA_TYPE_INVALID;
 };
 
+std::string data_type_to_string(DataType const type) {
+	std::string s = "void";
+
+	switch(type) {
+	case DATA_TYPE_STRING:
+		s = "string";
+		break;
+
+	case DATA_TYPE_INT:
+		s = "int";
+		break;
+
+	case DATA_TYPE_FLOAT:
+		s = "float";
+		break;
+
+	case DATA_TYPE_VEC3F:
+		s = "vec3";
+		break;
+	}
+	
+	return s;
+};
+
 void parse_command_info(Command* command) {
 	std::string const& header = command->functionCode[0];
 	size_t index = header.find(' ') + 1;
@@ -132,6 +157,7 @@ void parse_command_info(Command* command) {
 			}
 
 			command->arguments.emplace_back(type);
+			command->argumentNames.emplace_back(all.substr(index + 1));
 		}
 	}
 };
@@ -179,6 +205,33 @@ void write_command_hook(Command* command, std::ofstream& stream) {
 	stream << "};\n\n\n";
 };
 
+Command generate_help_command(std::vector<Command> const& commands) {
+	Command cmd;
+	cmd.name     = "help";
+	cmd.procName = "command_help";
+	cmd.functionCode.emplace_back("void command_help() {");
+	cmd.functionCode.emplace_back("\theConsolePrint(\"=== HELP ===\");");
+
+	for(Command const& all : commands) {
+		std::string arguments;
+		for(uint8_t args = 0; args < all.arguments.size(); ++args) {
+			arguments += data_type_to_string(all.arguments[args]) + ": " + all.argumentNames[args] + ", ";
+		}
+
+		if(arguments.size() > 0) {
+			// cut last ", " that was added by the last argument
+			arguments.pop_back();
+			arguments.pop_back();
+		}
+		
+		cmd.functionCode.emplace_back("\theConsolePrint(\"> " + all.name + " " + arguments + "\");");
+	}	
+
+	cmd.functionCode.emplace_back("\theConsolePrint(\"=== HELP ===\");\n");
+	cmd.functionCode.emplace_back("};");
+	return cmd;
+};
+
 int main(int argc, char* argv[]) {
 	// parse command files
 	if(argc < 2) {
@@ -203,7 +256,8 @@ int main(int argc, char* argv[]) {
 	out << "#include \"..\\heConsole.h\"\n";
 	out << "#include \"..\\heD3.h\"\n";
 	out << std::endl;
-	
+
+		
 	std::string registerCode = "void heRegisterCommands() {\n";
 	
 	for(auto& all : commands) {
@@ -212,10 +266,15 @@ int main(int argc, char* argv[]) {
 			return -1;
 		write_command_hook(&all, out);
 		registerCode += "\theConsoleRegisterCommand(\"" + all.name + "\", &front_command_" + all.name + ");\n";
+		std::cout << "Registered command: " + all.name << std::endl;
 	};
 
+	Command helpCommand = generate_help_command(commands);
+	write_command_hook(&helpCommand, out);
+	registerCode += "\theConsoleRegisterCommand(\"help\", &front_command_help);\n";
+	
 	registerCode += "};\n";
-
+	
 	out << registerCode << std::endl;
 	out.flush();
 	out.close();

@@ -34,8 +34,44 @@ void front_command_set_jumpheight(std::vector<std::string> const& args) {
 };
 
 
+void command_toggle_physics_debug() {
+	if(heD3Level->physics.enableDebugDraw)
+		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
+	else
+		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
+};
+
+void front_command_toggle_physics_debug(std::vector<std::string> const& args) {
+	if(args.size() != 0) {
+		heConsolePrint("Error: toggle_physics_debug requires 0 arguments");
+		return;
+	};
+	command_toggle_physics_debug();
+};
+
+
+void command_help() {
+	heConsolePrint("=== HELP ===");
+	heConsolePrint("> set_position int: index, vec3: position");
+	heConsolePrint("> set_jumpheight float: height");
+	heConsolePrint("> toggle_physics_debug ");
+	heConsolePrint("=== HELP ===");
+
+};
+
+void front_command_help(std::vector<std::string> const& args) {
+	if(args.size() != 0) {
+		heConsolePrint("Error: help requires 0 arguments");
+		return;
+	};
+	command_help();
+};
+
+
 void heRegisterCommands() {
 	heConsoleRegisterCommand("set_position", &front_command_set_position);
 	heConsoleRegisterCommand("set_jumpheight", &front_command_set_jumpheight);
+	heConsoleRegisterCommand("toggle_physics_debug", &front_command_toggle_physics_debug);
+	heConsoleRegisterCommand("help", &front_command_help);
 };
 

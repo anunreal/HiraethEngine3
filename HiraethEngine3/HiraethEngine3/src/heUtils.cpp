@@ -50,3 +50,13 @@ b8 heStringStartsWith(const std::string& base, const std::string& check) {
     return base.compare(0, check.size(), check.c_str()) == 0;
 };
 
+void heStringEatSpacesLeft(std::string& string) {
+	string.erase(string.begin(), std::find_if(string.begin(), string.end(), [](int ch) {
+			return !isspace(ch);
+		}));
+};
+void heStringEatSpacesRight(std::string& string) {
+	string.erase(string.rbegin(), std::find_if(string.rbegin(), string.rend(), [](int ch) {
+			return !isspace(ch);
+		}));
+};

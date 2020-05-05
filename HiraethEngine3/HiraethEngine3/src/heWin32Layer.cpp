@@ -116,6 +116,63 @@ void heWin32FolderCreate(std::string const& folder) {
 };
 
 
+void heWin32FileOpen(HeWin32TextFile* file, std::string const& path, uint32_t const bufferSize) {
+	file->stream.open(path);
+	if(!file) {
+		// error log
+		file->stream.close();
+		file->open = false;
+		HE_ERROR("Could not open text file [" + path + "]");
+		return;
+	}
+
+	file->bufferSize = bufferSize;
+	file->fullPath   = path;
+	file->name       = path.substr(path.find_last_of('/') + 1);
+	file->lineNumber = 0;
+	file->open       = true;
+	
+	if(file->bufferSize > 0) {
+		file->buffer = (char*) malloc(file->bufferSize);
+	}
+
+	// read version number
+	std::string versionLine = heWin32FileGetLine(file);
+	if(!heStringStartsWith(versionLine, "#version")) {
+		HE_ERROR("Expected version number at beginning of text file [" + path + "]");
+		file->version = 0;
+	} else {
+		versionLine = versionLine.substr(8);
+		heStringEatSpacesLeft(versionLine);
+		heStringEatSpacesRight(versionLine);
+		file->version = std::stoi(versionLine);
+	}
+};
+
+void heWin32FileClose(HeWin32TextFile* file) {
+	if(file->buffer)
+		free(file->buffer);
+	file->stream.close();
+	file->lineNumber = 0;
+	file->open       = false;
+	file->bufferSize = 0;
+	file->version    = 0;
+};
+
+std::string heWin32FileGetLine(HeWin32TextFile* file) {
+	if(file->bufferSize == 0) {
+		std::string line;
+		std::getline(file->stream, line);
+		file->lineNumber++;
+		return line;
+	} else {
+		// try to read from buffer @Incomplete
+		return "";		
+	}
+};
+
+
+
 // --- window stuff
 
 HeWin32Window* heWin32GetWindow(HeWindow const* window) {

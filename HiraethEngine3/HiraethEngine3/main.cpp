@@ -217,7 +217,7 @@ int main() {
 
 	createWorld(&window);
 
-	HeFont* font = heAssetPoolGetFont("monospaced");
+	HeFont* font = heAssetPoolGetFont("inconsolata");
 	
 	HE_LOG("Set up engine");
 	

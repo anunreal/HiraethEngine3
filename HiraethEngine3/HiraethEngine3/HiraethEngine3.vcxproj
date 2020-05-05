@@ -107,7 +107,8 @@
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -128,7 +129,8 @@
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,7 +155,8 @@
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -178,7 +181,8 @@
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)meta/commands/commands_meta.exe $(ProjectDir)src/meta/commands.meta</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -193,6 +197,7 @@
     <ClInclude Include="src\hePhysics.h" />
     <ClInclude Include="src\heRenderer.h" />
     <ClInclude Include="src\heTypes.h" />
+    <ClInclude Include="src\heUi.h" />
     <ClInclude Include="src\heUtils.h" />
     <ClInclude Include="src\heWin32Layer.h" />
     <ClInclude Include="src\heWindow.h" />
@@ -221,6 +226,7 @@
     <ClCompile Include="src\heLoader.cpp" />
     <ClCompile Include="src\hePhysics.cpp" />
     <ClCompile Include="src\heRenderer.cpp" />
+    <ClCompile Include="src\heUi.cpp" />
     <ClCompile Include="src\heUtils.cpp" />
     <ClCompile Include="src\heWin32Layer.cpp" />
     <ClCompile Include="src\heWindow.cpp" />
