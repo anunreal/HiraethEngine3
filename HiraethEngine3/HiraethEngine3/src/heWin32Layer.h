@@ -5,22 +5,9 @@
 #include "heWindow.h"
 #include <string>
 #include <vector>
+#include <fstream>
 
 /* NOTE: ALL THESE FUNCTIONS ARE ONLY DEFINED IF HE_USE_WIN32 IS DEFINED */
-
-// This struct is used for reading plain ascii files.
-struct HeWin32TextFile {
-	std::string   name;
-	std::string   fullPath;
-	uint32_t      lineNumber = 0;
-	uint32_t      bufferSize = 0;
-	
-	b8            open   = false;
-	char*         buffer = nullptr;
-	std::ifstream stream;
-
-	uint32_t version = 0;
-};
 
 
 // -- filesystem
@@ -36,16 +23,6 @@ extern HE_API b8 heWin32FileExists(std::string const& file);
 extern HE_API void heWin32FolderGetFiles(std::string const& folder, std::vector<std::string>& files, b8 const recursive);
 // creates a folder with given relative or absolute path if it doesnt exist
 extern HE_API void heWin32FolderCreate(std::string const& path);
-
-// tries to open given file. Sets the open flag of the file to true on success. If the file could not be found,
-// an error message is printed and the open flag is set to false. If bufferSize is greater than 0, this file
-// is read using a buffer rather than std::getline
-// This will also try to read the files version number
-extern HE_API void heWin32FileOpen(HeWin32TextFile* file, std::string const& path, uint32_t const bufferSize);
-// closes the file and sets all data to 0
-extern HE_API void heWin32FileClose(HeWin32TextFile* file);
-// gets the next line from the given file and increases the line number
-extern HE_API std::string heWin32FileGetLine(HeWin32TextFile* file);
 
 
 // -- window

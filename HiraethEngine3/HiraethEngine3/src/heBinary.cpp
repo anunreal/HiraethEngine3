@@ -183,22 +183,23 @@ b8 heBinaryBufferGetFloatBuffer(HeBinaryBuffer* buffer, std::vector<float>* outp
 
 
 void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const& outFile) {
-	std::ifstream in(inFile);
+	HeTextFile in;
+	heTextFileOpen(&in, inFile, 0);
 	
 	HeBinaryBuffer buffer;
 	heBinaryBufferOpenFile(&buffer, outFile, 4096, HE_ACCESS_WRITE_ONLY);
 	
-	if(!in) {
+	if(!in.open) {
 		HE_ERROR("Could not open asset file [" + inFile + "] for binary converting");
 		return;
 	}
 	
 	// parse material info
 	std::string line;
-	std::getline(in, line);
+	heTextFileGetLine(&in, &line);
 	while(!line.empty()) {
 		heBinaryBufferAddString(&buffer, line);
-		std::getline(in, line);
+		heTextFileGetLine(&in, &line);
 	}
 	
 	heBinaryBufferAdd(&buffer, '\n');
@@ -207,7 +208,7 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 	// parse vertices
 	{
 		std::vector<float> vertices;
-		while(heAsciiStreamParseFloatFixedWidth(in, &result))
+		while(heTextFileGetFloat(&in, &result))
 			vertices.emplace_back(result);
 		heBinaryBufferAddFloatBuffer(&buffer, vertices);
 	}
@@ -215,7 +216,7 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 	// parse uvs
 	{
 		std::vector<float> uvs;
-		while(heAsciiStreamParseFloatFixedWidth(in, &result))
+		while(heTextFileGetFloat(&in, &result))
 			uvs.emplace_back(result);
 		heBinaryBufferAddFloatBuffer(&buffer, uvs);
 	}
@@ -223,7 +224,7 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 	// parse normals
 	{
 		std::vector<float> normals;
-		while(heAsciiStreamParseFloatFixedWidth(in, &result))
+		while(heTextFileGetFloat(&in, &result))
 			normals.emplace_back(result);
 		heBinaryBufferAddFloatBuffer(&buffer, normals);
 	}
@@ -231,22 +232,22 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 	// parse tangents
 	{
 		std::vector<float> tangents;
-		while(heAsciiStreamParseFloatFixedWidth(in, &result))
+		while(heTextFileGetFloat(&in, &result))
 			tangents.emplace_back(result);
 		heBinaryBufferAddFloatBuffer(&buffer, tangents);
 	}
 	
 	// parse physics
-	if(in.peek() != '\n') {
+	if(heTextFilePeek(&in) != '\n') {
 		// type
 		char typeChar;
-		in.get(typeChar);
+		heTextFileGetChar(&in, &typeChar);
 		uint32_t type = uint32_t(typeChar - '0');
 		heBinaryBufferAddInt(&buffer, type);
 		float info[3];
-		heAsciiStreamParseFloatFixedWidth(in, &info[0]);
-		heAsciiStreamParseFloatFixedWidth(in, &info[1]);
-		heAsciiStreamParseFloatFixedWidth(in, &info[2]);
+		heTextFileGetFloat(&in, &info[0]);
+		heTextFileGetFloat(&in, &info[1]);
+		heTextFileGetFloat(&in, &info[2]);
 		heBinaryBufferAddFloat(&buffer, info[0]);
 		heBinaryBufferAddFloat(&buffer, info[1]);
 		heBinaryBufferAddFloat(&buffer, info[2]);
@@ -256,7 +257,7 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 		case HE_PHYSICS_SHAPE_CONCAVE_MESH:
 		case HE_PHYSICS_SHAPE_CONVEX_MESH: {
 			hm::vec3f vec;
-			while(heAsciiStreamParseFloats(in, 3, &vec)) {
+			while(heTextFileGetFloats(&in, 3, &vec)) {
 				data.emplace_back(vec.x);
 				data.emplace_back(vec.y);
 				data.emplace_back(vec.z);
@@ -266,7 +267,7 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 			
 		case HE_PHYSICS_SHAPE_BOX: {
 			hm::vec3f box;
-			heAsciiStreamParseFloats(in, 3, &box);
+			heTextFileGetFloats(&in, 3, &box);
 			data.emplace_back(box.x);
 			data.emplace_back(box.y);
 			data.emplace_back(box.z);
@@ -274,12 +275,12 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 		}
 			
 		case HE_PHYSICS_SHAPE_SPHERE:
-			heAsciiStreamParseFloatFixedWidth(in, &data.emplace_back());
+			heTextFileGetFloat(&in, &data.emplace_back());
 			break;
 			
 		case HE_PHYSICS_SHAPE_CAPSULE: {
 			hm::vec2f capsule;
-			heAsciiStreamParseFloats(in, 2, &capsule);
+			heTextFileGetFloats(&in, 2, &capsule);
 			data.emplace_back(capsule.x);
 			data.emplace_back(capsule.y);
 			break;
@@ -289,7 +290,7 @@ void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const&
 		heBinaryBufferAddFloatBuffer(&buffer, data);
 	}
 	
-	in.close();
+	heTextFileClose(&in);
 	heBinaryBufferCloseFile(&buffer);
 };
 

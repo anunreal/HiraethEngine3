@@ -48,89 +48,16 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
     }
 };
 
-b8 heAsciiStreamParseFloatFixedWidth(std::ifstream& stream, float* result) {
-    char c;
-    stream.get(c);
-    if(c == '\n')
-        return false;
-    
-    int sign = (c == '-') ? -1 : 1;
-    *result = 0;
-    
-    // 0 = 3;
-    // 1 = 2;
-    // 2 = 1;
-    // 3 = 0
-    // 4 = -1
-    // 5 = -2
-    // 6 = -3
-    
-    for(uint8_t i = 0; i < 7; ++i) {
-        stream.get(c);
-        int exp = -(i - 4) - 1;
-        int ch = (int) (c - '0');
-        *result = *result + (float) (ch * std::pow(10, exp));
-        
-        if(i == 3)
-            stream.get(c); // skip .
-    }
-    
-    *result *= sign;
-    return true;
-};
-
-template<typename T>
-b8 heAsciiStreamParseIntFixedWidth(std::ifstream& stream, T* result) {
-    char c;
-    stream.get(c);
-    if(c == '\n')
-        return false;
-    
-    uint8_t sign = (c == '-') ? -1 : 1;
-    *result = 0;
-    
-    for(uint8_t i = 0; i < 4; ++i) {
-        stream.get(c);
-        uint16_t exp = (3 - i);
-        T ch = (T) (c - '0');
-        *result = *result + ch * (T) std::pow(10, exp);
-    }
-    
-    *result *= sign;
-    return true;
-};
-
-// parses n floats and stores them in ptr
-b8 heAsciiStreamParseFloats(std::ifstream& stream, uint8_t const n, void* ptr) {
-    for(uint8_t i = 0; i < n; ++i) {
-        if(!heAsciiStreamParseFloatFixedWidth(stream, &((float*)ptr)[i]))
-            return false;
-    }
-    
-    return true;
-};
-
-// parses n ints and stores them in ptr
-template<typename T>
-b8 heAsciiStreamParseInts(std::ifstream& stream, uint8_t const n, void* ptr) {
-    for(uint8_t i = 0; i < n; ++i)
-        if(!heAsciiStreamParseIntFixedWidth(stream, &((T*)ptr)[i]))
-        return false;
-    
-    return true;
-};
-
 void heMeshLoad(std::string const& fileName, HeVao* vao) {
-    std::ifstream stream(fileName);
-    if (!stream.good()) {
-        HE_ERROR("Could not load model file [" + fileName + "]");
-        return;
-    }
-    
+	HeTextFile file;
+	heTextFileOpen(&file, fileName, 0);
+	if(!file.open)
+		return;
+	
     std::string string;
     HeD3MeshBuilder mesh;
     
-    while (std::getline(stream, string)) {
+    while (heTextFileGetLine(&file, &string)) {
         if (string.size() == 0 || string[0] == '#')
             continue;
         
@@ -172,9 +99,9 @@ void heMeshLoad(std::string const& fileName, HeVao* vao) {
             parseObjTangents(tvertices, tuvs, mesh);
         }
     }
-    
-    stream.close();
-    
+
+	heTextFileClose(&file);
+	
     b8 isMainThread = heIsMainThread();
     
     if(isMainThread) {
@@ -193,17 +120,16 @@ void heMeshLoad(std::string const& fileName, HeVao* vao) {
 
 
 void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
-    std::ifstream stream(fileName);
-    if(!stream) {
-        HE_ERROR("Could not find asset file [" + fileName + "]");
-        return;
-    }
-    
+	HeTextFile file;
+	heTextFileOpen(&file, fileName, 0);
+	if(!file.open)
+		return;
+	
     HE_LOG("Loading instance " + fileName);
     
     std::string line;
-    std::getline(stream, line);
-    
+	heTextFileGetLine(&file, &line);
+	
     std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
     
 #ifdef HE_ENABLE_NAMES
@@ -216,8 +142,8 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     //instance->material->shader = heAssetPoolGetShader(line);
     instance->material->type = heMaterialGetType(line);
     
-    std::getline(stream, line);
-    while(!line.empty()) {
+	heTextFileGetLine(&file, &line);
+	while(!line.empty()) {
         // parse texture to material
         size_t pos = line.find('=');
         std::string name = line.substr(0, pos);
@@ -227,8 +153,8 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
 		instance->material->textures[name] = texture;
 
 		//heTimerPrint(tex);
-        std::getline(stream, line);
-    }
+		heTextFileGetLine(&file, &line);
+	}
 
 	heTextureUnbind(0);
     
@@ -239,21 +165,21 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     // parse vertices
     {
         float result = 0.f;
-        while(heAsciiStreamParseFloatFixedWidth(stream, &result))
+        while(heTextFileGetFloat(&file, &result))
             builder.verticesArray.emplace_back(result);
     }
     
     // parse uvs
     {
         float result = 0.f;
-        while(heAsciiStreamParseFloatFixedWidth(stream, &result))
+        while(heTextFileGetFloat(&file, &result))
             builder.uvArray.emplace_back(result);
     }
     
     // parse normals
     {
         float result = 0.f;
-        while(heAsciiStreamParseFloatFixedWidth(stream, &result))
+        while(heTextFileGetFloat(&file, &result))
             builder.normalArray.emplace_back(result);
     }
     
@@ -261,7 +187,7 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     // parse tangents
     {
         float result = 0.f;
-        while(heAsciiStreamParseFloatFixedWidth(stream, &result))
+        while(heTextFileGetFloat(&file, &result))
             builder.tangentArray.emplace_back(result);
     }
     
@@ -288,41 +214,41 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     instance->mesh = vao;
     
     // PHYSICS
-    char c = stream.peek();
+    char c = heTextFilePeek(&file);
     // check if file still has content and physics is not nullptr
     if(c != '\n' && physics) {
         char type;
-        stream.get(type);
+        heTextFileGetChar(&file, &type);
         physics->type = (HePhysicsShapeType) int(type - '0');
         
-        heAsciiStreamParseFloatFixedWidth(stream, &physics->mass);
-        heAsciiStreamParseFloatFixedWidth(stream, &physics->friction);
-        heAsciiStreamParseFloatFixedWidth(stream, &physics->restitution);
+        heTextFileGetFloat(&file, &physics->mass);
+        heTextFileGetFloat(&file, &physics->friction);
+        heTextFileGetFloat(&file, &physics->restitution);
         
         switch(physics->type) {
             case HE_PHYSICS_SHAPE_CONCAVE_MESH:
             case HE_PHYSICS_SHAPE_CONVEX_MESH: {
                 hm::vec3f vec;
-                while(heAsciiStreamParseFloats(stream, 3, &vec))
+                while(heTextFileGetFloats(&file, 3, &vec))
                     physics->mesh.emplace_back(vec);
                 break;
             };
             
             case HE_PHYSICS_SHAPE_BOX:
-            heAsciiStreamParseFloats(stream, 3, &physics->box);
+            heTextFileGetFloats(&file, 3, &physics->box);
             break;
             
             case HE_PHYSICS_SHAPE_SPHERE:
-            heAsciiStreamParseFloatFixedWidth(stream, &physics->sphere);
+            heTextFileGetFloat(&file, &physics->sphere);
             break;
             
             case HE_PHYSICS_SHAPE_CAPSULE:
-            heAsciiStreamParseFloats(stream, 2, &physics->capsule);
+            heTextFileGetFloats(&file, 2, &physics->capsule);
             break;
         }
     }
     
-    stream.close();
+	heTextFileClose(&file);
 };
 
 void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
@@ -439,12 +365,9 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
 };
 
 void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadPhysics) {
-    std::ifstream stream(fileName);
-    if(!stream) {
-        HE_ERROR("Could not find level file [" + fileName + "]");
-        return;
-    }
-    
+	HeTextFile file;
+	heTextFileOpen(&file, fileName, 2048);
+	
     // some kind of physics info
     if(loadPhysics && !hePhysicsLevelIsSetup(&level->physics))
         hePhysicsLevelCreate(&level->physics, HePhysicsLevelInfo(hm::vec3f(0, -10, 0)));
@@ -460,22 +383,24 @@ void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadP
 
     char type;
     char c;
-    while(stream.get(type)) {
-        stream.get(c); // skip colon
-        if(type == 'i') {
+    while(heTextFileGetChar(&file, &type)) {
+        //stream.get(c); // skip colon
+		heTextFileGetChar(&file, &c);
+		if(type == 'i') {
             // instance
             std::string name = "";
-            stream.get(c);
-            while(c != ',') {
+            //stream.get(c);
+            heTextFileGetChar(&file, &c);
+			while(c != ',') {
                 name += c;
-                stream.get(c);
+                heTextFileGetChar(&file, &c);
             }
             
             HeD3Instance* instance = &level->instances.emplace_back();
             
-            heAsciiStreamParseFloats(stream, 3, &instance->transformation.position);
-            heAsciiStreamParseFloats(stream, 4, &instance->transformation.rotation);
-            heAsciiStreamParseFloats(stream, 3, &instance->transformation.scale);
+            heTextFileGetFloats(&file, 3, &instance->transformation.position);
+            heTextFileGetFloats(&file, 4, &instance->transformation.rotation);
+            heTextFileGetFloats(&file, 3, &instance->transformation.scale);
             
             HePhysicsShapeInfo physics;
             // for debugging purposes
@@ -506,22 +431,22 @@ void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadP
                 hePhysicsLevelAddComponent(&level->physics, instance->physics);
             }
             
-            stream.get(c); // skip next line
+            heTextFileGetChar(&file, &c); // skip next line
         } else if(type == 'l') {
             // light
             HeD3LightSource* light = &level->lights.emplace_back();
-            stream.get(c);
+            heTextFileGetChar(&file, &c);
             light->type     = (HeLightSourceType) (c - '0');
             light->colour.a = 255; // not needed for lights
             light->update   = true;
-            heAsciiStreamParseFloats(stream, 3, &light->vector);
-            heAsciiStreamParseInts<uint8_t>(stream, 3, &light->colour);
-            heAsciiStreamParseFloatFixedWidth(stream, &light->colour.i);
-            heAsciiStreamParseFloats(stream, 8, &light->data);
+            heTextFileGetFloats(&file, 3, &light->vector);
+            heTextFileGetInts<uint8_t>(&file, 3, &light->colour);
+            heTextFileGetFloat(&file, &light->colour.i);
+            heTextFileGetFloats(&file, 8, &light->data);
         }
     }
     
-    stream.close();
+    heTextFileClose(&file);
 };
 
 void heD3LevelLoadBinary(std::string const& fileName, HeD3Level* level, b8 const loadPhysics) {

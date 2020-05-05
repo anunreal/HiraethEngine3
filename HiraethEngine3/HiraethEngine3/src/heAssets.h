@@ -2,6 +2,22 @@
 #define HE_ASSETS_H
 
 #include "heGlLayer.h"
+#include <fstream>
+
+// This struct is used for reading plain ascii files.
+struct HeTextFile {
+	std::string   name;
+	std::string   fullPath;
+	uint32_t      lineNumber        = 0;
+	uint32_t      maxBufferSize     = 0;
+	uint32_t      currentBufferSize = 0;
+	
+	std::ifstream stream;
+	b8            open         = false;
+	char*         buffer       = nullptr;
+	uint32_t      bufferOffset = 0;	
+	uint32_t      version      = 0;
+};
 
 struct HeMaterial {
     // a type id, dependant of the shader. All materials with the same shader have the same type.
@@ -11,16 +27,16 @@ struct HeMaterial {
     // name of the sampler (without the t_ prefix) and a pointer to the asset pool
     std::unordered_map<std::string, HeTexture*> textures;
     // name of the uniform and some data
-    std::unordered_map<std::string, HeShaderData> uniforms;
+	std::unordered_map<std::string, HeShaderData> uniforms;
 };
 
 struct HeFont {
     struct Character {
-        int32_t id;             // ascii id
-		hm::vec4f uv;            // in texture space
+        int32_t id  ;             // ascii id
+		hm::vec4f uv ;            // in texture space
 		hm::vec2<uint32_t> size;  // in pixel space
 		hm::vec2<int32_t> offset; // in pixel space
-		uint8_t xadvance;        // in pixel space
+		uint8_t xadvance;         // in pixel space
 	};
 
 	//	std::unordered_map<uint32_t, Character> characters;
@@ -73,19 +89,56 @@ struct HeAssetPool {
     HeShaderPool   shaderPool;
     HeTexturePool  texturePool;
     HeMaterialPool materialPool;
-    HeFontPool     fontPool;
+	HeFontPool     fontPool;
 };
 
 struct HeThreadLoader {
     HeTextureRequests textures;
     HeVaoRequests vaos;
     
-    b8 updateRequested = false;
+	b8 updateRequested = false;
 };
 
 extern HeAssetPool heAssetPool;
 extern HeThreadLoader heThreadLoader;
 extern HeMemoryTracker heMemoryTracker;
+
+
+// -- Text files
+
+// tries to open given file. Sets the open flag of the file to true on success. If the file could not be found,
+// an error message is printed and the open flag is set to false. If bufferSize is greater than 0, this file
+// is read using a buffer rather than std::getline
+// This will also try to read the files version number if loadVersionTag is set to true (default)
+extern HE_API void heTextFileOpen(HeTextFile* file, std::string const& path, uint32_t const bufferSize, b8 const loadVersionTag = true);
+// closes the file and sets all data to 0
+extern HE_API void heTextFileClose(HeTextFile* file);
+// gets the next line from the given file and increases the line number
+extern HE_API b8 heTextFileGetLine(HeTextFile* file, std::string* result);
+// returns the next char from the stream
+extern HE_API b8 heTextFileGetChar(HeTextFile* file, char* result);
+// parses a float of the following format by reading characters from the given stream (and stores the result in
+// the float pointer): +ffff.fff (or -ffff.fff). This function returns true if the int could be parsed or false
+// if an error occurs (reached end of file or new line)
+extern HE_API b8 heTextFileGetFloat(HeTextFile* file, float* result);
+// parses an int of the following format by reading characters from the given stream (and stores the result in the
+// int pointer): +iiii (or -iiii). The int can be of any size (8, 16, 32 or 64 bit). This function returns true if
+// the int could be parsed or false if an error occurs (reached end of file or new line)
+template<typename T>
+extern HE_API b8 heTextFileGetInt(HeTextFile* file, T* result);
+// parses count amount of floats directly written back to back from the given stream. This simply calls the
+// heTextFileGetFloat function count times
+extern HE_API b8 heTextFileGetFloats(HeTextFile* file, uint8_t const count, void* ptr);
+// parses count amount of ints directly written back to back from the given stream. This simply calls the
+// heTextFileGetInt function count times
+template<typename T>
+extern HE_API b8 heTextFileGetInts(HeTextFile* file, uint8_t const count, void* ptr);
+// returns the whole content of the file as string
+extern HE_API b8 heTextFileGetContent(HeTextFile* file, std::string* result);
+// returns the next char that wasnt read yet
+extern HE_API char heTextFilePeek(HeTextFile* file);
+// skips behind the next new-line char
+extern HE_API void heTextFileSkipLine(HeTextFile* file);
 
 
 // -- Materials

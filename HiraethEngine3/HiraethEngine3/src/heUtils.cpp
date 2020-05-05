@@ -1,6 +1,9 @@
 #include "heUtils.h"
 #include <fstream>
 
+std::string SPACE_CHARS = "\t\n\v\f\r";
+
+
 std::vector<std::string> heStringSplit(const std::string& string, const char delimn) {
     std::vector<std::string> result;
     std::string::const_iterator start = string.begin();
@@ -51,12 +54,9 @@ b8 heStringStartsWith(const std::string& base, const std::string& check) {
 };
 
 void heStringEatSpacesLeft(std::string& string) {
-	string.erase(string.begin(), std::find_if(string.begin(), string.end(), [](int ch) {
-			return !isspace(ch);
-		}));
+	string.erase(0, string.find_first_not_of(SPACE_CHARS));
 };
+
 void heStringEatSpacesRight(std::string& string) {
-	string.erase(string.rbegin(), std::find_if(string.rbegin(), string.rend(), [](int ch) {
-			return !isspace(ch);
-		}));
+	string.erase(string.find_last_not_of(SPACE_CHARS) + 1);
 };

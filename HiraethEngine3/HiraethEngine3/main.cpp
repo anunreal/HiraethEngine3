@@ -196,6 +196,7 @@ void createWorld(HeWindow* window) {
 // TODO(Victor): Multiple shapes per component
 
 int main() {
+	heWin32TimerStart();
 	std::thread commandThread(heCommandThread, nullptr);
 	
 	HeWindow window;
@@ -218,6 +219,7 @@ int main() {
 	createWorld(&window);
 
 	HeFont* font = heAssetPoolGetFont("inconsolata");
+	heConsoleCreate(font);
 	
 	HE_LOG("Set up engine");
 	
@@ -231,10 +233,10 @@ int main() {
 	
 	heGlErrorSaveAll();
 	heErrorsPrint();
-	
+
+	heWin32TimerPrint("TOTAL STARTUP");
 	HE_DEBUG("Starting game loop");
 
-	heConsoleCreate(font);
 	
 	while (!window.shouldClose) {
 		if (heThreadLoader.updateRequested)

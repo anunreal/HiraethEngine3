@@ -22,34 +22,30 @@
 // --- Shaders
 
 std::string heShaderLoadSource(std::string const& file) {
-	std::ifstream stream(file);
-	if (!stream) {
-		HE_ERROR("Could not find shader file [" + file + "]");
+	HeTextFile stream;
+	heTextFileOpen(&stream, file, 4096, false);
+	if(!stream.open)
 		return "";
-	}
 	
 	std::string source;
-	std::string line;
+	heTextFileGetContent(&stream, &source);
 	
-	while (std::getline(stream, line))
-		source += line + "\n";
-	
-	stream.close();
+	heTextFileClose(&stream);
 	return source;
 };
 
 std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string const& file) {
-	std::ifstream stream(file);
+	HeTextFile stream;
+	heTextFileOpen(&stream, file, 4096, false);
+	if(!stream.open)
+		return std::unordered_map<HeShaderType, std::string>();
+	
 	std::unordered_map<HeShaderType, std::string> sourceMap;
-	if (!stream) {
-		HE_ERROR("Could not find shader file [" + file + "]");
-		return sourceMap;
-	}
 	
 	std::string line;
 	
 	HeShaderType currentType;
-	while (std::getline(stream, line)) {
+	while (heTextFileGetLine(&stream, &line)) {
 		if(line[0] == '#') {
 			if(line.compare(1, 6, "vertex") == 0) {
 				currentType = HE_SHADER_TYPE_VERTEX;
@@ -66,7 +62,7 @@ std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string 
 		sourceMap[currentType] += line + "\n";
 	}
 	
-	stream.close();
+	heTextFileClose(&stream);
 	return sourceMap;
 };
 
@@ -133,8 +129,7 @@ void heShaderLoadCompute(HeShaderProgram* program, std::string const& computeSha
 	heMemoryTracker[HE_MEMORY_TYPE_SHADER] += program->memory;
 		
 #ifdef HE_ENABLE_NAMES
-	if(program->name.empty())
-		program->name = computeShader;
+	program->name = computeShader;
 	glObjectLabel(GL_PROGRAM, program->programId, (uint32_t) program->name.size(), program->name.c_str());
 #endif
 };

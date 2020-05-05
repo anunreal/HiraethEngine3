@@ -3,6 +3,7 @@
 #include "heWindow.h"
 #include "heUtils.h"
 #include "heCore.h"
+#include "heWin32Layer.h"
 #include <fstream>
 
 HeAssetPool heAssetPool;
@@ -11,6 +12,226 @@ HeMemoryTracker heMemoryTracker;
 
 std::unordered_map<std::string, uint32_t> shaderTypeIds;
 uint32_t shaderTypeCounter = 0;
+
+
+// -- text files
+
+b8 heTextFileFillBuffer(HeTextFile* file) {
+	file->stream.read(file->buffer, file->maxBufferSize);
+	file->currentBufferSize = (uint32_t) file->stream.gcount();
+	file->bufferOffset      = 0;
+	return file->currentBufferSize;
+};
+
+void heTextFileOpen(HeTextFile* file, std::string const& path, uint32_t const bufferSize, b8 const loadVersionTag) {
+	file->stream.open(path);
+	if(!file) {
+		// error log
+		file->stream.close();
+		file->open = false;
+		HE_ERROR("Could not open text file [" + path + "]");
+		return;
+	}
+
+	file->maxBufferSize = bufferSize;
+	file->fullPath      = path;
+	file->name          = path.substr(path.find_last_of('/') + 1);
+	file->lineNumber    = 0;
+	file->open          = true;
+	
+	if(file->maxBufferSize > 0) {
+		file->buffer = (char*) malloc(file->maxBufferSize);
+		heTextFileFillBuffer(file);
+	}
+
+	if(loadVersionTag) {
+		// read version number
+		std::string versionLine;
+		heTextFileGetLine(file, &versionLine);
+		if(!heStringStartsWith(versionLine, "#version")) {
+			HE_ERROR("Expected version number at beginning of text file [" + path + "]");
+			file->version = 0;
+		} else {
+			versionLine = versionLine.substr(8);
+			heStringEatSpacesLeft(versionLine);
+			heStringEatSpacesRight(versionLine);
+			file->version = std::stoi(versionLine);
+		}
+	}
+};
+
+void heTextFileClose(HeTextFile* file) {
+	if(file->stream.is_open()) { // only close if we have an open file
+		if(file->buffer)
+			free(file->buffer);
+		file->stream.close();
+		file->name.clear();
+		file->fullPath.clear();
+		file->lineNumber        = 0;
+		file->open              = false;
+		file->maxBufferSize     = 0;
+		file->currentBufferSize = 0;
+		file->version           = 0;
+	}
+};
+
+b8 heTextFileGetLine(HeTextFile* file, std::string* result) {
+	if(!file->open)
+		return false;
+	
+	if(file->maxBufferSize == 0) {
+		result->clear();
+		while(result->empty() || (*result)[0] == ';') {
+			if(!std::getline(file->stream, *result)) {
+				file->open = false;
+				break;
+			}
+			
+			heStringEatSpacesLeft(*result);
+		}
+		
+		file->lineNumber++;
+		return file->open;
+	} else {
+		result->clear();
+		while(file->open && (result->empty() || (*result)[0] == ';')) {
+			while(file->open && file->buffer[file->bufferOffset] != '\n') {
+				char c;
+				if(!heTextFileGetChar(file, &c))
+					break;
+				//heTextFileGetChar(file, &c);
+				result->push_back(c);
+			}
+			file->bufferOffset++; // skip \n
+		}
+		
+		return result->size();
+	}
+};
+
+b8 heTextFileGetChar(HeTextFile* file, char* result) {
+	if(file->maxBufferSize == 0) {
+		file->stream.get(*result);
+		file->open = file->stream.good();
+		return file->open;
+	} else {
+		if(file->bufferOffset >= file->currentBufferSize) {
+			if(!heTextFileFillBuffer(file)) {
+				heTextFileClose(file);
+				*result = -1;
+			}
+		}
+
+		if(file->open)
+			*result = file->buffer[file->bufferOffset++];
+		return file->open;
+	}
+};
+
+b8 heTextFileGetFloat(HeTextFile* file, float* result) {
+	char c;
+    heTextFileGetChar(file, &c);
+    if(c == '\n')
+        return false;
+    
+    int sign = (c == '-') ? -1 : 1;
+    *result = 0;
+    
+    // 0 = 3;
+    // 1 = 2;
+    // 2 = 1;
+    // 3 = 0
+    // 4 = -1
+    // 5 = -2
+    // 6 = -3
+    
+    for(uint8_t i = 0; i < 7; ++i) {
+        heTextFileGetChar(file, &c);
+        int exp = -(i - 4) - 1;
+        int ch = (int) (c - '0');
+        *result = *result + (float) (ch * std::pow(10, exp));
+
+		if(i == 3)
+			heTextFileGetChar(file, &c);
+	}
+    
+    *result *= sign;
+    return true;
+};
+
+b8 heTextFileGetFloats(HeTextFile* file, uint8_t const count, void* ptr) {
+    for(uint8_t i = 0; i < count; ++i) {
+        if(!heTextFileGetFloat(file, &((float*)ptr)[i]))
+            return false;
+    }
+    
+    return true;
+};
+
+template<typename T>
+b8 heTextFileGetInt(HeTextFile* file, T* result) {
+    char c;
+	heTextFileGetChar(file, &c);
+    if(c == '\n')
+        return false;
+    
+    uint8_t sign = (c == '-') ? -1 : 1;
+    *result = 0;
+    
+    for(uint8_t i = 0; i < 4; ++i) {
+		heTextFileGetChar(file, &c);
+        uint16_t exp = (3 - i);
+        T ch = (T) (c - '0');
+        *result = *result + ch * (T) std::pow(10, exp);
+    }
+    
+    *result *= sign;
+    return true;
+
+};
+
+template<typename T>
+b8 heTextFileGetInts(HeTextFile* file, uint8_t const count, void* ptr) {
+    for(uint8_t i = 0; i < count; ++i)
+        if(!heTextFileGetInt(file, &((T*)ptr)[i]))
+			return false;
+    
+    return true;
+};
+
+template b8 heTextFileGetInts<uint8_t>(HeTextFile*, uint8_t const, void*);
+template b8 heTextFileGetInts<int32_t>(HeTextFile*, uint8_t const, void*);
+
+b8 heTextFileGetContent(HeTextFile* file, std::string* result) {
+	if(file->maxBufferSize == 0) {
+		file->stream.seekg(0, std::ios::end);
+		result->reserve(file->stream.tellg());
+		file->stream.seekg(0, std::ios::beg);
+
+		result->assign((std::istreambuf_iterator<char>(file->stream)), std::istreambuf_iterator<char>());
+	} else {
+		result->clear();
+		//result->reserve(file->currentBufferSize - 1);
+		//strcpy(result->data(), file->buffer, file->currentBufferSize - 1);
+		do {
+			*result += std::string(file->buffer, file->currentBufferSize);
+		} while(heTextFileFillBuffer(file));
+	}
+	return true;
+};
+
+char heTextFilePeek(HeTextFile* file) {
+	if(file->maxBufferSize == 0 || file->bufferOffset == file->currentBufferSize)
+		// we either dont use buffers or the current buffer was already completely read
+		return file->stream.peek();
+	else
+		return file->buffer[file->bufferOffset + 1];
+};
+
+void heTextFileSkipLine(HeTextFile* file) {
+	file->stream.ignore(100000, file->stream.widen('\n'));
+};
+
 
 
 // -- Materials
@@ -52,18 +273,16 @@ std::unordered_map<std::string, std::string> getLineArguments(std::string const&
 };
 
 void heFontLoad(HeFont* font, std::string const& name) {
-	std::ifstream stream("res/fonts/" + name + ".fnt");
-	if(!stream) {
-		HE_ERROR("Could not open font file [" + name + "]");
-		return;
-	}
+	HeTextFile file;
+	heTextFileOpen(&file, "res/fonts/" + name + ".fnt", 0);
 	
 #ifdef HE_ENABLE_NAMES
 	font->name = name;
 #endif
 	
 	std::string line;
-	std::getline(stream, line);
+	heTextFileGetLine(&file, &line);
+	
 	// parse basic info
 	auto info	  = getLineArguments(line); // info
 	//font->size	= std::stoi(info["size"]);
@@ -72,7 +291,7 @@ void heFontLoad(HeFont* font, std::string const& name) {
 									  info["padding"][4] - '0',
 									  info["padding"][6] - '0');
 	
-	std::getline(stream, line);
+	heTextFileGetLine(&file, &line);
 	info			 = getLineArguments(line); // common
 	font->lineHeight = std::stoi(info["lineHeight"]);
 	font->size		 = std::stoi(info["base"]);
@@ -80,10 +299,11 @@ void heFontLoad(HeFont* font, std::string const& name) {
 	hm::vec2i textureSize(std::stoi(info["scaleW"]), std::stoi(info["scaleH"]));
 	
 	// skip next two lines, they are unnecessary
-	std::getline(stream, line);
-	std::getline(stream, line);
+	heTextFileSkipLine(&file);
+	heTextFileSkipLine(&file);
 	
-	while(std::getline(stream, line)) {
+	while(file.open) {
+		heTextFileGetLine(&file, &line);
 		if(!heStringStartsWith(line, "char"))
 			continue;
 		
@@ -110,7 +330,7 @@ void heFontLoad(HeFont* font, std::string const& name) {
 	}
 	
 	font->atlas = heAssetPoolGetTexture("res/fonts/" + name + ".png", HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE);
-	stream.close();
+	heTextFileClose(&file);
 };
 
 void heFontCreateScaled(HeFont const* font, HeScaledFont* scaled, uint32_t const size) {
