@@ -49,16 +49,17 @@ void heWindowSyncToFps(HeWindow* window) {
 	
 	auto now = std::chrono::system_clock::now();
 	double nowTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
 	if (window->lastFrame == 0.)
 		window->lastFrame = nowTime;
 	
 	// make sure that vsync is not enabled
 	if (window->windowInfo.fpsCap > 0) {
-		double deltaTime = nowTime - window->lastFrame;
+		double deltaTime = nowTime - window->lastFrame; // in ms
 		
-		double requestedTime = 1000. / window->windowInfo.fpsCap;
-		double sleepTime = (requestedTime - deltaTime);
-		
+		double requestedTime = (1000. / window->windowInfo.fpsCap); // in ms
+		double sleepTime = (requestedTime - deltaTime); // in ms
+
 		if (sleepTime > 0.) {
 			std::chrono::milliseconds duration((int)sleepTime);
 			std::this_thread::sleep_for(duration);
@@ -67,9 +68,8 @@ void heWindowSyncToFps(HeWindow* window) {
 	
 	now = std::chrono::system_clock::now();
 	nowTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-	window->frameTime = (nowTime - window->lastFrame) / 1000.;
+	window->frameTime = (nowTime - window->lastFrame) / 1000.f;
 	window->lastFrame = nowTime;
-	
 };
 
 void heWindowEnableVsync(const int8_t timestamp) {

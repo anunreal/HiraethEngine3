@@ -27,7 +27,7 @@ out vec4 out_colour;
 
 layout(location = 0) uniform sampler2D t_d2Tex;
 layout(location = 1) uniform samplerCube t_cubeTex;
-
+uniform bool u_isHdr; // apply tone mapping?wA
 
 vec3 getPosition(vec3 texCoord) {
 	vec3 pos = vec3(0.0);
@@ -92,4 +92,7 @@ void main(void) {
 			discard;
 	} else
 		out_colour = texture2D(t_d2Tex, pass_uv);	
+
+	if(u_isHdr)
+		out_colour.rgb = out_colour.rgb / (out_colour.rgb + vec3(1.0));
 }

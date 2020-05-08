@@ -7,6 +7,8 @@ in uint  in_data;
 flat out vec4 pass_colour;
 out vec2 pass_uv;
 
+uniform vec2      u_position;
+
 vec4 unpackColour() {
 	vec4 v;
 	v.a = float((uint(0xFF000000) & in_data) >> 24);
@@ -17,7 +19,10 @@ vec4 unpackColour() {
 }
 
 void main(void) {
-	gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
+	vec2 transformedPos = in_vertex.xy;
+	transformedPos.x += u_position.x;
+	transformedPos.y -= u_position.y;
+	gl_Position = vec4(transformedPos, 0.0, 1.0);
 	pass_colour = unpackColour();
 	pass_uv 	= in_vertex.zw;
 }
@@ -31,7 +36,7 @@ in vec2 pass_uv;
 out vec4 out_colour;
 
 uniform sampler2D t_atlas;
-uniform float u_textSize;
+uniform float 	  u_textSize;
 
 float calculateFontAlpha() {
 	float spread = 10.;

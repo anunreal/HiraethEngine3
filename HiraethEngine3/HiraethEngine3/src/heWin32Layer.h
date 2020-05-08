@@ -51,7 +51,11 @@ extern HE_API void heWin32TimerStart();
 extern HE_API double heWin32TimerGet();
 // prints the latest time entry
 extern HE_API inline void heWin32TimerPrint(std::string const& id);
-
+// returns a time since program start (with queryPerformanceCounter)
+extern HE_API inline __int64 heWin32TimeGet();
+// calculates the given duration in cycles into milliseconds. The duration should be calculated using two different
+// heWin32TimeGet() calls
+extern HE_API inline double heWin32TimeCalculateMs(__int64 duration);
 
 // -- utils
 

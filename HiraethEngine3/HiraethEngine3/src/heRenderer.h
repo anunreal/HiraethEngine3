@@ -17,6 +17,16 @@ struct HeWindow;
   TODO(Victor):	 Add Post Process (Bloom), Forward renderer
 */
 
+struct HeUiTextMesh {
+	std::vector<float> vertices;
+	std::vector<uint32_t> colours;
+	uint32_t lastFrameAccess = 0;
+};
+
+struct HeUiTextManager {
+	std::unordered_map<std::string, HeUiTextMesh> texts;
+	uint32_t currentFrame = 0;
+};
 
 struct HeUiLine {
 	hm::colour colour;
@@ -36,7 +46,7 @@ struct HeUiLine {
 
 struct HeUiText {
 	std::string text;
-	hm::vec2i	position; // in window space
+	hm::vec2f	position; // in window space
 	hm::colour	colour;
 
 	HeUiText() : text(""), position(0), colour(0) {};
@@ -51,6 +61,15 @@ struct HeUiQueue {
 	HeVao textVao;
 	HeShaderProgram* textShader	 = nullptr;
 	std::unordered_map<HeScaledFont const*, std::vector<HeUiText>> texts;
+};
+
+struct HePostProcessEngine {
+	b8 initialized = false;
+	HeFbo bloomFbo; // used for the brightness pass and downscaling that
+	HeTexture bloomTexture; // holds the blurred result
+	HeShaderProgram* brightPassShader   = nullptr;
+	HeShaderProgram* gaussianBlurShader = nullptr;
+	HeShaderProgram* combineShader      = nullptr;
 };
 
 struct HeRenderEngine {
@@ -82,7 +101,7 @@ struct HeRenderEngine {
 	// a 16 bit multisampled fbo used for hdr rendering
 	HeFbo gBufferFbo;
 	// an 16 bit fbo used for post-process image manipulation
-	HeFbo resolvedFbo;
+	HeFbo hdrFbo;
 	// used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
 	HeShaderProgram* finalShader	 = nullptr;
 	// the shader used for rendering d3 objects into the gbuffer. This will put information like position, normals... into the
@@ -94,6 +113,8 @@ struct HeRenderEngine {
 	HeShaderProgram* skyboxShader	 = nullptr;
 	// the brdf integration texture (rg channels)
 	HeTexture* brdfIntegration = nullptr;
+
+	HePostProcessEngine postProcess;
 };
 
 // the current active render engine. Can be set and (then) used at any time
@@ -102,6 +123,8 @@ extern HeRenderEngine* heRenderEngine;
 
 // -- render engine
 
+// creates the post process engine
+extern HE_API void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window);
 // loads all important data for the render engine
 extern HE_API void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window);
 // checks if the fbos of the engine are the size of the window, and (if not so) resizes them
@@ -122,7 +145,10 @@ extern HE_API void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource c
 extern HE_API void heD3InstanceRender(HeD3Instance* instance);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
-extern HE_API void heD3LevelRender(HeRenderEngine* engine, HeD3Level* level);
+extern HE_API void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level);
+// renders a complete level with all its instances by mapping all instances to their shader and loading all
+// important data (camera, lights...) to these shaders
+extern HE_API void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level);
 // prepares the render engine for 3d rendering by binding the multisampled hdr fbo
 extern HE_API void heRenderEnginePrepareD3(HeRenderEngine* engine);
 // ends the render engine by drawing the fbo onto the screen
@@ -131,9 +157,9 @@ extern HE_API void heRenderEngineFinishD3(HeRenderEngine* engine);
 extern HE_API void heRenderEnginePrepareUi(HeRenderEngine* engine);
 // blits from the multisampled fbo onto the screen
 extern HE_API void heRenderEngineFinishUi(HeRenderEngine* engine);
-// updates a (or adds a new) render property for given engine. This should be done before the shaders are loaded.
-// If a property is updated after the shaders are loaded, you can reload specific shaders manually
-extern HE_API void heRenderEngineSetProperty(HeRenderEngine* engine, std::string const& name, int32_t const value);
+// creates a bloom texture in the bloom fbo of the post process engine by blurring it and combining the different
+// textures
+extern HE_API void hePostProcessBloomPass(HeRenderEngine* engine);
 
 
 // -- ui
@@ -144,15 +170,26 @@ extern HE_API void heUiQueueCreate(HeUiQueue* queue);
 // build a quad that covers the whole screen
 extern HE_API inline void heUiSetQuadVao(HeVao* vao, hm::vec2f const& p0 = hm::vec2f(-1, 1), hm::vec2f const& p1 = hm::vec2f(1, 1), hm::vec2f const& p2 = hm::vec2f(-1, -1), hm::vec2f const& p3 = hm::vec2f(1, -1));
 
+// -- immediate rendering
+
+// creates the vertices, uv coordinates and colours for given text and stores the data in mesh
+extern HE_API void heUiTextCreateMesh(HeRenderEngine* engine, HeUiTextMesh* mesh, HeScaledFont const* font, std::string const& text, hm::colour const& colour);
+// tries to find given text in the text mesh manager. If that text mesh doesnt exist, create a new one and store it
+extern HE_API HeUiTextMesh* heUiTextFindOrCreateMesh(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::colour const& colour);
+
 // renders given texture to the currently bound fbo. This can either be a cube or a 2d texture. The texture will be centered at
 // position. Position and scale can be relativ (negativ) or absolute (positiv). This will load the texture shader
 // if it wasnt already
 extern HE_API inline void heUiRenderTexture(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size);
 // renders given 2d texture to the currently bound fbo. The texture will be centered at position. Position and scale can
 // be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
-extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size, bool const isCubeMap = false);
+extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size, HeTextureRenderMode const options = HE_TEXTURE_RENDER_2D);
 // renders a quad with given vertices in window space with given colour
 extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour);
+// immediate mode: renders text
+extern HE_API void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour);
+
+// -- batch rendering
 
 // renders all lines batched together
 extern HE_API void heUiQueueRenderLines(HeRenderEngine* queue);
@@ -166,7 +203,16 @@ extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const
 // p0 and p1 must be in world space, width is in pixels
 extern HE_API inline void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& colour, float const width);
 // pushes a new text with position in window space (pixels)
-extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2i const& position, hm::colour const& colour);
+extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour);
+
+
+// -- render effects
+
+// blurs given texture at given clip (in window space) (CLIPPING DOESNT WORK RN)
+extern HE_API void heRenderGaussianBlur(HeRenderEngine* engine, HeTexture const* texture, hm::vec4f const& clip);
+
+
+// -- utils
 
 // transforms given vector from pixel space to clip space ([-1:1])
 extern HE_API inline hm::vec2f heSpaceScreenToClip(hm::vec2f const& pixelspace, HeWindow const* window);

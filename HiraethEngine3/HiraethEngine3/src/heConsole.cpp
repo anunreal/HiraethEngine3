@@ -315,7 +315,8 @@ void heConsoleRender(float const delta) {
 		heConsole.timeSinceLastInput += delta;
 
 		// input string
-		heUiPushText(heRenderEngine, &heConsole.backlogFont, heConsole.inputString, hm::vec2i(10, (int32_t) sizeY), hm::colour(255, 255, 255, 255));	
+		if(heConsole.inputString.size() > 0)
+			heUiPushText(heRenderEngine, &heConsole.backlogFont, heConsole.inputString, hm::vec2i(10, (int32_t) sizeY), hm::colour(255, 255, 255, 255));	
 	}
 };
 

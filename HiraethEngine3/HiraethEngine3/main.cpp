@@ -173,6 +173,14 @@ void createWorld(HeWindow* window) {
 	camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window->windowInfo.size.x / (float)window->windowInfo.size.y, 0.1f, 1000.0f);
 	heWin32TimerStart();
 	heD3LevelLoad("res/level/level0.h3level", &level, USE_PHYSICS);
+
+	// temporary: bloom test
+	for(HeD3Instance& all : level.instances) {
+		if(all.name == "Suzanne.h3asset")
+			all.material->emission = hm::colour(255, 100, 100, 255, 10.f);
+	}
+		
+
 	heWin32TimerPrint("LEVEL LOAD");
 	
 	heD3SkyboxCreate(&level.skybox, "res/textures/hdr/pink_sunrise.hdr");
@@ -214,12 +222,14 @@ int main() {
 	
 	HeRenderEngine engine;
 	heRenderEngineCreate(&engine, &window);
+	hePostProcessEngineCreate(&engine.postProcess, &window);
 	heRenderEngine = &engine;
 
 	createWorld(&window);
 
 	HeFont* font = heAssetPoolGetFont("inconsolata");
 	heConsoleCreate(font);
+	heFontCreateScaled(font, &heProfiler.font, 10);
 	
 	HE_LOG("Set up engine");
 	
@@ -237,15 +247,21 @@ int main() {
 	heWin32TimerPrint("TOTAL STARTUP");
 	HE_DEBUG("Starting game loop");
 
+	double sleepTime = 0;
 	
 	while (!window.shouldClose) {
 		if (heThreadLoader.updateRequested)
 			heThreadLoaderUpdate();
+
+		heProfilerFrameStart();
 		
 		heWindowUpdate(&window);
+
 		heRenderEnginePrepare(&engine);
 		level.time += window.frameTime;
-		
+
+		heProfilerFrameMark("window", hm::colour(200, 100, 200));
+
 		{ // input
 			if (window.active)
 				checkWindowInput(&window, &level.camera, (float) window.frameTime);
@@ -253,39 +269,48 @@ int main() {
 			if(heWindowKeyWasPressed(&window, HE_KEY_F1))
 				heConsoleToggleOpen((window.keyboardInfo.keyStatus[HE_KEY_LSHIFT]) ? HE_CONSOLE_STATE_OPEN_FULL : HE_CONSOLE_STATE_OPEN);
 		}
+
+		heProfilerFrameMark("input", hm::colour(255, 0, 0));
+
 		
 		{ // d3 rendering
 #if USE_PHYSICS == 1
 			hePhysicsLevelUpdate(&level.physics, (float) window.frameTime);
 			if(!freeCam)
 				level.camera.position = hePhysicsActorGetEyePosition(&actor);
+			heProfilerFrameMark("physics update", hm::colour(0, 255, 0));
 #endif
 			level.camera.viewMatrix = hm::createViewMatrix(level.camera.position, level.camera.rotation);
 			heRenderEnginePrepareD3(&engine);
 			heD3LevelUpdate(&level);
 			heD3LevelRender(&engine, &level);
+			heProfilerFrameMark("d3 render", hm::colour(0, 0, 255));
 #if USE_PHYSICS == 1
 			hePhysicsLevelDebugDraw(&level.physics);
 #endif
 			heRenderEngineFinishD3(&engine);
+			heProfilerFrameMark("d3 final", hm::colour(255, 0, 255));
 		}
-		
+				
 		{ // ui rendering
 			heRenderEnginePrepareUi(&engine);
 			heConsoleRender((float) window.frameTime);
 			heUiQueueRender(&engine);
+			heProfilerFrameMark("ui render", hm::colour(255, 255, 0));
+			heProfilerAddEntry("sleep", sleepTime, hm::colour(100));
+			heProfilerRender(&engine);
 			heRenderEngineFinishUi(&engine);
 		}
 		
+		
+		heWin32TimerStart();
 		heRenderEngineFinish(&engine);
 		heWindowSyncToFps(&window);
+		sleepTime = heWin32TimerGet();
 		
 #if USE_NETWORKING
 		hnClientUpdateVariables(&client);
 #endif
-		
-		heGlErrorSaveAll();
-		heErrorsPrint();
 	}
 	
 #if USE_NETWORKING

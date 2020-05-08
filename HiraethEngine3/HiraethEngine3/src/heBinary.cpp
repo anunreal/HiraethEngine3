@@ -7,9 +7,11 @@
 #pragma warning(pop)
 
 b8 heBinaryBufferOpenFile(HeBinaryBuffer* buffer, std::string const& fileName, uint32_t const maxSize, HeAccessType const access) {
-	buffer->maxSize = maxSize;
-	buffer->ptr		= (char*) malloc(buffer->maxSize);
-	buffer->access	= access;
+	buffer->maxSize  = maxSize;
+	buffer->ptr		 = (char*) malloc(buffer->maxSize);
+	buffer->access 	 = access;
+	buffer->fullPath = fileName;
+	buffer->name     = fileName.substr(fileName.find_last_of('/') + 1, fileName.find('.'));
 	b8 success = true;
 	
 	if(access == HE_ACCESS_READ_ONLY || access == HE_ACCESS_READ_WRITE) {
@@ -184,12 +186,18 @@ b8 heBinaryBufferGetFloatBuffer(HeBinaryBuffer* buffer, std::vector<float>* outp
 
 void heBinaryConvertD3InstanceFile(std::string const& inFile, std::string const& outFile) {
 	HeTextFile in;
-	heTextFileOpen(&in, inFile, 0);
+	in.skipEmptyLines = false;
+	heTextFileOpen(&in, inFile, 0, false);
 	
 	HeBinaryBuffer buffer;
 	heBinaryBufferOpenFile(&buffer, outFile, 4096, HE_ACCESS_WRITE_ONLY);
 	
 	if(!in.open) {
+		HE_ERROR("Could not open asset file [" + inFile + "] for binary converting");
+		return;
+	}
+
+	if(!buffer.out) {
 		HE_ERROR("Could not open asset file [" + inFile + "] for binary converting");
 		return;
 	}

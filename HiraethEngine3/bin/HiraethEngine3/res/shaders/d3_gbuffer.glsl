@@ -42,6 +42,7 @@ layout(location = 0) out vec4 out_position;
 layout(location = 1) out vec4 out_normal;
 layout(location = 2) out vec4 out_diffuse;
 layout(location = 3) out vec4 out_arm;
+layout(location = 4) out vec4 out_emission;
 
 in vec3 pass_position;
 in vec3 pass_normal;
@@ -51,7 +52,8 @@ in mat3 pass_tangentSpace;
 uniform sampler2D t_diffuse;
 uniform sampler2D t_normal;
 uniform sampler2D t_arm;
-uniform int u_materialType;
+uniform vec4 	  u_emission;
+uniform int 	  u_materialType;
 
 void main(void) {
 	vec3 normalRgb = texture(t_normal, pass_uv).rgb;
@@ -64,4 +66,5 @@ void main(void) {
 	out_position = vec4(pass_position, float(u_materialType));
 	out_diffuse  = texture(t_diffuse, pass_uv);
 	out_arm      = texture(t_arm, pass_uv);
+	out_emission = u_emission;
 }

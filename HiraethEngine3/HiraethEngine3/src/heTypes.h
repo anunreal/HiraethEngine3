@@ -9,6 +9,22 @@
 #define HE_API __declspec(dllimport)
 #endif
 
+/*
+#define HE_STRIPPATH(s)\
+    (sizeof(s) > 2 && (s)[sizeof(s)-2] == '/' ? (s) + sizeof(s) - 1 : \
+    sizeof(s) > 3 && (s)[sizeof(s)-3] == '/' ? (s) + sizeof(s) - 2 : \
+    sizeof(s) > 4 && (s)[sizeof(s)-4] == '/' ? (s) + sizeof(s) - 3 : \
+    sizeof(s) > 5 && (s)[sizeof(s)-5] == '/' ? (s) + sizeof(s) - 4 : \
+    sizeof(s) > 6 && (s)[sizeof(s)-6] == '/' ? (s) + sizeof(s) - 5 : \
+    sizeof(s) > 7 && (s)[sizeof(s)-7] == '/' ? (s) + sizeof(s) - 6 : \
+    sizeof(s) > 8 && (s)[sizeof(s)-8] == '/' ? (s) + sizeof(s) - 7 : \
+    sizeof(s) > 9 && (s)[sizeof(s)-9] == '/' ? (s) + sizeof(s) - 8 : \
+    sizeof(s) > 10 && (s)[sizeof(s)-10] == '/' ? (s) + sizeof(s) - 9 : \
+    sizeof(s) > 11 && (s)[sizeof(s)-11] == '/' ? (s) + sizeof(s) - 10 : (s))
+
+#define __HE_FILE__ HE_STRIPPATH(__FILE__)
+*/
+
 // possible macro definitions:
 // HE_USE_WIN32
 // HE_USE_STBI
@@ -21,7 +37,6 @@
 // HE_ENABLE_WARNING_MSG
 // HE_ENABLE_ERROR_MSG
 // HE_ENABLE_NAMES
-
 
 typedef bool b8;
 
@@ -216,12 +231,20 @@ typedef enum HeConsoleState {
 	HE_CONSOLE_STATE_OPEN_FULL,
 } HeConsoleState;
 
+typedef enum HeTextureRenderMode {
+	HE_TEXTURE_RENDER_2D       = 0b0001,
+	HE_TEXTURE_RENDER_CUBE_MAP = 0b0010,
+	HE_TEXTURE_RENDER_HDR      = 0b0100,
+} HeTextureRenderMode;
+
 // a small macro to enable bitwise operations on enums
-#define HE_ENABLE_BIT(T) inline T operator| (T a, T b) {return (T)((int) a | (int) b);};\
-inline T operator& (T a, T b) {return (T)((int) a & (int) b);}
+#define HE_ENABLE_BIT(T) inline T operator| (T a, T b) { return (T)((int) a | (int) b); }; \
+	inline T operator& (T a, T b) { return (T)((int) a & (int) b); };	\
+	inline T operator|=(T a, T b) { a = a & b; return a; };
 
 HE_ENABLE_BIT(HeDebugInfoFlags);
 HE_ENABLE_BIT(HeFrameBufferBits);
 HE_ENABLE_BIT(HeTextureParameter);
-	
+HE_ENABLE_BIT(HeTextureRenderMode);
+
 #endif

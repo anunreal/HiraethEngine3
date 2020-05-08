@@ -261,8 +261,9 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     
     HE_LOG("Loading instance " + fileName);
     
-    std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
-    
+    //std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
+	std::string assetName = buffer.name;
+	
 #ifdef HE_ENABLE_NAMES
     instance->name = assetName;
 #endif

@@ -11,6 +11,7 @@ struct HeTextFile {
 	uint32_t      lineNumber        = 0;
 	uint32_t      maxBufferSize     = 0;
 	uint32_t      currentBufferSize = 0;
+	b8 skipEmptyLines               = true;
 	
 	std::ifstream stream;
 	b8            open         = false;
@@ -28,6 +29,8 @@ struct HeMaterial {
     std::unordered_map<std::string, HeTexture*> textures;
     // name of the uniform and some data
 	std::unordered_map<std::string, HeShaderData> uniforms;
+
+	hm::colour emission = hm::colour(0);
 };
 
 struct HeFont {

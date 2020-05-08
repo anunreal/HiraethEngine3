@@ -52,7 +52,7 @@ struct HeVbo {
 	HeVboUsage			  usage			= HE_VBO_USAGE_STATIC;
 	// the type of this vbo. For vectors this should be float.
 	// the only other accepted type is int
-	HeDataType	   type			 = HE_DATA_TYPE_FLOAT;
+	HeDataType	          type          = HE_DATA_TYPE_FLOAT;
 
 	// the memory used by this texture, in bytes
 	uint32_t memory = 0;
@@ -79,15 +79,17 @@ struct HeVao {
 
 struct HeFboAttachment {
 	// texture or buffer?
-	b8			   texture = true;
+	b8			   texture  = true;
 	// if true this attachment is resized (relative to the fbo size change). If false this attachment does not get resized
-	b8			   resize  = true;
+	b8			   resize   = true;
 	// the number of samples for multisampling. Only works if this is a buffer
-	uint8_t		   samples = 1;
+	uint8_t		   samples  = 1;
 	// the gl id of the texture or buffer of this attachment
-	uint32_t	   id	   = 0;
+	uint32_t	   id	    = 0;
+	// the amount of mipmaps to generate for this fbo. If this is zero, no mipmaps are generated
+	uint16_t       mipCount = 0;
 	// the colour format of this attachment
-	HeColourFormat format  = HE_COLOUR_FORMAT_RGBA8;
+	HeColourFormat format   = HE_COLOUR_FORMAT_RGBA8;
 	// the size of this attachment in pixels
 	hm::vec2i	   size;
 
@@ -266,8 +268,9 @@ extern HE_API void heVaoRender(HeVao const* vao);
 // a (multisampled, if samples is bigger than 1) colour attachment and either a depth texture or a depth buffer
 // attachment to the fbo
 extern HE_API void heFboCreate(HeFbo* fbo);
-// adds a new colour texture attachment to given fbo. If size is -1, the
-extern HE_API void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8, hm::vec2i const& size = hm::vec2i(-1));
+// adds a new colour texture attachment to given fbo. If size is -1, the size of the fbo is used. If mipCount is
+// not zero, that many mip levels are created for this attachment.
+extern HE_API void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8, hm::vec2i const& size = hm::vec2i(-1), uint16_t const mipCount = 0);
 // adds a new (multisampled) colour buffer attachment to given fbo
 extern HE_API void heFboCreateColourBufferAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8, uint8_t const samples = 1, hm::vec2i const& size = hm::vec2i(-1));
 // creates a new depth buffer attachment for given fbo. The buffer will be the size of the fbo. The fbo must already be bound
@@ -293,6 +296,9 @@ extern HE_API void heFboRender(HeFbo* sourceFbo, HeFbo* targetFbo);
 extern HE_API void heFboRender(HeFbo* sourceFbo, hm::vec2i const& windowSize);
 // checks if the currently bound fbo was correctly set up.
 extern HE_API void heFboValidate();
+// creates a wrapper texture around the given colour texture attachment of the fbo (with size, format,
+// channels... set). Useful when you need to operate on fbo attachments
+extern HE_API HeTexture heFboCreateColourTextureWrapper(HeFboAttachment const* attachment);
 
 
 // -- Textures
@@ -330,6 +336,8 @@ extern HE_API void heImageTextureBind(HeTexture const* texture, int8_t const slo
 extern HE_API void heTextureUnbind(int8_t const slot, b8 const cubeMap = false);
 // deletes given texture if its reference count is currently 1
 extern HE_API void heTextureDestroy(HeTexture* texture);
+// auto-generates mipmaps for given texture (needs to be bound)
+extern HE_API void heTextureCreateMipmaps(uint32_t const textureId, uint32_t const count = 1000, b8 const cubeMap = false);
 
 // before calling any of the following functions, a texture must be bound
 
@@ -394,5 +402,9 @@ extern HE_API void heGlErrorSaveAll();
 extern HE_API uint32_t heGlErrorGet();
 // checks if an error has occured just now (since the last check)
 extern HE_API uint32_t heGlErrorCheck();
+// prints an error message if an error occured (with location information)
+extern HE_API void heGlErrorPrint(std::string const& location = "");
+
+#define GL_CALL(func) func; heGlErrorPrint(__FILE__ ":" + std::to_string(__LINE__) + " in " + __func__)
 
 #endif

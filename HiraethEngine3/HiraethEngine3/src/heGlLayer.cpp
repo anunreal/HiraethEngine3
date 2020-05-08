@@ -769,27 +769,35 @@ void heFboCreate(HeFbo* fbo) {
 #endif
 };
 
-void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format, hm::vec2i const& size) {
+void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format, hm::vec2i const& size, uint16_t const mipCount) {
 	uint32_t f = GL_RGBA;
 	uint8_t index = (uint8_t) fbo->colourAttachments.size();
 	if(format == HE_COLOUR_FORMAT_RGB8 || format == HE_COLOUR_FORMAT_RGB16)
 		f = GL_RGB;
 	
 	HeFboAttachment* attachment = &fbo->colourAttachments.emplace_back();
-	attachment->texture = true;
-	attachment->samples = 1;
-	attachment->format	= format;
+	attachment->texture  = true;
+	attachment->samples  = 1;
+	attachment->format	 = format;
+	attachment->mipCount = mipCount;
+	
 	if(size == hm::vec2i(-1))
 		attachment->size = fbo->size;
 	else
 		attachment->size = size;
+
 	glGenTextures(1, &attachment->id);
 	glBindTexture(GL_TEXTURE_2D, attachment->id);
 	glTexImage2D(GL_TEXTURE_2D, 0, format, attachment->size.x, attachment->size.y, 0, f, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	if(mipCount == 0) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	} else
+		heTextureCreateMipmaps(attachment->id, mipCount);
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, attachment->id, 0);
 
 	// memory tracker
@@ -961,7 +969,7 @@ void heFboResize(HeFbo* fbo, hm::vec2i const& newSize) {
 			all.size = hm::vec2i(scaleFactor * all.size);
 		
 		if(all.texture)
-			heFboCreateColourTextureAttachment(fbo, all.format, all.size);
+			heFboCreateColourTextureAttachment(fbo, all.format, all.size, all.mipCount);
 		else
 			heFboCreateColourBufferAttachment(fbo, all.format, all.samples, all.size);
 	}
@@ -990,6 +998,16 @@ void heFboRender(HeFbo* sourceFbo, hm::vec2i const& windowSize) {
 void heFboValidate() {
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		HE_ERROR("Fbo not set up correctly (" + std::to_string(glGetError()) + ")");
+};
+
+HeTexture heFboCreateColourTextureWrapper(HeFboAttachment const* attachment) {
+	HeTexture texture;
+	texture.textureId  = attachment->id;
+	texture.format     = attachment->format;
+	texture.size       = attachment->size;
+	texture.parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE;
+	texture.channels = (texture.format == HE_COLOUR_FORMAT_RGBA8 || texture.format == HE_COLOUR_FORMAT_RGBA16) ? 4 : 3;
+	return texture;
 };
 
 
@@ -1162,7 +1180,7 @@ void heTextureCreateFromBuffer(HeTexture* texture) {
 	
 	// memory tracker
 	uint8_t perPixel = heMemoryGetBytesPerPixel(texture->format);
-	uint32_t bytes = heMemoryRoundUsage(texture->size.x * texture->size.y * perPixel);
+	uint32_t bytes   = heMemoryRoundUsage(texture->size.x * texture->size.y * perPixel);
 	if(texture->parameters & HE_TEXTURE_FILTER_TRILINEAR)
 		bytes = (uint32_t) (bytes * 1.33);
 	texture->memory = bytes;
@@ -1194,6 +1212,9 @@ void heTextureBind(uint32_t const texture, int8_t const slot, b8 const cubeMap) 
 void heImageTextureBind(HeTexture const* texture, int8_t const slot, int8_t const level, int8_t const layer, HeAccessType const access) {
 	if(texture != nullptr)
 		glBindImageTexture(slot, texture->textureId, level, (layer == -1) ? GL_TRUE : GL_FALSE, (layer == -1) ? 0 : layer, access, texture->format);
+	else
+		glBindImageTexture(slot, 0, level, (layer == -1) ? GL_TRUE : GL_FALSE, (layer == -1) ? 0 : layer, access, GL_RGB8);
+		
 };
 
 void heTextureUnbind(int8_t const slot, b8 const cubeMap) {
@@ -1212,6 +1233,16 @@ void heTextureDestroy(HeTexture* texture) {
 		texture->memory	   = 0;
 	}
 };
+
+void heTextureCreateMipmaps(uint32_t const id, uint32_t const count, b8 const cubeMap) {
+	uint32_t format = (cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	glTexParameteri(format, GL_TEXTURE_MAX_LEVEL, count);
+	glTexParameteri(format, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateTextureMipmap(id);
+};
+
 
 void heTextureFilterLinear(HeTexture const* texture) {
 	uint32_t format = (texture->cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
@@ -1411,6 +1442,12 @@ uint32_t heGlErrorGet() {
 
 uint32_t heGlErrorCheck() {
 	return glGetError();
+};
+
+void heGlErrorPrint(std::string const& location) {
+	uint32_t error = heGlErrorCheck();
+	if(error != GL_NO_ERROR)
+		HE_WARNING("Gl Error: " + std::to_string(error) + " in " + location);
 };
 
 #else

@@ -15,3 +15,15 @@ void command_toggle_physics_debug() {
 	else
 		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
 };
+
+void command_toggle_profiler() {
+	 heProfilerToggleDisplay();
+};
+
+void command_set_exposure(float f) {
+	 heD3Level->camera.exposure = f;
+};
+
+void command_set_gamma(float g) {
+	 heD3Level->camera.gamma = g;
+};

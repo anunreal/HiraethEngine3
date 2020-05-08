@@ -39,8 +39,8 @@ namespace hm {
         inline vec2 operator/(double const v) const {
             return vec2((T) (x / v), (T) (y / v));
         };
-        
-        inline vec2& operator*=(double const v) {
+		
+        inline vec2& operator*=(T const v) {
             this->x *= v;
             this->y *= v;
             return *this;

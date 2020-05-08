@@ -10,6 +10,7 @@
 #include <iomanip> // for std::setprecision 
 
 HeDebugInfo heDebugInfo;
+HeProfiler  heProfiler;
 
 inline void heFlagStringBuilder(std::string& output, std::string const& in) {
     if(output.size() == 0)
@@ -384,6 +385,8 @@ void he_to_string(HeMaterial const* ptr, std::string& output, std::string const&
 };
 
 
+// -- other
+
 std::string he_bytes_to_string(uint64_t const bytes) {
 	std::string s;
 
@@ -403,6 +406,70 @@ std::string he_float_to_string(float const _float, uint8_t const precision) {
 	return stream.str();
 };
 
+
+// -- profiler
+
+void heProfilerAddEntry(std::string const& name, double const duration, hm::colour const& colour) {
+	heProfiler.entries[heProfiler.entryOffset++] = HeProfiler::HeProfilerEntry(name, duration, colour);
+};
+
+void heProfilerRender(HeRenderEngine* engine) { 
+	if(heProfiler.displayed) {
+		// render profiler	
+		float const MS_COUNT   = 16.f;                 // the amount of milliseconds displayed
+		float const MAX_WIDTH  = 0.99f;                // in clip space
+		float const PER_MS     = MAX_WIDTH / MS_COUNT; // clip space per millisecond
+		float const HEIGHT     = 15.f;                 // bar height in pixels
+		float const BARYOFFSET = (float) engine->window->windowInfo.size.y - 20.f; 
+	
+		float xoffset = (1.0f - MAX_WIDTH) / 2.f * engine->window->windowInfo.size.x; // in pixels
+		float yoffset = BARYOFFSET - HEIGHT - 10;
+		
+		hm::vec2f colourQuadSize = hm::vec2f(20, 10);
+		
+		for(uint32_t i = 0; i < heProfiler.entryOffset; ++i) {
+			HeProfiler::HeProfilerEntry const& entry = heProfiler.entries[i];
+			float widthInPixels = PER_MS * (float) entry.duration * engine->window->windowInfo.size.x;
+
+			// draw in graph
+			heUiRenderQuad(engine, hm::vec2f(xoffset, BARYOFFSET), hm::vec2f(xoffset, BARYOFFSET + HEIGHT), hm::vec2f(xoffset + widthInPixels, BARYOFFSET), hm::vec2f(xoffset + widthInPixels, BARYOFFSET + HEIGHT), entry.colour);
+
+			// draw description
+			heUiRenderQuad(engine, hm::vec2f(10, yoffset), hm::vec2f(10, yoffset + colourQuadSize.y), hm::vec2f(10 + colourQuadSize.x, yoffset), hm::vec2f(10, yoffset) + colourQuadSize, entry.colour);
+
+			heUiRenderText(engine, &heProfiler.font, entry.name + ":  " + std::to_string(entry.duration) + "ms" , hm::vec2f(10 + colourQuadSize.x + 5, yoffset), hm::colour(255)); // immediate mode
+			
+			xoffset += widthInPixels;	
+			yoffset -= 15;
+		}
+
+		// draw frame time
+		heUiRenderText(engine, &heProfiler.font, "Frame: " + std::to_string((int) (1. / engine->window->frameTime)) + " (" + std::to_string(engine->window->frameTime) + ")", hm::vec2f(10, yoffset), hm::colour(255));
+
+		// draw sleep time
+		float remaining = (MAX_WIDTH * engine->window->windowInfo.size.x) - xoffset;
+		heUiRenderQuad(engine, hm::vec2f(xoffset, BARYOFFSET), hm::vec2f(xoffset, BARYOFFSET + HEIGHT), hm::vec2f(xoffset + remaining, BARYOFFSET), hm::vec2f(xoffset + remaining, BARYOFFSET + HEIGHT), hm::colour(0));
+	}	
+};
+
+void heProfilerFrameStart() {
+	heProfiler.currentMark = heWin32TimeGet();
+	heProfiler.entryOffset = 0;
+};
+
+void heProfilerFrameMark(std::string const& name, hm::colour const& colour) {
+	__int64 now = heWin32TimeGet();
+	double duration = heWin32TimeCalculateMs(now - heProfiler.currentMark);
+	heProfiler.currentMark = now;
+	heProfilerAddEntry(name, duration, colour);
+};
+
+void heProfilerToggleDisplay() {
+	heProfiler.displayed = !heProfiler.displayed;
+};
+
+
+// -- commands
 
 b8 heCommandRun(std::string const& message) {
     b8 found = false;
@@ -545,6 +612,7 @@ b8 heCommandRun(std::string const& message) {
         if(args[1] == "instance") {
             // convert file to binary
             heBinaryConvertD3InstanceFile(args[2], args[3]);
+			HE_LOG("Successfully converted instance file");
             found = true;
         }
         

@@ -31,6 +31,7 @@ uniform sampler2D t_worldSpace;
 uniform sampler2D t_normals;
 uniform sampler2D t_diffuse;
 uniform sampler2D t_arm;
+uniform sampler2D t_emission;
 uniform sampler2D t_brdf;
 uniform samplerCube t_irradiance;
 uniform samplerCube t_environment;
@@ -196,6 +197,5 @@ void main(void) {
 	vec3 specular = prefilteredColour * (kS * envBRDF.x + envBRDF.y);
 	
 	vec3 ambient = (kD * diffuse + specular) * ao; 
-	out_colour = vec4(ambient + totalLight, 1.0);
-	out_colour.rgb = out_colour.rgb / (out_colour.rgb + vec3(1.0)); 
+	out_colour = vec4(ambient + totalLight + texture(t_emission, pass_uv).rgb, 1.0);
 }

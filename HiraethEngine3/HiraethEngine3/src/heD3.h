@@ -41,6 +41,9 @@ struct HeD3Camera {
     hm::mat4f viewMatrix;
     // the projection matrix of this camera created when the camera is set up
     hm::mat4f projectionMatrix;
+
+	float exposure = 1.f; // default exposure (brightness of the scene)
+	float gamma    = 1.f; // disable gamma correction
 };
 
 struct HeD3LightSource {

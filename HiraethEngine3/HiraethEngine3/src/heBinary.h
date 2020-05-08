@@ -15,6 +15,9 @@ struct HeBinaryBuffer {
 	
 	std::ofstream	out;
 	std::ifstream	in;
+
+	std::string fullPath; // the full relative path of this file
+	std::string name; // the name of this file, without parent folders and file extension
 };
 
 

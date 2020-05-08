@@ -81,15 +81,21 @@ b8 heTextFileGetLine(HeTextFile* file, std::string* result) {
 	
 	if(file->maxBufferSize == 0) {
 		result->clear();
-		while(result->empty() || (*result)[0] == ';') {
-			if(!std::getline(file->stream, *result)) {
-				file->open = false;
-				break;
-			}
+		if(file->skipEmptyLines) {
+			while(result->empty() || (*result)[0] == ';') {
+				if(!std::getline(file->stream, *result)) {
+					file->open = false;
+					break;
+				}
 			
+				heStringEatSpacesLeft(*result);
+			}
+		} else {
+			if(!std::getline(file->stream, *result))
+				file->open = false;
 			heStringEatSpacesLeft(*result);
 		}
-		
+
 		file->lineNumber++;
 		return file->open;
 	} else {
@@ -555,13 +561,7 @@ uint8_t heMemoryGetBytesPerPixel(HeColourFormat const format) {
 };
 
 uint32_t heMemoryRoundUsage(uint32_t const usage) {
-	uint32_t u = usage - 1;
-	u |= u >> 1;
-	u |= u >> 2;
-	u |= u >> 4;
-	u |= u >> 8;
-	u |= u >> 16;
-	return u + 1;
+	return hm::ceilPowerOfTwo(usage);
 };
 
 

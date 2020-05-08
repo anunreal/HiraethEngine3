@@ -614,6 +614,16 @@ void heWin32TimerPrint(std::string const& id) {
 	heLogCout(id + ": " + std::to_string(heWin32TimerGet()) + "ms", "[TIMER]:");
 };
 
+__int64 heWin32TimeGet() {
+	LARGE_INTEGER _int;
+	QueryPerformanceCounter(&_int);
+	return _int.QuadPart;
+};
+
+double heWin32TimeCalculateMs(__int64 duration) {
+	return duration * 1000.0 / heTimer.frequency.QuadPart;
+};
+
 
 std::string heWin32ClipboardGet() {
 	if(!OpenClipboard(NULL))

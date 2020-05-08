@@ -8,11 +8,11 @@ static bool ISSUED_ERROR = false;
 
 
 enum DataType {
-			   DATA_TYPE_INVALID,
-			   DATA_TYPE_STRING,
-			   DATA_TYPE_INT,
-			   DATA_TYPE_FLOAT,
-			   DATA_TYPE_VEC3F,
+   DATA_TYPE_INVALID,
+   DATA_TYPE_STRING,
+   DATA_TYPE_INT,
+   DATA_TYPE_FLOAT,
+   DATA_TYPE_VEC3F,
 };
 
 struct Command {
@@ -255,6 +255,7 @@ int main(int argc, char* argv[]) {
 	out << "#include <vector>\n";
 	out << "#include \"..\\heConsole.h\"\n";
 	out << "#include \"..\\heD3.h\"\n";
+	out << "#include \"..\\heDebugUtils.h\"\n";
 	out << std::endl;
 
 		

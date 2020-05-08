@@ -3,6 +3,10 @@
 
 #include "heTypes.h"
 #include <string>
+#include "hm/colour.hpp"
+#include "heAssets.h"
+
+struct HeRenderEngine; // used for profiler
 
 // used to print out debug information on the fly
 struct HeDebugInfo {
@@ -13,6 +17,26 @@ struct HeDebugInfo {
     // the next time a level is rendered), then that flag will be removed.
     uint32_t flags = 0;
 };
+
+struct HeProfiler {
+	struct HeProfilerEntry {
+		double      duration;
+		hm::colour  colour;
+		std::string name;
+
+		HeProfilerEntry() : name(""), duration(-1.), colour(0) {}; 
+		HeProfilerEntry(std::string const& name, double const duration, hm::colour const& colour) :
+			name(name), duration(duration), colour(colour) {};
+	};
+	
+	__int64 currentMark = 0; // marks a time stamp
+	uint32_t entryOffset = 0;
+	b8 displayed = false;
+	HeProfilerEntry entries[20];
+	HeScaledFont font;
+};
+
+extern HeProfiler heProfiler;
 
 // returns true if the given flag was requested before (since the last check). This will remove the flag
 extern HE_API inline b8 heDebugIsInfoRequested(const HeDebugInfoFlags flag);
@@ -80,6 +104,17 @@ extern HE_API void he_to_string(HeMaterial const* ptr, std::string& output, std:
 extern HE_API std::string he_bytes_to_string(uint64_t const bytes);
 // formats a float into a string with given precision
 extern HE_API std::string he_float_to_string(float const _float, uint8_t const precision);
+
+
+// -- profiler
+
+// adds a new entry to the profiler for this frame. 
+extern HE_API void heProfilerAddEntry(std::string const& name, double duration, hm::colour const& colour);
+extern HE_API void heProfilerAddEntry(std::string const& name, double duration);
+extern HE_API void heProfilerFrameStart();
+extern HE_API void heProfilerFrameMark(std::string const& name, hm::colour const& colour);
+extern HE_API void heProfilerRender(HeRenderEngine* engine);
+extern HE_API void heProfilerToggleDisplay();
 
 
 // -- commands
