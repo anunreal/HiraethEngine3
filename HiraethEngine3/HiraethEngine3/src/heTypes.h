@@ -237,6 +237,17 @@ typedef enum HeTextureRenderMode {
 	HE_TEXTURE_RENDER_HDR      = 0b0100,
 } HeTextureRenderMode;
 
+typedef enum HeRenderMode {
+	HE_RENDER_MODE_FORWARD,
+	HE_RENDER_MODE_DEFERRED
+} HeRenderMode;
+
+typedef enum HeTextAlignMode {
+	HE_TEXT_ALIGN_LEFT,
+	HE_TEXT_ALIGN_RIGHT,
+	HE_TEXT_ALIGN_CENTER,
+} HeTextAlignMode;
+
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) { return (T)((int) a | (int) b); }; \
 	inline T operator& (T a, T b) { return (T)((int) a & (int) b); };	\

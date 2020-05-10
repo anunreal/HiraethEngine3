@@ -54,6 +54,7 @@ extern HE_API std::string he_to_string(HeLightSourceType const& type);
 extern HE_API std::string he_to_string(HePhysicsShape    const& type);
 extern HE_API std::string he_to_string(HeColourFormat    const& type);
 extern HE_API std::string he_to_string(HeMemoryType      const& type);
+extern HE_API std::string he_gl_error_to_string(uint32_t const& error);
 
 
 // -- helper structs
@@ -108,13 +109,20 @@ extern HE_API std::string he_float_to_string(float const _float, uint8_t const p
 
 // -- profiler
 
+// sets up the profiler by creating a scaled font from given font
+extern HE_API inline void heProfilerCreate(HeFont const* font);
 // adds a new entry to the profiler for this frame. 
-extern HE_API void heProfilerAddEntry(std::string const& name, double duration, hm::colour const& colour);
-extern HE_API void heProfilerAddEntry(std::string const& name, double duration);
-extern HE_API void heProfilerFrameStart();
-extern HE_API void heProfilerFrameMark(std::string const& name, hm::colour const& colour);
+extern HE_API inline void heProfilerAddEntry(std::string const& name, double duration, hm::colour const& colour);
+// adds a new entry with a random colour
+extern HE_API inline void heProfilerAddEntry(std::string const& name, double duration);
+// starts a new profiler frame by resetting the recorded entries and the time mark
+extern HE_API inline void heProfilerFrameStart();
+// marks a new profiler. This should be called after the frame step was completed
+extern HE_API inline void heProfilerFrameMark(std::string const& name, hm::colour const& colour);
+// renders the profiler (if its opened)
 extern HE_API void heProfilerRender(HeRenderEngine* engine);
-extern HE_API void heProfilerToggleDisplay();
+// toggles whether the profiler is visible
+extern HE_API inline void heProfilerToggleDisplay();
 
 
 // -- commands

@@ -54,9 +54,11 @@ void heDebugRequestInfo(const HeDebugInfoFlags flags) {
     
     if(flags & HE_DEBUG_INFO_ENGINE) {
         heDebugPrint("=== ENGINE ===\n");
-        std::string string;
-        he_to_string(&heRenderEngine->gBufferFbo, string);
-        heDebugPrint("gBuffer = " + string);
+		if(heRenderEngine->renderMode == HE_RENDER_MODE_DEFERRED) {
+			std::string string;
+			he_to_string(&heRenderEngine->deferred.gBufferFbo, string);
+			heDebugPrint("gBuffer = " + string);
+		}
         heDebugPrint("=== ENGINE ===");
     }
 
@@ -197,6 +199,50 @@ std::string he_to_string(HeMemoryType const& type) {
 
 	return s;
 	
+};
+
+std::string he_gl_error_to_string(uint32_t const& error) {
+	std::string s;
+
+	switch(error) {
+	case 0x0500:
+		s = "Invalid Enum";
+		break;
+
+	case 0x0501:
+		s = "Invalid Value";
+		break;
+
+	case 0x0502:
+		s = "Invalid Operation";
+		break;
+
+	case 0x0503:
+		s = "Stack Overflow";
+		break;
+
+	case 0x0504:
+		s = "Stack Underflow";
+		break;
+
+	case 0x0505:
+		s = "Out of Memory";
+		break;
+
+	case 0x0506:
+		s = "Invalid Framebuffer Operation";
+		break;
+
+	case 0x0507:
+		s = "Lost Context";
+		break;
+		
+	default:
+		s = std::to_string(error);
+		break;
+	}
+	
+	return s;
 };
 
 
@@ -371,7 +417,7 @@ void he_to_string(HeMaterial const* ptr, std::string& output, std::string const&
     output += prefix + "HeMaterial {\n";
     output += prefix + "\ttype   = " + std::to_string(ptr->type) + '\n';
 #ifdef HE_ENABLE_NAMES
-    //output += prefix + "\tshader = " + ptr->shader->name + '\n';
+    output += prefix + "\tshader = " + ptr->shader->name + '\n';
     output += prefix + "\ttextures:\n";
     for(auto const& all : ptr->textures)
         output += prefix + "\t\t" + all.first + " = " + all.second->name + '\n';
@@ -409,8 +455,20 @@ std::string he_float_to_string(float const _float, uint8_t const precision) {
 
 // -- profiler
 
+void heProfilerCreate(HeFont const* font) {
+	heFontCreateScaled(font, &heProfiler.font, 10);
+};
+
 void heProfilerAddEntry(std::string const& name, double const duration, hm::colour const& colour) {
 	heProfiler.entries[heProfiler.entryOffset++] = HeProfiler::HeProfilerEntry(name, duration, colour);
+};
+
+void heProfilerAddEntry(std::string const& name, double const duration) {
+	hm::colour c;
+	c.r = std::rand() % 255;
+	c.g = std::rand() % 255;
+	c.b = std::rand() % 255;
+	heProfilerAddEntry(name, duration, c);
 };
 
 void heProfilerRender(HeRenderEngine* engine) { 

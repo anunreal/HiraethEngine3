@@ -66,8 +66,9 @@ struct HeWindow {
 	HeWindowInfo   windowInfo;
 	HeMouseInfo	   mouseInfo;
 	b8			   shouldClose = false;
-	b8			 active = false; // is this the topmost window?
-	
+	b8			   active      = false; // is this the topmost window?
+	b8             resized     = false; // did the window get resized in the last frame
+
 	// timing stuff
 	double lastFrame = 0.; // the last frame time (time_since_epoch)
 	double frameTime = 0.; // the duration of the last frame (in seconds)

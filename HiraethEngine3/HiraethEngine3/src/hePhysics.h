@@ -77,6 +77,13 @@ struct HePhysicsActor {
 	btConvexShape*					shape	   = nullptr;
 	HePhysicsShapeInfo				shapeInfo;
 	HePhysicsActorInfo				actorInfo;
+
+
+	// -- read only
+	
+	hm::vec3f position;     // position of the shape (center)
+	hm::vec3f feetPosition; // position of the feet (position - height / 2) 
+	hm::vec3f velocity;     // the current velocity of the actor
 };
 
 struct HePhysicsLevel {
@@ -92,6 +99,15 @@ struct HePhysicsLevel {
 	HePhysicsActor* actor	= nullptr;
 	std::list<HePhysicsComponent> components;
 };
+
+// -- shape
+
+// checks the type of the info and tries to figure out the height of that shape. This only works if the shape
+// is of primitive type
+extern HE_API float hePhysicsShapeGetHeight(HePhysicsShapeInfo const* info);
+
+
+// -- level
 
 // creates a new empty physics level with default settings (gravity)
 extern HE_API void hePhysicsLevelCreate(HePhysicsLevel* level, HePhysicsLevelInfo const& info);
@@ -114,6 +130,9 @@ extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel const* level);
 // returns true if the given level was successfully set up
 extern HE_API inline b8 hePhysicsLevelIsSetup(HePhysicsLevel const* level);
 
+
+// -- component
+
 // creates a new physics component from a shape
 extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& shape);
 // destroys given physics component. The component should be removed from all levels before this. This function simply deletes all
@@ -127,6 +146,9 @@ extern HE_API void hePhysicsComponentSetTransform(HePhysicsComponent* component,
 extern HE_API hm::vec3f hePhysicsComponentGetPosition(HePhysicsComponent const* component);
 // returns the current rotation of the component
 extern HE_API hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component);
+
+
+// -- actor
 
 // creates a new physics component from given shape
 extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shape, HePhysicsActorInfo const& actorInfo);
@@ -148,6 +170,7 @@ extern HE_API inline hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* a
 extern HE_API inline hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor);
 // returns true if the actor currently stands on solid ground
 extern HE_API inline b8 hePhysicsActorOnGround(HePhysicsActor const* actor);
+
 
 // -- these functions simply update the actors settings
 

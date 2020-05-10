@@ -28,14 +28,15 @@ in vec4 pass_uv;
 
 uniform samplerCube t_skybox;
 uniform sampler2D t_alphaTest;
+uniform bool u_realDepthTest;
 
 void main(void) {
 	vec2 uv = (pass_uv.xy / pass_uv.w) * 0.5 + 0.5;
-	if(texture(t_alphaTest, uv).a > 0.0)
+	if(!u_realDepthTest && texture(t_alphaTest, uv).a > 0.0)
 		discard;
 
 	vec3 envColour = textureLod(t_skybox, pass_pos, 0).rgb;
 	envColour = envColour / (envColour + vec3(1.0)); // hdr
-	envColour = pow(envColour, vec3(1.0 / 2.2)); // gamma
+	//envColour = pow(envColour, vec3(1.0 / 2.2)); // gamma
 	out_colour = vec4(envColour, 1.0);
 }

@@ -52,7 +52,7 @@ std::vector<std::string> split_string(const std::string& string, const char deli
 	return result;
 };
 
-void parse_command_file(std::string const& file, std::vector<Command>& commands) {
+void parse_command_file(std::string const& file, std::vector<Command>& commands, std::vector<std::string>& includeFiles) {
 	std::ifstream stream(file);
 	if(!stream) {
 		std::cout << "ERROR: Could not find file [" + file + "]" << std::endl;
@@ -66,6 +66,11 @@ void parse_command_file(std::string const& file, std::vector<Command>& commands)
 		if(line.empty())
 			continue;
 
+		if(line[0] == '#') {
+			includeFiles.emplace_back(line);
+			continue;
+		}
+		
 		// parse function
 		uint64_t openBraces = 1;
 		Command* cmd = &commands.emplace_back();
@@ -245,7 +250,8 @@ int main(int argc, char* argv[]) {
 	
 	std::cout << "Parsing file: " << file << std::endl;
 	std::vector<Command> commands;
-	parse_command_file(file, commands);
+	std::vector<std::string> includes;
+	parse_command_file(file, commands, includes);
 
 	if(ISSUED_ERROR)
 		return -1;
@@ -256,6 +262,9 @@ int main(int argc, char* argv[]) {
 	out << "#include \"..\\heConsole.h\"\n";
 	out << "#include \"..\\heD3.h\"\n";
 	out << "#include \"..\\heDebugUtils.h\"\n";
+	for(std::string const& all : includes)
+		out << all << std::endl;
+
 	out << std::endl;
 
 		

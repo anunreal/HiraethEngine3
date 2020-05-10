@@ -194,6 +194,7 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 			window->windowInfo.size.x = LOWORD(lparam);
 			window->windowInfo.size.y = HIWORD(lparam);
 			heViewport(hm::vec2i(0), window->windowInfo.size);
+			window->resized = true;
 			break;
 		}
 			
@@ -514,6 +515,7 @@ b8 heWin32WindowCreate(HeWindow* window) {
 };
 
 void heWin32WindowUpdate(HeWindow* window) {
+	window->resized = false;
 	MSG msg;
 	while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 		TranslateMessage(&msg);

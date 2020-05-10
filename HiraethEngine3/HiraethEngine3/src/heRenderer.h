@@ -21,6 +21,7 @@ struct HeUiTextMesh {
 	std::vector<float> vertices;
 	std::vector<uint32_t> colours;
 	uint32_t lastFrameAccess = 0;
+	float width = 0.f; // in clip space
 };
 
 struct HeUiTextManager {
@@ -45,12 +46,13 @@ struct HeUiLine {
 };
 
 struct HeUiText {
-	std::string text;
-	hm::vec2f	position; // in window space
-	hm::colour	colour;
-
+	std::string     text;
+	hm::vec2f	    position; // in window space
+	hm::colour	    colour;
+	HeTextAlignMode align;
+	
 	HeUiText() : text(""), position(0), colour(0) {};
-	HeUiText(std::string const& text, hm::vec2i const& position, hm::colour const& colour) : text(text), position(position), colour(colour) {};
+	HeUiText(std::string const& text, hm::vec2i const& position, hm::colour const& colour, HeTextAlignMode const align) : text(text), position(position), colour(colour), align(align) {};
 };
 
 struct HeUiQueue {
@@ -98,22 +100,31 @@ struct HeRenderEngine {
 	// 3: diffuse texture
 	// 4: arm texture
 	uint8_t outputTexture = 0;
-	// a 16 bit multisampled fbo used for hdr rendering
-	HeFbo gBufferFbo;
 	// an 16 bit fbo used for post-process image manipulation
 	HeFbo hdrFbo;
 	// used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
 	HeShaderProgram* finalShader	 = nullptr;
-	// the shader used for rendering d3 objects into the gbuffer. This will put information like position, normals... into the
-	// gbuffer independant of the instances material
-	HeShaderProgram* gBufferShader	 = nullptr;
-	// the lighting shader after the gbuffer pass
-	HeShaderProgram* gLightingShader = nullptr;
 	// renders an hdr skybox of a level (cube map texture) 
 	HeShaderProgram* skyboxShader	 = nullptr;
 	// the brdf integration texture (rg channels)
 	HeTexture* brdfIntegration = nullptr;
 
+	struct {
+		// a 16 bit fbo used for deferred hdr rendering
+		HeFbo gBufferFbo;
+		// the shader used for rendering d3 objects into the gbuffer. This will put information like position,
+		// normals... into the gbuffer independant of the instances material
+		HeShaderProgram* gBufferShader	 = nullptr;
+		// the lighting shader after the gbuffer pass
+		HeShaderProgram* gLightingShader = nullptr;
+	} deferred;
+
+	struct {
+		HeFbo forwardFbo;
+		HeUbo lightsUbo;
+	} forward;
+	
+	HeRenderMode renderMode;
 	HePostProcessEngine postProcess;
 };
 
@@ -140,15 +151,16 @@ extern HE_API void heShaderLoadMaterial(HeShaderProgram* shader, HeMaterial cons
 // loads a 3d light source to given shader. If index is -1, the shader is assumed to only have one light as a uniform
 // called u_light. If index is greater or equal to 0, the shader is assumed to have an array of lights, called u_lights[]
 extern HE_API void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource const* light, int8_t const index);
-// renders a single 3d instance using the instances mesh and material. Make sure that a shader is bound and
-// set up before this is called (camera and lights)
-extern HE_API void heD3InstanceRender(HeD3Instance* instance);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
 extern HE_API void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level);
+// forward-renders given instance. The shader should already be set up and bound
+extern HE_API void heD3InstanceRenderForward(HeD3Instance* instance);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
 extern HE_API void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level);
+// renders given level either in forward or deferred mode, depending on the mode of the engine
+extern HE_API inline void heD3LevelRender(HeRenderEngine* engine, HeD3Level* level);
 // prepares the render engine for 3d rendering by binding the multisampled hdr fbo
 extern HE_API void heRenderEnginePrepareD3(HeRenderEngine* engine);
 // ends the render engine by drawing the fbo onto the screen
@@ -187,7 +199,7 @@ extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const text
 // renders a quad with given vertices in window space with given colour
 extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour);
 // immediate mode: renders text
-extern HE_API void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour);
+extern HE_API void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode const align = HE_TEXT_ALIGN_LEFT);
 
 // -- batch rendering
 
@@ -203,21 +215,16 @@ extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const
 // p0 and p1 must be in world space, width is in pixels
 extern HE_API inline void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& colour, float const width);
 // pushes a new text with position in window space (pixels)
-extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour);
-
-
-// -- render effects
-
-// blurs given texture at given clip (in window space) (CLIPPING DOESNT WORK RN)
-extern HE_API void heRenderGaussianBlur(HeRenderEngine* engine, HeTexture const* texture, hm::vec4f const& clip);
+extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode const align = HE_TEXT_ALIGN_LEFT);
 
 
 // -- utils
 
 // transforms given vector from pixel space to clip space ([-1:1])
 extern HE_API inline hm::vec2f heSpaceScreenToClip(hm::vec2f const& pixelspace, HeWindow const* window);
-// calculates the screen space coordinate (in pixels) of the given world spacce position by transforming it with the matrices of
-// the camera
-extern HE_API inline hm::vec2f heSpaceWorldToScreen(hm::vec3f const& worldSpace, HeD3Camera const* camera, HeWindow const* window);
+// calculates the screen space coordinate (in pixels) of the given world spacce position by transforming it with
+// the matrices of the camera. If the z component of the result is less than 0, the position is clipped (behind
+// the camera)
+extern HE_API inline hm::vec3f heSpaceWorldToScreen(hm::vec3f const& worldSpace, HeD3Camera const* camera, HeWindow const* window);
 
 #endif

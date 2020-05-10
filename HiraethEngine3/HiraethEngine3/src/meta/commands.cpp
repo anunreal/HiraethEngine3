@@ -3,6 +3,7 @@
 #include "..\heConsole.h"
 #include "..\heD3.h"
 #include "..\heDebugUtils.h"
+#include "..\..\main.h"
 
 void command_set_position(int index, hm::vec3f const& position) {
 	HeD3Instance* instance = heD3LevelGetInstance(heD3Level, index);
@@ -92,6 +93,20 @@ void front_command_set_gamma(std::vector<std::string> const& args) {
 };
 
 
+void command_set_name(std::string const& name) {
+	 strcpy_s(app.ownName, name.c_str());
+};
+
+void front_command_set_name(std::vector<std::string> const& args) {
+	if(args.size() != 1) {
+		heConsolePrint("Error: set_name requires 1 arguments");
+		return;
+	};
+	std::string i0 = args[0];
+	command_set_name(i0);
+};
+
+
 void command_help() {
 	heConsolePrint("=== HELP ===");
 	heConsolePrint("> set_position int: index, vec3: position");
@@ -100,6 +115,7 @@ void command_help() {
 	heConsolePrint("> toggle_profiler ");
 	heConsolePrint("> set_exposure float: f");
 	heConsolePrint("> set_gamma float: g");
+	heConsolePrint("> set_name string: name");
 	heConsolePrint("=== HELP ===");
 
 };
@@ -120,6 +136,7 @@ void heRegisterCommands() {
 	heConsoleRegisterCommand("toggle_profiler", &front_command_toggle_profiler);
 	heConsoleRegisterCommand("set_exposure", &front_command_set_exposure);
 	heConsoleRegisterCommand("set_gamma", &front_command_set_gamma);
+	heConsoleRegisterCommand("set_name", &front_command_set_name);
 	heConsoleRegisterCommand("help", &front_command_help);
 };
 

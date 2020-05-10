@@ -1,3 +1,4 @@
+#include "..\..\main.h"
 
 void command_set_position(int index, hm::vec3f const& position) {
 	HeD3Instance* instance = heD3LevelGetInstance(heD3Level, index);
@@ -26,4 +27,8 @@ void command_set_exposure(float f) {
 
 void command_set_gamma(float g) {
 	 heD3Level->camera.gamma = g;
+};
+
+void command_set_name(std::string const& name) {
+	 strcpy_s(app.ownName, name.c_str());
 };

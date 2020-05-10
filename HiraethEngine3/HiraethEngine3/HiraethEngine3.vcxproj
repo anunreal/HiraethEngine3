@@ -186,6 +186,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="main.h" />
     <ClInclude Include="src\heAssets.h" />
     <ClInclude Include="src\heBinary.h" />
     <ClInclude Include="src\heConsole.h" />

@@ -12,7 +12,7 @@
 #define HN_API __declspec(dllimport)
 #endif
 
-#define HN_ENABLE_LOG_MSG
+//#define HN_ENABLE_LOG_MSG
 #define HN_ENABLE_ERROR_MSG
 #define HN_ENABLE_DEBUG_MSG
 
@@ -24,7 +24,8 @@ enum HnDataType {
     HN_DATA_TYPE_FLOAT,
     HN_DATA_TYPE_VEC2,
     HN_DATA_TYPE_VEC3,
-    HN_DATA_TYPE_VEC4
+    HN_DATA_TYPE_VEC4,
+	HN_DATA_TYPE_STRING
 };
 
 enum HnStatus {
@@ -106,6 +107,8 @@ struct HnVariableInfo {
     // a pointer to data representing this variable on the local side (local client or remote client). This
     // must point to a valid memory location of the correct data type
     void* data = nullptr;
+	// the size of the data pointer in bytes
+	uint32_t dataSize = 0;
 };
 
 // maps a variable id to its info
@@ -185,12 +188,12 @@ extern HN_API inline std::string hnSocketRead(HnSocket* socket, char* buffer, co
 
 // returns the data represented in a string, multiple arguments of the variable (vec2, ...) will be split by a 
 // forward dash ('/')
-extern HN_API std::string hnVariableDataToString(const void* ptr, const HnDataType dataType);
+extern HN_API std::string hnVariableDataToString(const void* ptr, const HnDataType dataType, uint32_t const dataSize);
 // returns the variables data formatted into a string. This depends on the variables type.
 // Multiple arguments of the data (vec2...) will be split by a forward dash (/)
 extern HN_API inline std::string hnVariableDataToString(const HnVariableInfo* variable);
 // parses the data from given string and updates the data pointer, depending on the requested type
-extern HN_API void hnVariableParseFromString(void* ptr, const std::string& dataString, const HnDataType type);
+extern HN_API void hnVariableParseFromString(void* ptr, const std::string& dataString, const HnDataType type, uint32_t const dataSize);
 
 // sends a packet over given socket
 extern HN_API void hnSocketSendPacket(HnSocket* socket, const HnPacket& packet);

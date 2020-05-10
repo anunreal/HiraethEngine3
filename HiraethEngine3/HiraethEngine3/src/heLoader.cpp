@@ -50,7 +50,7 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
 
 void heMeshLoad(std::string const& fileName, HeVao* vao) {
 	HeTextFile file;
-	heTextFileOpen(&file, fileName, 0);
+	heTextFileOpen(&file, fileName, 0, false);
 	if(!file.open)
 		return;
 	
@@ -121,7 +121,8 @@ void heMeshLoad(std::string const& fileName, HeVao* vao) {
 
 void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
 	HeTextFile file;
-	heTextFileOpen(&file, fileName, 0);
+	file.skipEmptyLines = false;
+	heTextFileOpen(&file, fileName, 0, false);
 	if(!file.open)
 		return;
 	
@@ -130,7 +131,16 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     std::string line;
 	heTextFileGetLine(&file, &line);
 	
-    std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
+    //std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
+	std::string assetName = file.name;
+	
+	auto it = heAssetPool.meshPool.find(assetName);
+	if(it != heAssetPool.meshPool.end()) {
+		heTextFileClose(&file);
+		instance->mesh = &it->second;
+		instance->material = &heAssetPool.materialPool[assetName];
+		return;
+	}
     
 #ifdef HE_ENABLE_NAMES
     instance->name = assetName;
@@ -139,7 +149,7 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     
     // MATERIAL
     instance->material = heAssetPoolGetNewMaterial(assetName);
-    //instance->material->shader = heAssetPoolGetShader(line);
+    instance->material->shader = heAssetPoolGetShader(line);
     instance->material->type = heMaterialGetType(line);
     
 	heTextFileGetLine(&file, &line);
@@ -191,7 +201,7 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
             builder.tangentArray.emplace_back(result);
     }
     
-    HeVao* vao = &heAssetPool.meshPool[fileName];
+    HeVao* vao = &heAssetPool.meshPool[assetName];
     
 #ifdef HE_ENABLE_NAMES
     vao->name = fileName;
@@ -252,7 +262,7 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
 };
 
 void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
-    HeBinaryBuffer buffer;
+	HeBinaryBuffer buffer;
     
     if(!heBinaryBufferOpenFile(&buffer, fileName, 4096, HE_ACCESS_READ_ONLY)) {
         HE_ERROR("Could not find asset file [" + fileName + "]");
@@ -263,6 +273,14 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     
     //std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
 	std::string assetName = buffer.name;
+
+	auto it = heAssetPool.meshPool.find(assetName);
+	if(it != heAssetPool.meshPool.end()) {
+		heBinaryBufferCloseFile(&buffer);
+		instance->mesh = &it->second;
+		instance->material = &heAssetPool.materialPool[assetName];
+		return;
+	}
 	
 #ifdef HE_ENABLE_NAMES
     instance->name = assetName;
@@ -273,7 +291,8 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     
     instance->material = heAssetPoolGetNewMaterial(assetName);
     instance->material->type = heMaterialGetType(line);
-    
+	instance->material->shader = heAssetPoolGetShader(line);
+	
     // -- material
     
     while(heBinaryBufferPeek(&buffer) != '\n') {
@@ -300,7 +319,7 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     heBinaryBufferGetFloatBuffer(&buffer, &builder.uvArray);
     heBinaryBufferGetFloatBuffer(&buffer, &builder.normalArray);
     heBinaryBufferGetFloatBuffer(&buffer, &builder.tangentArray);
-    HeVao* vao = &heAssetPool.meshPool[fileName];
+    HeVao* vao = &heAssetPool.meshPool[assetName];
     
 #ifdef HE_ENABLE_NAMES
     vao->name = assetName;
@@ -326,7 +345,7 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     
     // -- physics
     
-    if(heBinaryBufferAvailable(&buffer)) { // we still have data here
+    if(heBinaryBufferAvailable(&buffer) && physics) { // we still have data here
         int32_t type;
         heBinaryBufferGetInt(&buffer, &type);
         physics->type = (HePhysicsShapeType) type;

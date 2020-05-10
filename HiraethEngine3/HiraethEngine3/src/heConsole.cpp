@@ -249,7 +249,12 @@ void heConsoleToggleOpen(HeConsoleState const state) {
 };
 
 void heConsolePrint(std::string const& message) {
-	heConsole.backlog.emplace_back(message);
+	if(message.find('\n') != std::string::npos) {
+		std::vector<std::string> messages = heStringSplit(message, '\n');
+		for(std::string all : messages)
+			heConsole.backlog.emplace_back(all);
+	} else
+		heConsole.backlog.emplace_back(message);
 };
 
 void heConsoleRender(float const delta) {

@@ -19,10 +19,63 @@
 #pragma warning(pop)
 
 
+// -- ubos
+
+void heUboCreate(HeUbo* ubo) {
+	glGenBuffers(1, &ubo->uboId);
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo->uboId);
+	
+	if(ubo->totalSize > 0) {
+		// round size to next multiple of 16
+		int x = (int) std::ceil(ubo->totalSize / 16.f);
+		ubo->totalSize = x * 16;
+		
+		ubo->buffer = (unsigned char*) malloc(ubo->totalSize);
+		glBufferData(GL_UNIFORM_BUFFER, ubo->totalSize, ubo->buffer, GL_DYNAMIC_DRAW);
+	}
+};
+
+void heUboAllocate(HeUbo* ubo, std::string const& variable, uint32_t const size) {
+	ubo->variableOffset[variable] = ubo->totalSize;
+	ubo->variableSize[variable] = size;
+	ubo->totalSize += size;
+};
+
+void heUboUploadData(HeUbo const* ubo) {
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo->uboId);
+	//glBufferData(GL_UNIFORM_BUFFER, ubo->totalSize, ubo->buffer, GL_DYNAMIC_DRAW);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, ubo->totalSize, ubo->buffer);
+};
+
+void heUboUpdateVariable(HeUbo* ubo, std::string const& variable, void const* ptr) {
+	uint32_t offset = ubo->variableOffset[variable];
+	uint32_t size   = ubo->variableSize[variable];
+	memcpy(ubo->buffer + offset, (unsigned char*) ptr, size); 
+};
+
+void heUboUpdateData(HeUbo* ubo, uint32_t const offset, uint32_t const size, void const* ptr) {
+	memcpy(ubo->buffer + offset, (unsigned char*) ptr, size);
+};
+
+void heUboBind(HeUbo const* ubo, uint32_t const location) {
+	glBindBufferBase(GL_UNIFORM_BUFFER, location, ubo->uboId);
+};
+
+void heUboDestroy(HeUbo* ubo) {
+	glDeleteBuffers(1, &ubo->uboId);
+	free(ubo->buffer);
+	ubo->uboId     = 0;
+	ubo->totalSize = 0;
+	ubo->variableOffset.clear();
+	ubo->variableSize.clear();
+};
+
+
 // --- Shaders
 
 std::string heShaderLoadSource(std::string const& file) {
 	HeTextFile stream;
+	stream.skipEmptyLines = false;
 	heTextFileOpen(&stream, file, 4096, false);
 	if(!stream.open)
 		return "";
@@ -36,6 +89,7 @@ std::string heShaderLoadSource(std::string const& file) {
 
 std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string const& file) {
 	HeTextFile stream;
+	stream.skipEmptyLines = false;
 	heTextFileOpen(&stream, file, 4096, false);
 	if(!stream.open)
 		return std::unordered_map<HeShaderType, std::string>();
@@ -355,10 +409,11 @@ void heShaderCheckReload(HeShaderProgram* program) {
 };
 
 
-int heShaderGetUniformLocation(HeShaderProgram* program, std::string const& uniform) {
+int32_t heShaderGetUniformLocation(HeShaderProgram* program, std::string const& uniform) {
 	int32_t location;
-	if (program->uniforms.find(uniform) != program->uniforms.end()) {
-		location = program->uniforms[uniform];
+	auto it = program->uniforms.find(uniform); 
+	if (it != program->uniforms.end()) {
+		location = it->second;
 	} else {
 		location = glGetUniformLocation(program->programId, uniform.c_str());
 		program->uniforms[uniform] = location;
@@ -375,15 +430,41 @@ int heShaderGetUniformLocation(HeShaderProgram* program, std::string const& unif
 	return location;
 };
 
-int heShaderGetSamplerLocation(HeShaderProgram* program, std::string const& sampler, uint8_t const requestedSlot) {
+int32_t heShaderGetUboLocation(HeShaderProgram* program, std::string const& ubo) {
 	int32_t location;
-	if (program->samplers.find(sampler) != program->samplers.end()) {
-		location = program->samplers[sampler];
+	auto it = program->ubos.find(ubo);
+	if (it != program->ubos.end())
+		location = it->second;
+	else {
+		location = glGetUniformBlockIndex(program->programId, ubo.c_str());
+		program->ubos[ubo] = location;
+		
+		if(location == -1) {
+#ifdef HE_ENABLE_NAMES
+			HE_DEBUG("Could not find ubo [" + ubo + "] in shader [" + program->name + "]");
+#else
+			HE_DEBUG("Could not find ubo [" + ubo + "]");
+#endif
+		}
+	}
+	
+	return location;
+};
+
+int32_t heShaderGetSamplerLocation(HeShaderProgram* program, std::string const& sampler, int8_t const requestedSlot) {
+	int32_t location;
+	auto it = program->samplers.find(sampler);
+	if (it != program->samplers.end()) {
+		location = it->second;
 	} else {
 		int32_t uloc = glGetUniformLocation(program->programId, sampler.c_str());
-		glProgramUniform1i(program->programId, uloc, requestedSlot);
-		program->samplers[sampler] = requestedSlot;
-		location = requestedSlot;
+		uint8_t slot = requestedSlot;
+		if(requestedSlot == -1)
+			slot = (uint8_t) program->samplers.size();
+
+		glProgramUniform1i(program->programId, uloc, slot);
+		program->samplers[sampler] = slot;
+		location = slot;
 		
 		if(uloc == -1) {
 #ifdef HE_ENABLE_NAMES
@@ -822,16 +903,18 @@ void heFboCreateColourBufferAttachment(HeFbo* fbo, HeColourFormat const format, 
 	attachment->size	= size;
 	if(size == hm::vec2i(-1))
 		attachment->size = fbo->size;
-	else
-		attachment->size = size;
+
 	glGenRenderbuffers(1, &attachment->id);
 	glBindRenderbuffer(GL_RENDERBUFFER, attachment->id);
-	glRenderbufferStorageMultisample(GL_RENDERBUFFER, attachment->samples, attachment->format, attachment->size.x, attachment->size.y);
+	if(samples > 1) {
+		GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, attachment->samples, attachment->format, attachment->size.x, attachment->size.y));
+		fbo->useMultisampling = true;
+	} else
+		glRenderbufferStorage(GL_RENDERBUFFER, attachment->format, attachment->size.x, attachment->size.y);
+
+	
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_RENDERBUFFER, attachment->id);
 	
-	if(samples > 1)
-		fbo->useMultisampling = true;
-
 	// memory tracker
 	uint32_t perPixel = heMemoryGetBytesPerPixel(format);
 	uint32_t bytes = attachment->size.x * attachment->size.y * perPixel * samples;
@@ -851,12 +934,11 @@ void heFboCreateDepthBufferAttachment(HeFbo* fbo, uint8_t const samples) {
 	
 	glGenRenderbuffers(1, &fbo->depthAttachment.id);
 	glBindRenderbuffer(GL_RENDERBUFFER, fbo->depthAttachment.id);
-	if (samples == 1)
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, fbo->depthAttachment.size.x, fbo->depthAttachment.size.y);
-	else {
+	if (samples > 1) {
 		glRenderbufferStorageMultisample(GL_RENDERBUFFER, fbo->depthAttachment.samples, GL_DEPTH_COMPONENT24, fbo->depthAttachment.size.x, fbo->depthAttachment.size.y);
 		fbo->useMultisampling = true;
-	}
+	} else
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, fbo->depthAttachment.size.x, fbo->depthAttachment.size.y);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fbo->depthAttachment.id);
 	
 	// memory tracker
@@ -939,12 +1021,16 @@ void heFboResize(HeFbo* fbo, hm::vec2i const& newSize) {
 	// manually destroy fbo without overwriting any data
 
 	uint8_t depthAttachment = 0;
+	uint8_t samples = 0;
 	if(fbo->depthAttachment.id > 0) {
 		heMemoryTracker[HE_MEMORY_TYPE_FBO] -= fbo->depthAttachment.memory;
 		if(fbo->depthAttachment.texture)
 			glDeleteTextures(1, &fbo->depthAttachment.id);
-		else
+		else {
 			glDeleteRenderbuffers(1, &fbo->depthAttachment.id);
+			samples = fbo->depthAttachment.samples;
+		}
+
 		depthAttachment = fbo->depthAttachment.texture + 1;
 	}
 	
@@ -975,7 +1061,7 @@ void heFboResize(HeFbo* fbo, hm::vec2i const& newSize) {
 	}
 	
 	if(depthAttachment == 1)
-		heFboCreateDepthBufferAttachment(fbo);
+		heFboCreateDepthBufferAttachment(fbo, samples);
 	if(depthAttachment == 2)
 		heFboCreateDepthTextureAttachment(fbo);
 };
@@ -983,9 +1069,7 @@ void heFboResize(HeFbo* fbo, hm::vec2i const& newSize) {
 void heFboRender(HeFbo* sourceFbo, HeFbo* targetFbo) {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, targetFbo->fboId);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, sourceFbo->fboId);
-	//glDrawBuffer(GL_BACK); (Invalid operation?)
-	glBlitFramebuffer(0, 0, sourceFbo->size.x, sourceFbo->size.y, 0, 0, targetFbo->size.x, targetFbo->size.y, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-	heFboUnbind();
+	glBlitFramebuffer(0, 0, sourceFbo->size.x, sourceFbo->size.y, 0, 0, targetFbo->size.x, targetFbo->size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 };
 
 void heFboRender(HeFbo* sourceFbo, hm::vec2i const& windowSize) {
@@ -995,9 +1079,14 @@ void heFboRender(HeFbo* sourceFbo, hm::vec2i const& windowSize) {
 	heFboRender(sourceFbo, &fake);
 };
 
-void heFboValidate() {
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		HE_ERROR("Fbo not set up correctly (" + std::to_string(glGetError()) + ")");
+void heFboValidate(HeFbo const* fbo) {
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+#ifdef HE_ENABLE_NAMES
+		HE_ERROR("Fbo [" + fbo->name + "] not set up correctly (" + he_gl_error_to_string(glGetError()) + ")");
+#else
+		HE_ERROR("Fbo not set up correctly (" + he_gl_error_to_string(glGetError()) + ")");
+#endif
+	}
 };
 
 HeTexture heFboCreateColourTextureWrapper(HeFboAttachment const* attachment) {
@@ -1404,7 +1493,7 @@ int32_t heMemoryGetUsage() {
 	//x=0; glGetIntegerv(GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX,&x);
 	//y=0; glGetIntegerv(GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX,&y);
 	//txt+=AnsiString().sprintf("GPU blocks: %i used: %i MByte\r\n",x,y>>10);
-	return (z) * 1000;
+	return (x);
 };
 
 void heGlPrintInfo() {
@@ -1447,7 +1536,7 @@ uint32_t heGlErrorCheck() {
 void heGlErrorPrint(std::string const& location) {
 	uint32_t error = heGlErrorCheck();
 	if(error != GL_NO_ERROR)
-		HE_WARNING("Gl Error: " + std::to_string(error) + " in " + location);
+		HE_WARNING("Gl Error: " + he_gl_error_to_string(error) + " in " + location);
 };
 
 #else

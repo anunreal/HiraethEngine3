@@ -79,6 +79,13 @@ namespace hm {
 			return vec3(-x, -y, -z);
 		};
 		
+		inline vec3& operator*=(float const f) {
+			x *= f;
+			y *= f;
+			z *= f;
+			return *this;
+		};
+
 		inline void operator+=(const vec3& v) {
 			x += v.x;
 			y += v.y;

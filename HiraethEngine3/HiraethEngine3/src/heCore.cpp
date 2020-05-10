@@ -4,8 +4,7 @@
 #include <iostream>
 #include <vector>
 
-void heLogCout(std::string const& message, std::string const& prefix) {
-    
+void heLogCout(std::string const& message, std::string const& prefix) { 
     // get time
     auto time = std::time(nullptr);
     struct tm buf;
@@ -25,6 +24,5 @@ void heLogCout(std::string const& message, std::string const& prefix) {
 
 	output.push_back('\n');
     std::cout << output;
-    std::cout.flush();
-    
+    std::cout.flush();    
 };

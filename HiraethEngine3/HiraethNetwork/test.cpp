@@ -11,10 +11,9 @@ void clientThread(HnClient* client) {
         hnClientUpdateInput(client);
 };
 
-int main() {
-    
+int main() {    
     HnClient client;
-    hnClientConnect(&client, "localhost", 9876, HN_PROTOCOL_UDP);
+    hnClientConnect(&client, "localhost", 9876, HN_PROTOCOL_TCP);
     hnClientSync(&client);
     hnClientCreateVariable(&client, "testvar", HN_DATA_TYPE_FLOAT, 10);
     hnClientHookVariable(&client, "testvar", &testvar);
@@ -31,8 +30,7 @@ int main() {
     if(t.joinable())
         t.join();
     
-    return 0;
-    
+    return 0;    
 };
 
 #endif
@@ -47,10 +45,9 @@ void serverThread(HnServer* server) {
         hnServerUpdate(server);
 };
 
-int main() {
-    
+int main() {    
     HnServer server;
-    hnServerCreate(&server, 9876, HN_PROTOCOL_UDP);
+    hnServerCreate(&server, 9876, HN_PROTOCOL_TCP);
     
     std::thread t(serverThread, &server);
     
@@ -64,8 +61,7 @@ int main() {
     if(t.joinable()) 
         t.join();
     
-    return 0;
-    
+    return 0;    
 };
 
 #endif

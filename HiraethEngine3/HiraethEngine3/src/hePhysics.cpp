@@ -96,13 +96,32 @@ btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
 };
 
 
+float hePhysicsShapeGetHeight(HePhysicsShapeInfo const* info) {
+	float height = 0.f;
+
+	switch(info->type) {
+	case HE_PHYSICS_SHAPE_SPHERE:
+		height = info->sphere * 2.f;
+		break;
+		
+	case HE_PHYSICS_SHAPE_BOX:
+		height = info->box.y * 2.f;
+		break;
+
+	case HE_PHYSICS_SHAPE_CAPSULE:
+		height = info->capsule.y;
+		break;
+	}
+	
+	return height;
+};
+
+
 void hePhysicsLevelCreate(HePhysicsLevel* level, HePhysicsLevelInfo const& info) {
 	level->config	  = new btDefaultCollisionConfiguration();
 	level->dispatcher = new btCollisionDispatcher(level->config);
 	btVector3 worldMin(-1000, -1000, -1000);
 	btVector3 worldMax(1000, 1000, 1000);
-	//btAxisSweep3* sweepBP = new btAxisSweep3(worldMin, worldMax);
-	//level->broadphase = sweepBP;
 	level->broadphase = new btDbvtBroadphase();
 	level->solver	  = new btSequentialImpulseConstraintSolver();
 	level->world	  = new btDiscreteDynamicsWorld(level->dispatcher, level->broadphase, level->solver, level->config);
@@ -152,8 +171,15 @@ void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor* actor) {
 };
 
 void hePhysicsLevelUpdate(HePhysicsLevel* level, const float delta) {
-	// seconds to ms
 	level->world->stepSimulation(delta, 10);
+
+	if(level->actor) {
+		hm::vec3f prev = level->actor->position;
+		level->actor->position        = hePhysicsActorGetPosition(level->actor);
+		level->actor->feetPosition    = level->actor->position;
+		level->actor->feetPosition.y -= hePhysicsShapeGetHeight(&level->actor->shapeInfo) / 2.f;
+		level->actor->velocity        = level->actor->position - prev;
+	}
 };
 
 void hePhysicsLevelEnableDebugDraw(HePhysicsLevel* level, HeRenderEngine* engine) {

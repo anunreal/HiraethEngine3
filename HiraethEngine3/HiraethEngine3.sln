@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29519.87
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HiraethEngine3", "HiraethEngine3\HiraethEngine3.vcxproj", "{76ADC3FB-9847-4884-AB52-8F6686334495}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A5EB3255-E57B-4D4E-AB57-9E828F7C2423} = {A5EB3255-E57B-4D4E-AB57-9E828F7C2423}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HiraethNetwork", "HiraethNetwork\HiraethNetwork.vcxproj", "{A5EB3255-E57B-4D4E-AB57-9E828F7C2423}"
 EndProject

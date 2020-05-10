@@ -19,6 +19,18 @@ struct HeShaderData {
 	};
 };
 
+struct HeUbo {
+	// the gl id
+	uint32_t uboId = 0;
+	// in bytes
+	uint32_t totalSize = 0;
+	// maps variables in this ubo to their offet in bytes
+	std::unordered_map<std::string, uint32_t> variableOffset;
+	std::unordered_map<std::string, uint32_t> variableSize;
+	// the buffer containing the data of this ubo
+	unsigned char* buffer = nullptr;
+};
+
 struct HeShaderProgram {
 	uint32_t programId = 0;
 	// a list of all files loaded for this shader. Everytime the shader is bound and hotswapping is enabled,
@@ -26,11 +38,12 @@ struct HeShaderProgram {
 	std::vector<std::string> files;
 	// maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
 	// be stored in the map for faster lookup.
-	std::unordered_map<std::string, int16_t> uniforms;
+	std::unordered_map<std::string, int32_t> uniforms;
 	// maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the
 	// texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is
 	// saved here so that we dont have to remember it
-	std::unordered_map<std::string, int8_t> samplers;
+	std::unordered_map<std::string, int32_t> samplers;
+	std::unordered_map<std::string, int32_t> ubos;
 	// whether this is a compute shader or a normal pipeline shader
 	b8 computeShader = false;
 	// the memory used by this shader, in bytes
@@ -152,6 +165,25 @@ struct HeTexture {
 };
 
 
+// -- ubos
+
+// creates a new uniform buffer object. Variables should already be allocated before this call.
+extern HE_API void heUboCreate(HeUbo* ubo);
+// allocates space for a variable in the ubo. size must be in bytes
+extern HE_API void heUboAllocate(HeUbo* ubo, std::string const& variable, uint32_t const size);
+// uploads the buffer to the gl object. Should be called after the buffer has been filled with up-to-date data 
+extern HE_API void heUboUploadData(HeUbo const* ubo);
+// updates the given variable to data. This variable must be allocated first. ptr can be a pointer to any memory
+// (floats, math vectors...), but it should be of the size that was allocated 
+extern HE_API void heUboUpdateVariable(HeUbo* ubo, std::string const& variable, void const* ptr);
+// updates the buffer at given offset with given size by copying size bytes from ptr into the ubos buffer
+extern HE_API void heUboUpdateData(HeUbo* ubo, uint32_t const offset, uint32_t const size, void const* ptr);
+// binds the given ubo to a slot that is should be retrieved from the shader
+extern HE_API void heUboBind(HeUbo const* ubo, uint32_t const location);
+// destroys this ubo and all associated data
+extern HE_API void heUboDestroy(HeUbo* ubo);
+
+
 // -- Shaders
 
 // loads a compute shader from given file
@@ -193,14 +225,18 @@ extern HE_API void heShaderReload(HeShaderProgram* program);
 // reloads the program
 extern HE_API void heShaderCheckReload(HeShaderProgram* program);
 
-// gets the location of given uniform in given shader. Once the uniform is loaded, the location is stored in program
-// for faster lookups later. If the uniform wasnt found (spelling mistake or optimized away), -1 is returned
-extern HE_API int heShaderGetUniformLocation(HeShaderProgram* program, std::string const& uniform);
-// gets the location of given sampler in given shader. Once the sampler is loaded, the location is stored in program
-// for faster lookups later. If the sampler wasnt found (spelling mistake or optimized away), -1 is returned.
-// If the sampler does exist, it will be bound to given texture slot (glActiveTexture(GL_TEXTURE0 + requestedSlot))
-extern HE_API int heShaderGetSamplerLocation(HeShaderProgram* program, std::string const& sampler, uint8_t const requestedSlot);
-
+// gets the location of given uniform in given shader. Once the uniform is loaded, the location is stored in
+// program for faster lookups later. If the uniform wasnt found (spelling mistake or optimized away), -1
+// is returned
+extern HE_API int32_t heShaderGetUniformLocation(HeShaderProgram* program, std::string const& uniform);
+// gets the location of given ubo in given shader. Once the ubo is loaded, the location is stored in the program
+// of faster lookups later. If the ubo was not found in the shader, -1 is returned
+extern HE_API int32_t heShaderGetUboLocation(HeShaderProgram* program, std::string const& ubo);
+// gets the location of given sampler in given shader. Once the sampler is loaded, the location is stored in
+// program for faster lookups later. If the sampler wasnt found (spelling mistake or optimized away), -1 is
+// returned. If the sampler does exist, it will be bound to given texture slot (leave at -1 for default slotting)
+// (glActiveTexture(GL_TEXTURE0 + requestedSlot))
+extern HE_API int32_t heShaderGetSamplerLocation(HeShaderProgram* program, std::string const& sampler, int8_t const requestedSlot = -1);
 // sets all samplers (loaded in the shader) to 0
 extern HE_API void heShaderClearSamplers(HeShaderProgram const* program);
 
@@ -295,7 +331,7 @@ extern HE_API void heFboRender(HeFbo* sourceFbo, HeFbo* targetFbo);
 // renders the source fbo directly onto the window with given size
 extern HE_API void heFboRender(HeFbo* sourceFbo, hm::vec2i const& windowSize);
 // checks if the currently bound fbo was correctly set up.
-extern HE_API void heFboValidate();
+extern HE_API void heFboValidate(HeFbo const* fbo);
 // creates a wrapper texture around the given colour texture attachment of the fbo (with size, format,
 // channels... set). Useful when you need to operate on fbo attachments
 extern HE_API HeTexture heFboCreateColourTextureWrapper(HeFboAttachment const* attachment);

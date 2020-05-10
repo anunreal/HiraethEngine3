@@ -20,12 +20,16 @@ b8 heTextFileFillBuffer(HeTextFile* file) {
 	file->stream.read(file->buffer, file->maxBufferSize);
 	file->currentBufferSize = (uint32_t) file->stream.gcount();
 	file->bufferOffset      = 0;
+	if (file->currentBufferSize > 0 && file->buffer[file->currentBufferSize] == EOF)
+		// reached end of file
+		file->currentBufferSize--;
+	
 	return file->currentBufferSize;
 };
 
 void heTextFileOpen(HeTextFile* file, std::string const& path, uint32_t const bufferSize, b8 const loadVersionTag) {
 	file->stream.open(path);
-	if(!file) {
+	if(!file->stream) {
 		// error log
 		file->stream.close();
 		file->open = false;
@@ -67,12 +71,13 @@ void heTextFileClose(HeTextFile* file) {
 		file->stream.close();
 		file->name.clear();
 		file->fullPath.clear();
-		file->lineNumber        = 0;
-		file->open              = false;
-		file->maxBufferSize     = 0;
-		file->currentBufferSize = 0;
-		file->version           = 0;
 	}
+
+	file->lineNumber        = 0;
+	file->open              = false;
+	file->maxBufferSize     = 0;
+	file->currentBufferSize = 0;
+	file->version           = 0;
 };
 
 b8 heTextFileGetLine(HeTextFile* file, std::string* result) {
@@ -99,8 +104,11 @@ b8 heTextFileGetLine(HeTextFile* file, std::string* result) {
 		file->lineNumber++;
 		return file->open;
 	} else {
+		if(!file->open)
+			return false;
+		
 		result->clear();
-		while(file->open && (result->empty() || (*result)[0] == ';')) {
+		while(file->open) {
 			while(file->open && file->buffer[file->bufferOffset] != '\n') {
 				char c;
 				if(!heTextFileGetChar(file, &c))
@@ -108,10 +116,14 @@ b8 heTextFileGetLine(HeTextFile* file, std::string* result) {
 				//heTextFileGetChar(file, &c);
 				result->push_back(c);
 			}
+			
 			file->bufferOffset++; // skip \n
+			if(!file->skipEmptyLines || (!result->empty() && (*result)[0] != ';'))
+				break;
 		}
-		
-		return result->size();
+
+		file->lineNumber++;
+		return true;
 	}
 };
 

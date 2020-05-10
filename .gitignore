@@ -37,3 +37,4 @@ bin-int/
 *.ilk
 *.pdb
 /HiraethEngine3/bin/HiraethEngine3/testrelease.zip
+/HiraethEngine3/bin/HiraethEngine3/resStripped
