@@ -26,12 +26,19 @@ void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window) {
 	heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGBA16, bloomSize, 4); // blur output -> actual bloom
 
 	engine->brightPassShader = heAssetPoolGetShader("bright_pass", "res/shaders/quad_v.glsl", "res/shaders/brightPassFilter.glsl");
-	engine->combineShader = heAssetPoolGetShader("combine_shader", "res/shaders/quad_v.glsl", "res/shaders/d3_final.glsl");
+	engine->combineShader = heAssetPoolGetShader("combine_shader", "res/shaders/quad_v.glsl", "res/shaders/3d_final.glsl");
 	
 	engine->gaussianBlurShader = &heAssetPool.shaderPool["bloomShader"];
 	heShaderCreateCompute(engine->gaussianBlurShader, "res/shaders/bloomCompute.glsl");
 	
 	engine->initialized = true;
+};
+
+void hePostProcessEngineDestroy(HePostProcessEngine* engine) {
+	heFboDestroy(&engine->bloomFbo);
+	heShaderDestroy(engine->brightPassShader);
+	heShaderDestroy(engine->gaussianBlurShader);
+	heShaderDestroy(engine->combineShader);
 };
 
 void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
@@ -109,7 +116,7 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
 	
 	// d3	
 	
-	engine->skyboxShader	= heAssetPoolGetShader("d3_skybox");
+	engine->skyboxShader	= heAssetPoolGetShader("3d_skybox");
 	engine->brdfIntegration = heAssetPoolGetTexture("res/textures/utils/brdf.png", HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE);
 	engine->hdrFbo.size = window->windowInfo.size;
 	heFboCreate(&engine->hdrFbo);
@@ -118,8 +125,8 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
 	//heFboCreateDepthBufferAttachment(&engine->hdrFbo);
 		
 	if(engine->renderMode == HE_RENDER_MODE_DEFERRED) {
-		engine->deferred.gBufferShader	 = heAssetPoolGetShader("d3_gbuffer");
-		engine->deferred.gLightingShader = heAssetPoolGetShader("d3_lighting");
+		engine->deferred.gBufferShader	 = heAssetPoolGetShader("3d_gbuffer");
+		engine->deferred.gLightingShader = heAssetPoolGetShader("3d_lighting");
 		engine->deferred.gBufferFbo.size = window->windowInfo.size;
 		heFboCreate(&engine->deferred.gBufferFbo);
 		heFboCreateDepthBufferAttachment(&engine->deferred.gBufferFbo);
@@ -144,8 +151,6 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
 
 void heRenderEngineResize(HeRenderEngine* engine) {
 	// resize only if the size has changed and its not 0 (minimized window)
-
-	// SIZE CHANGED FLAG
 	if(engine->window->resized && engine->window->windowInfo.size != hm::vec2i(0)) {
 		heFboResize(&engine->hdrFbo, engine->window->windowInfo.size);
 
@@ -165,16 +170,30 @@ void heRenderEngineResize(HeRenderEngine* engine) {
 };
 
 void heRenderEngineDestroy(HeRenderEngine* engine) {
-	heShaderDestroy(engine->textureShader);
 	heVaoDestroy(engine->shapes.quadVao);
+	heVaoDestroy(engine->shapes.cubeVao);
+	heVaoDestroy(engine->shapes.sphereVao);
+
+	heShaderDestroy(engine->textureShader);
+	heShaderDestroy(engine->rgbaShader);
+	heShaderDestroy(engine->skyboxShader);
 	heFboDestroy(&engine->hdrFbo);
+	heTextureDestroy(engine->brdfIntegration);
 
 	if (engine->renderMode == HE_RENDER_MODE_DEFERRED) {
 		heShaderDestroy(engine->deferred.gBufferShader);
+		heShaderDestroy(engine->deferred.gLightingShader);
 		heFboDestroy(&engine->deferred.gBufferFbo);
 	} else {
-
+		heFboDestroy(&engine->forward.forwardFbo);
+		heUboDestroy(&engine->forward.lightsUbo);
 	}	
+
+	heUiQueueDestroy(&engine->uiQueue);
+	
+	// destroy ui and post process
+	if(engine->postProcess.initialized)
+		hePostProcessEngineDestroy(&engine->postProcess);
 };
 
 void heRenderEnginePrepare(HeRenderEngine* engine) {
@@ -186,8 +205,9 @@ void heRenderEngineFinish(HeRenderEngine* engine) {
 	heWindowSwapBuffers(engine->window);
 };
 
-void heShaderLoadMaterial(HeShaderProgram* shader, HeMaterial const* material) {
-	//heShaderClearSamplers(shader);
+void heShaderLoadMaterial(HeRenderEngine* engine, HeShaderProgram* shader, HeMaterial const* material) {
+	if(engine->renderMode == HE_RENDER_MODE_DEFERRED)
+		heShaderClearSamplers(shader);
 
 	for (const auto& textures : material->textures)
 		heTextureBind(textures.second, heShaderGetSamplerLocation(shader, "t_" + textures.first));
@@ -231,7 +251,7 @@ void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level) {
 		hm::mat4f transMat = hm::createTransformationMatrix(all.transformation.position, all.transformation.rotation, all.transformation.scale);
 		heShaderLoadUniform(engine->deferred.gBufferShader, "u_transMat", transMat);
 		heShaderLoadUniform(engine->deferred.gBufferShader, "u_normMat",	 hm::transpose(hm::inverse(hm::mat3f(transMat))));
-		heShaderLoadMaterial(engine->deferred.gBufferShader, all.material);
+		heShaderLoadMaterial(engine, engine->deferred.gBufferShader, all.material);
 		
 		heVaoBind(all.mesh);
 		heVaoRender(all.mesh);
@@ -289,11 +309,11 @@ void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level) {
 	heD3RenderInfo.gamma    = level->camera.gamma;
 };
 
-void heD3InstanceRenderForward(HeD3Instance* instance) {
+void heD3InstanceRenderForward(HeRenderEngine* engine, HeD3Instance* instance) {
 	hm::mat4f transMat = hm::createTransformationMatrix(instance->transformation.position, instance->transformation.rotation, instance->transformation.scale);
 	heShaderLoadUniform(instance->material->shader, "u_transMat", transMat);
 	heShaderLoadUniform(instance->material->shader, "u_normMat", hm::transpose(hm::inverse(hm::mat3f(transMat))));
-	heShaderLoadMaterial(instance->material->shader, instance->material);
+	heShaderLoadMaterial(engine, instance->material->shader, instance->material);
 	heVaoBind(instance->mesh);
 	heVaoRender(instance->mesh);
 };
@@ -357,12 +377,11 @@ void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level) {
 		
 		
 		for (HeD3Instance* instances : all.second)		
-			heD3InstanceRenderForward(instances);
+			heD3InstanceRenderForward(engine, instances);
 	}
 
 	// render skybox
 	if(level->skybox.specular) {
-		// render sky box
 		heDepthFunc(HE_FRAGMENT_TEST_LEQUAL);
 		heCullEnable(false);
 		heVaoBind(engine->shapes.cubeVao);
@@ -469,6 +488,7 @@ void heUiQueueCreate(HeUiQueue* queue) {
 #ifdef HE_ENABLE_NAMES
 	queue->linesVao.name = "linesVao";
 	queue->textVao.name	 = "textVao";
+	queue->quadsVao.name = "quadsVao";
 #endif
 	
 	heVaoCreate(&queue->linesVao, HE_VAO_TYPE_LINES);
@@ -494,6 +514,23 @@ void heUiQueueCreate(HeUiQueue* queue) {
 	heVaoUnbind(&queue->textVao);
 
 	queue->textShader = heAssetPoolGetShader("gui_text");
+
+	// quads
+	heVaoCreate(&queue->quadsVao, HE_VAO_TYPE_TRIANGLES);
+	heVaoBind(&queue->quadsVao);
+	heVboAllocate(&vbo, 0, 2, HE_VBO_USAGE_DYNAMIC);
+	heVaoAddVbo(&queue->quadsVao, &vbo);
+	heVboAllocate(&vbo, 0, 1, HE_VBO_USAGE_DYNAMIC, HE_DATA_TYPE_UINT);
+	heVaoAddVbo(&queue->quadsVao, &vbo);
+	heVaoUnbind(&queue->quadsVao);
+};
+
+void heUiQueueDestroy(HeUiQueue* queue) {
+	heVaoDestroy(&queue->linesVao);
+	heVaoDestroy(&queue->textVao);
+	heVaoDestroy(&queue->quadsVao);
+	heShaderDestroy(queue->linesShader);
+	heShaderDestroy(queue->textShader);
 };
 
 void heUiSetQuadVao(HeVao* vao, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3) {
@@ -678,14 +715,11 @@ void heUiRenderQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const
 	heUiSetQuadVao(engine->shapes.quadVao, _p0, _p1, _p2, _p3);
 	heShaderLoadUniform(engine->rgbaShader, "u_colour", colour);
 	heVaoRender(engine->shapes.quadVao);
-	heVaoUnbind(engine->shapes.quadVao);
-	heShaderUnbind();
 };
 
 void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode align) {
 	HeUiTextMesh mesh;
 	heUiTextCreateMesh(engine, &mesh, font, text, colour);
-	//HeUiTextMesh* mesh = heUiTextFindOrCreateMesh(engine, font, text, colour);
 	
 	heShaderBind(engine->uiQueue.textShader);
 	heVaoBind(&engine->uiQueue.textVao);
@@ -770,8 +804,6 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
 		heTextureBind(all.first->font->atlas, heShaderGetSamplerLocation(engine->uiQueue.textShader, "t_atlas", 0));	
 		
 		for (HeUiText const& texts : all.second) {
-			//HeUiTextMesh mesh;
-			//heUiTextCreateMesh(engine, &mesh, all.first, texts.text, texts.colour);
 			HeUiTextMesh* mesh = heUiTextFindOrCreateMesh(engine, all.first, texts.text, texts.colour);
 
 			hm::vec2f position = texts.position / engine->window->windowInfo.size * 2.f;
@@ -787,14 +819,75 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
 	}
 };
 
+void heUiQueueRenderQuads(HeRenderEngine* engine) {
+	hm::vec2f windowSize(engine->window->windowInfo.size);
+	heShaderBind(engine->rgbaShader);
+	heVaoBind(&engine->uiQueue.quadsVao);
+
+	uint32_t size = (uint32_t) engine->uiQueue.quads.size() * 6;
+	std::vector<float> vertices;
+	std::vector<uint32_t> colours;
+	vertices.reserve(size * 2);
+	colours.reserve(size);
+	
+	for(HeUiColouredQuad const& all : engine->uiQueue.quads) {
+		hm::vec2f _p0 = heSpaceScreenToClip(all.points[0], engine->window);
+		hm::vec2f _p1 = heSpaceScreenToClip(all.points[1], engine->window);
+		hm::vec2f _p2 = heSpaceScreenToClip(all.points[2], engine->window);
+		hm::vec2f _p3 = heSpaceScreenToClip(all.points[3], engine->window);
+
+		vertices.emplace_back(_p0.x);
+		vertices.emplace_back(_p0.y);
+
+		vertices.emplace_back(_p1.x);
+		vertices.emplace_back(_p1.y);
+		
+		vertices.emplace_back(_p2.x);
+		vertices.emplace_back(_p2.y);
+
+		vertices.emplace_back(_p2.x);
+		vertices.emplace_back(_p2.y);
+
+		vertices.emplace_back(_p3.x);
+		vertices.emplace_back(_p3.y);
+
+		vertices.emplace_back(_p1.x);
+		vertices.emplace_back(_p1.y);
+
+		uint32_t colour = hm::encodeColour(all.colour);
+		colours.emplace_back(colour);
+		colours.emplace_back(colour);
+		colours.emplace_back(colour);
+		colours.emplace_back(colour);
+		colours.emplace_back(colour);
+		colours.emplace_back(colour);
+	}
+
+	heShaderLoadUniform(engine->rgbaShader, "u_colour", hm::colour(0, 0, 0, 0));
+	heVaoUpdateData(&engine->uiQueue.quadsVao, vertices, 0);
+	heVaoUpdateDataUint(&engine->uiQueue.quadsVao, colours, 1);
+	heVaoRender(&engine->uiQueue.quadsVao);
+};
+
 void heUiQueueRender(HeRenderEngine* engine) {
 	heBlendMode(0);
 	heDepthEnable(false);
-	heUiQueueRenderLines(engine);
-	heUiQueueRenderTexts(engine);
+	if(engine->uiQueue.lines.size()) {
+		heUiQueueRenderLines(engine);
+		engine->uiQueue.lines.clear();
+	}
+	
+	if(engine->uiQueue.quads.size()) {
+		heUiQueueRenderQuads(engine);
+		engine->uiQueue.quads.clear();
+		}
+	
+	if(engine->uiQueue.texts.size()) {
+		heUiQueueRenderTexts(engine);
+		engine->uiQueue.texts.clear();
+	}
 
 	heTextManager.currentFrame++;
-
 	
 	// remove all unused text meshes
 	auto it = heTextManager.texts.cbegin();
@@ -804,14 +897,9 @@ void heUiQueueRender(HeRenderEngine* engine) {
 		else
 			++it;
 	}
-	
 
 	if(heTextManager.currentFrame > 100000)
 		heTextManager.currentFrame = 0;
-	
-	// clear queue
-	engine->uiQueue.lines.clear();
-	engine->uiQueue.texts.clear();
 };
 
 
@@ -826,6 +914,10 @@ void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const
 void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode const align) {
 	if(text.size() > 0)
 		engine->uiQueue.texts[font].emplace_back(HeUiText(text, position, colour, align));
+};
+
+void heUiPushQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour) {
+	engine->uiQueue.quads.emplace_back(p0, p1, p2, p3, colour);
 };
 
 

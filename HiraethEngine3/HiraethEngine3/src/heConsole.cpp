@@ -267,8 +267,8 @@ void heConsoleRender(float const delta) {
 	uint32_t sizeY = (uint32_t) (heConsole.currentY * window->windowInfo.size.y);
 
 	{ // render background
-		heUiRenderQuad(heRenderEngine, hm::vec2i(0, 0), hm::vec2i(0, sizeY), hm::vec2i(window->windowInfo.size.x, 0), hm::vec2i(window->windowInfo.size.x, sizeY), hm::colour(40, 40, 40, 200));
-		heUiRenderQuad(heRenderEngine, hm::vec2i(0, sizeY), hm::vec2i(0, sizeY + TYPE_BAR_HEIGHT), hm::vec2i(window->windowInfo.size.x, sizeY), hm::vec2i(window->windowInfo.size.x, sizeY + TYPE_BAR_HEIGHT), hm::colour(10, 10, 10, 255));
+		heUiPushQuad(heRenderEngine, hm::vec2i(0, 0), hm::vec2i(0, sizeY), hm::vec2i(window->windowInfo.size.x, 0), hm::vec2i(window->windowInfo.size.x, sizeY), hm::colour(40, 40, 40, 200));
+		heUiPushQuad(heRenderEngine, hm::vec2i(0, sizeY), hm::vec2i(0, sizeY + TYPE_BAR_HEIGHT), hm::vec2i(window->windowInfo.size.x, sizeY), hm::vec2i(window->windowInfo.size.x, sizeY + TYPE_BAR_HEIGHT), hm::colour(10, 10, 10, 255));
 	}
 
 	{ // render backlog
@@ -296,8 +296,8 @@ void heConsoleRender(float const delta) {
 			float width = 10;
 			hm::vec2f offset(heRenderEngine->window->windowInfo.size.x - 20.f, yOffset);
 			
-			heUiRenderQuad(heRenderEngine, hm::vec2f(offset.x, 10.f), hm::vec2f(offset.x, 10.f + totalHeight), hm::vec2f(offset.x + width, 10.f), hm::vec2f(offset.x + width, 10.f + totalHeight), hm::colour(50));
-			heUiRenderQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + height), hm::vec2f(offset.x + width, offset.y), hm::vec2f(offset.x + width, offset.y + height), hm::colour(70));
+			heUiPushQuad(heRenderEngine, hm::vec2f(offset.x, 10.f), hm::vec2f(offset.x, 10.f + totalHeight), hm::vec2f(offset.x + width, 10.f), hm::vec2f(offset.x + width, 10.f + totalHeight), hm::colour(50));
+			heUiPushQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + height), hm::vec2f(offset.x + width, offset.y), hm::vec2f(offset.x + width, offset.y + height), hm::colour(70));
 		}
 	}
 
@@ -316,7 +316,7 @@ void heConsoleRender(float const delta) {
 		if((heConsole.timeSinceLastInput - std::floor(heConsole.timeSinceLastInput)) > 0.5f)
 			alpha = 0;
 		
-		heUiRenderQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + size.y), hm::vec2f(offset.x + size.x, offset.y), offset + size, hm::colour(100, 100, 100, alpha));
+		heUiPushQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + size.y), hm::vec2f(offset.x + size.x, offset.y), offset + size, hm::colour(100, 100, 100, alpha));
 		heConsole.timeSinceLastInput += delta;
 
 		// input string

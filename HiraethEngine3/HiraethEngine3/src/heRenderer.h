@@ -13,10 +13,6 @@ struct HeMaterial;
 struct HeScaledFont;
 struct HeWindow;
 
-/*
-  TODO(Victor):	 Add Post Process (Bloom), Forward renderer
-*/
-
 struct HeUiTextMesh {
 	std::vector<float> vertices;
 	std::vector<uint32_t> colours;
@@ -55,6 +51,14 @@ struct HeUiText {
 	HeUiText(std::string const& text, hm::vec2i const& position, hm::colour const& colour, HeTextAlignMode const align) : text(text), position(position), colour(colour), align(align) {};
 };
 
+struct HeUiColouredQuad {
+	hm::vec2f points[4];
+	hm::colour colour;
+
+	HeUiColouredQuad() {};
+	HeUiColouredQuad(hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour) : points{ p0, p1, p2, p3 }, colour(colour) {};
+};
+
 struct HeUiQueue {
 	HeVao linesVao;
 	HeShaderProgram* linesShader = nullptr;
@@ -63,12 +67,14 @@ struct HeUiQueue {
 	HeVao textVao;
 	HeShaderProgram* textShader	 = nullptr;
 	std::unordered_map<HeScaledFont const*, std::vector<HeUiText>> texts;
+
+	HeVao quadsVao; // used for batch rendering
+	std::vector<HeUiColouredQuad> quads;	
 };
 
 struct HePostProcessEngine {
 	b8 initialized = false;
 	HeFbo bloomFbo; // used for the brightness pass and downscaling that
-	HeTexture bloomTexture; // holds the blurred result
 	HeShaderProgram* brightPassShader   = nullptr;
 	HeShaderProgram* gaussianBlurShader = nullptr;
 	HeShaderProgram* combineShader      = nullptr;
@@ -88,7 +94,7 @@ struct HeRenderEngine {
 	HeWindow* window = nullptr;
 
 	// a simple rgba shader that renders a mesh with one rgba colour
-	HeShaderProgram* rgbaShader; 
+	HeShaderProgram* rgbaShader = nullptr; 
 	// used for 2d texture rendering
 	HeShaderProgram* textureShader = nullptr;
 	// the ui render queue for batch rendering
@@ -102,8 +108,6 @@ struct HeRenderEngine {
 	uint8_t outputTexture = 0;
 	// an 16 bit fbo used for post-process image manipulation
 	HeFbo hdrFbo;
-	// used for rendering the hdr fbo onto the screen with tone mapping, colour corrections etc
-	HeShaderProgram* finalShader	 = nullptr;
 	// renders an hdr skybox of a level (cube map texture) 
 	HeShaderProgram* skyboxShader	 = nullptr;
 	// the brdf integration texture (rg channels)
@@ -124,7 +128,7 @@ struct HeRenderEngine {
 		HeUbo lightsUbo;
 	} forward;
 	
-	HeRenderMode renderMode;
+	HeRenderMode renderMode = HE_RENDER_MODE_FORWARD;
 	HePostProcessEngine postProcess;
 };
 
@@ -136,6 +140,8 @@ extern HeRenderEngine* heRenderEngine;
 
 // creates the post process engine
 extern HE_API void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window);
+// destroys the post process engine. This is called when the render engine gets destroyed
+extern HE_API void hePostProcessEngineDestroy(HePostProcessEngine* engine);
 // loads all important data for the render engine
 extern HE_API void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window);
 // checks if the fbos of the engine are the size of the window, and (if not so) resizes them
@@ -147,15 +153,16 @@ extern HE_API void heRenderEnginePrepare(HeRenderEngine* engine);
 // finishes up the frame by swapping the buffers
 extern HE_API void heRenderEngineFinish(HeRenderEngine* engine);
 // loads given material to given shader by uploading all textures and uniforms set in the material
-extern HE_API void heShaderLoadMaterial(HeShaderProgram* shader, HeMaterial const* material);
-// loads a 3d light source to given shader. If index is -1, the shader is assumed to only have one light as a uniform
-// called u_light. If index is greater or equal to 0, the shader is assumed to have an array of lights, called u_lights[]
+extern HE_API void heShaderLoadMaterial(HeRenderEngine* engine, HeShaderProgram* shader, HeMaterial const* material);
+// loads a 3d light source to given shader. If index is -1, the shader is assumed to only have one light as a
+// uniform called u_light. If index is greater or equal to 0, the shader is assumed to have an array of lights,
+// called u_lights[]
 extern HE_API void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource const* light, int8_t const index);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
 extern HE_API void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level);
 // forward-renders given instance. The shader should already be set up and bound
-extern HE_API void heD3InstanceRenderForward(HeD3Instance* instance);
+extern HE_API void heD3InstanceRenderForward(HeRenderEngine* engine, HeD3Instance* instance);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
 extern HE_API void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level);
@@ -178,8 +185,10 @@ extern HE_API void hePostProcessBloomPass(HeRenderEngine* engine);
 
 // sets up this ui queue by creating the necessary vaos and shaders
 extern HE_API void heUiQueueCreate(HeUiQueue* queue);
-// updates the vao to hold the given vertices (makes two triangles). Binds the given vao first. The default arguments
-// build a quad that covers the whole screen
+// deletes all vaos and shaders used by the queue
+extern HE_API void heUiQueueDestroy(HeUiQueue* queue);
+// updates the vao to hold the given vertices (makes two triangles). Binds the given vao first. The default
+// arguments build a quad that covers the whole screen
 extern HE_API inline void heUiSetQuadVao(HeVao* vao, hm::vec2f const& p0 = hm::vec2f(-1, 1), hm::vec2f const& p1 = hm::vec2f(1, 1), hm::vec2f const& p2 = hm::vec2f(-1, -1), hm::vec2f const& p3 = hm::vec2f(1, -1));
 
 // -- immediate rendering
@@ -201,21 +210,26 @@ extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2f const& p0, h
 // immediate mode: renders text
 extern HE_API void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode const align = HE_TEXT_ALIGN_LEFT);
 
+
 // -- batch rendering
 
 // renders all lines batched together
-extern HE_API void heUiQueueRenderLines(HeRenderEngine* queue);
+extern HE_API void heUiQueueRenderLines(HeRenderEngine* engine);
 // renders all texts batched by their font
-extern HE_API void heUiQueueRenderTexts(HeRenderEngine* queue);
+extern HE_API void heUiQueueRenderTexts(HeRenderEngine* engine);
+// renders all texts batched by their font
+extern HE_API void heUiQueueRenderQuads(HeRenderEngine* engine);
 // renders all ui elements pushed
 extern HE_API void heUiQueueRender(HeRenderEngine* engine);
 // pushes a new line to the render queue. The line will go from p0 to p1 (in pixels), width is in pixels
 extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::colour const& colour, float const width);
-// pushes a new line to the render queue. The line will be projected onto the screen using the camera of the current active d3 level.
-// p0 and p1 must be in world space, width is in pixels
+// pushes a new line to the render queue. The line will be projected onto the screen using the camera of the
+// current active d3 level. p0 and p1 must be in world space, width is in pixels
 extern HE_API inline void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& colour, float const width);
 // pushes a new text with position in window space (pixels)
 extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode const align = HE_TEXT_ALIGN_LEFT);
+// pushes a new quad at given coordinates in window space
+extern HE_API inline void heUiPushQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour);
 
 
 // -- utils

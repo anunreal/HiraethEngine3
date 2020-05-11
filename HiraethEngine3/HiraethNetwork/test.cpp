@@ -47,7 +47,7 @@ void serverThread(HnServer* server) {
 
 int main() {    
     HnServer server;
-    hnServerCreate(&server, 9876, HN_PROTOCOL_TCP);
+    hnServerCreate(&server, 9876, HN_PROTOCOL_UDP);
     
     std::thread t(serverThread, &server);
     

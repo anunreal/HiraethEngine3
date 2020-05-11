@@ -485,8 +485,7 @@ HeShaderProgram* heAssetPoolGetShader(std::string const& name) {
 	s->name = name;
 #endif
 	
-	heShaderCreateProgram(s, "res/shaders/" + name + ".glsl");
-	
+	heShaderCreateProgram(s, "res/shaders/" + name + ".glsl");	
 	return s;
 };
 

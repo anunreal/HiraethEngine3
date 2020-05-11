@@ -40,9 +40,10 @@ struct HeShaderProgram {
 	// be stored in the map for faster lookup.
 	std::unordered_map<std::string, int32_t> uniforms;
 	// maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the
-	// texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This slot is
-	// saved here so that we dont have to remember it
+	// texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This
+	// slot is saved here so that we dont have to remember it
 	std::unordered_map<std::string, int32_t> samplers;
+	// maps ubos to their slot. The slot is shader dependant. This location is saved in the map for faster lookup
 	std::unordered_map<std::string, int32_t> ubos;
 	// whether this is a compute shader or a normal pipeline shader
 	b8 computeShader = false;

@@ -107,6 +107,7 @@ void _onClientConnect(HnClient* client, HnLocalClient* local) {
 void _onClientDisconnect(HnClient* client, HnLocalClient* local) {
 	Player* p = &app.players[local->id];
 	heD3LevelRemoveInstance(&app.level, p->model);
+	app.players.erase(local->id);
 };
 
 void createClient() {
@@ -114,13 +115,14 @@ void createClient() {
 	
 	app.client.callbacks.clientConnect = &_onClientConnect;
 	app.client.callbacks.clientDisconnect = &_onClientDisconnect;
-	//hnConnectClient(&client, "tealfire.de", 9876);
-	hnClientConnect(&app.client, "localhost", 9876, HN_PROTOCOL_TCP);
+	//hnClientConnect(&app.client, "tealfire.de", 9876, HN_PROTOCOL_TCP);
+	hnClientConnect(&app.client, "localhost", 9876, HN_PROTOCOL_UDP);
+
+	hnClientSync(&app.client);
 
 	if(app.client.socket.status != HN_STATUS_CONNECTED)
 		return;
 
-	hnClientSync(&app.client);
 	hnClientCreateVariable(&app.client, "position", HN_DATA_TYPE_VEC3, 10);
 	hnClientHookVariable(  &app.client, "position", &app.level.physics.actor->feetPosition);
 	hnClientCreateVariable(&app.client, "velocity", HN_DATA_TYPE_VEC3, 2);
@@ -185,9 +187,7 @@ void createWorld(HeWindow* window) {
 	heD3Level = &app.level;
 
 	HeD3Instance* instance = &app.level.instances.emplace_back();
-	//instance->mesh = heAssetPoolGetMesh("res/models/player.obj");
-	//instance->material = heAssetPoolGetMaterial("level");
-	heD3InstanceLoadBinary("res/assets/bin/player.h3asset", instance, nullptr);
+    heD3InstanceLoadBinary("res/assets/bin/player.h3asset", instance, nullptr);
 	instance->transformation.position = hm::vec3f(5, 0, -5);
 	
 	HE_LOG("Successfully loaded lvl");
@@ -321,14 +321,18 @@ int main() {
 		sleepTime = heWin32TimerGet();
 		
 #if USE_NETWORKING
-		hnClientUpdateVariables(&app.client);
+		if(app.client.socket.status == HN_STATUS_CONNECTED)
+			hnClientUpdateVariables(&app.client);
 #endif
 	}
 	
 #if USE_NETWORKING
-	hnClientDisconnect(&app.client);
+	if(app.client.socket.status == HN_STATUS_CONNECTED) {
+		hnClientDisconnect(&app.client);
+	}
 	thread.join();
 #endif
+
 	commandThread.detach();
 	heRenderEngineDestroy(&app.engine);
 	heWindowDestroy(&app.window);

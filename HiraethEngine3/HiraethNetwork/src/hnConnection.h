@@ -12,7 +12,7 @@
 #define HN_API __declspec(dllimport)
 #endif
 
-//#define HN_ENABLE_LOG_MSG
+#define HN_ENABLE_LOG_MSG
 #define HN_ENABLE_ERROR_MSG
 #define HN_ENABLE_DEBUG_MSG
 
@@ -77,7 +77,12 @@ struct HnSocket {
     HnProtocol type;
     // the status, should be HN_STATUS_CONNECTED
     HnStatus status;
-    
+
+	// the sequence id of the next-to-send packet
+	uint32_t sequenceId = 1;
+	// the current sequence number of the latest packet received
+	uint32_t remoteSequenceNumber = 0;
+	
     // the other end of the connection if this is a udp socket
     HnSocketAddress destination;
     
@@ -86,6 +91,8 @@ struct HnSocket {
 };
 
 struct HnPacket {
+	// the sequence id of this packet. Only used for udp. If this is 0, the sequence id is not sent in the packet
+	uint32_t sequenceId = 0;
     // the id of this packet, ie the type of this packet. Used for faster recoginition. See above for
     // packet types
     uint8_t type = 0;
@@ -93,6 +100,10 @@ struct HnPacket {
     
     HnPacket() {};
     HnPacket(const uint8_t type) : type(type) {};
+};
+
+struct HnPacketBuilder {
+	
 };
 
 struct HnVariableInfo {
@@ -141,9 +152,9 @@ extern HN_API void hnNetworkDestroy();
 extern HN_API void hnSocketCreateUdp(HnSocket* hnSocket);
 // creates a new tcp socket (for both server and clients). If this fails, the status of the socket is set to error
 extern HN_API void hnSocketCreateTcp(HnSocket* hnSocket);
-// tries to connect given socket to given server. If the connection fails, the status of the socket is set to error.
-// The type of the socket must be set before calling this method to either udp or tcp. The type must be the same 
-// as the server
+// tries to connect given socket to given server. If the connection fails, the status of the socket is set to
+// error. The type of the socket must be set before calling this method to either udp or tcp. The type must be the
+// same as the server
 extern HN_API void hnSocketCreateClient(HnSocket* socket, const std::string& host, const uint32_t port);
 // sets up a server on given socket. If this fails (port already in use?), the status of the socket is set to error
 extern HN_API void hnSocketCreateServer(HnSocket* socket, const uint32_t port);
@@ -153,8 +164,8 @@ extern HN_API void hnSocketDestroy(HnSocket* socket);
 // sends given data over given socket. If an error occurrs, the status of the socket is updated and an 
 // error message is printed
 extern HN_API void hnSocketSendDataTcp(HnSocket* socket, const std::string& data);
-// sends given data from socket to the destination of the socket. If an error occurs, the status of the status of the 
-// socket is updated and an error message is printed
+// sends given data from socket to the destination of the socket. If an error occurs, the status of the status of
+// the socket is updated and an error message is printed
 extern HN_API void hnSocketSendDataUdp(HnSocket* socket, const std::string& data);
 // tries to read from given socket. If the connection is interrupted, an empty string will be returned, else
 // the read message will be returned as a string (with any null chars removed). You can pass a buffer to avoid
@@ -164,8 +175,8 @@ extern HN_API void hnSocketSendDataUdp(HnSocket* socket, const std::string& data
 extern HN_API std::string hnSocketReadTcp(HnSocket* socket, char* buffer, const uint32_t maxSize);
 // reads all data available in the stream to socket. If an error occurrs, a message will be printed, the sockets
 // status will be set to error and an empty string will be returned. Else, the read message will be returned as
-// astring (with any null chars removed). You can pass a buffer to avoid reallocating it every time this function is 
-// called or nullptr when this function should create its own buffer.
+// astring (with any null chars removed). You can pass a buffer to avoid reallocating it every time this function
+// is called or nullptr when this function should create its own buffer.
 // maxSize is the maximum number of bytes read at once (if buffer is not nullptr, maxSize should be the length 
 // of given buffer. If buffer is nullptr, a new buffer will be created with length maxSize).
 // from will be filled with information about the sender of the read packet. This can be set to nullptr if that

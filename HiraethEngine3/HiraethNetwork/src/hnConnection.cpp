@@ -14,14 +14,14 @@ void hnSocketCreate(HnSocket* socket) {
         hnSocketCreateTcp(socket);    
 };
 
-void hnSocketSend(HnSocket* socket, const std::string& msg) {    
+void hnSocketSend(HnSocket* socket, std::string const& msg) {    
     if(socket->type == HN_PROTOCOL_UDP)
         hnSocketSendDataUdp(socket, msg);
     else if(socket->type == HN_PROTOCOL_TCP)
         hnSocketSendDataTcp(socket, msg);
 };
 
-std::string hnSocketRead(HnSocket* socket, char* buffer, const uint32_t maxSize) {    
+std::string hnSocketRead(HnSocket* socket, char* buffer, uint32_t const maxSize) {    
 	std::string msg;
     if(socket->type == HN_PROTOCOL_UDP)
         msg = hnSocketReadUdp(socket, buffer, maxSize, nullptr);
@@ -32,7 +32,7 @@ std::string hnSocketRead(HnSocket* socket, char* buffer, const uint32_t maxSize)
 };
 
 
-std::string hnVariableDataToString(const void* ptr, const HnDataType dataType, uint32_t const dataSize) {    
+std::string hnVariableDataToString(void const* ptr, HnDataType const dataType, uint32_t const dataSize) {    
     if(ptr == nullptr)
         return "";
     
@@ -70,11 +70,11 @@ std::string hnVariableDataToString(const void* ptr, const HnDataType dataType, u
     return data;    
 };
 
-std::string hnVariableDataToString(const HnVariableInfo* info) {
+std::string hnVariableDataToString(HnVariableInfo const* info) {
     return hnVariableDataToString(info->data, info->type, info->dataSize);
 };
 
-void hnVariableParseFromString(void* ptr, const std::string& dataString, const HnDataType type, uint32_t const dataSize) {   
+void hnVariableParseFromString(void* ptr, std::string const& dataString, HnDataType const type, uint32_t const dataSize) {   
     switch(type) {
 	case HN_DATA_TYPE_INT:
         *((int*) ptr) = std::stoi(dataString);
@@ -135,20 +135,22 @@ void hnVariableParseFromString(void* ptr, const std::string& dataString, const H
 		memcpy(ptr, &dataString[0], dataString.size());
 		break;
 	}
-    }
-	
+    }	
 };
 
-void hnSocketSendPacket(HnSocket* socket, const HnPacket& packet) {    
+void hnSocketSendPacket(HnSocket* socket, HnPacket const& packet) {    
     if (socket->status != HN_STATUS_CONNECTED)
         return;
-    
+
+	if(socket->type == HN_PROTOCOL_UDP)
+		socket->sequenceId = socket->sequenceId++);
+	
     hnSocketSend(socket, hnPacketGetContent(packet));
     if(packet.type != HN_PACKET_VAR_UPDATE)
         HN_LOG("Send Packet [" + hnPacketGetContent(packet) + "]");
 };
 
-HnPacket hnPacketBuildFromParameters(uint8_t numargs, const uint8_t type, ...) {    
+HnPacket hnPacketBuildFromParameters(uint8_t numargs, uint8_t const type, ...) {    
     HnPacket packet(type);
     va_list ap;
     
@@ -202,8 +204,12 @@ std::vector<HnPacket> hnPacketDecodeAllFromString(std::string& message) {
     return packets;    
 };
 
-std::string hnPacketGetContent(const HnPacket& packet) {    
-    std::string data = std::to_string(packet.type);
+std::string hnPacketGetContent(HnPacket const& packet) {
+	std::string data = "";
+	if(packet.sequenceId > 0)
+		data = std::to_string(packet);
+	
+	data += std::to_string(packet.type);
     
     for (const std::string& all : packet.arguments)
         data += ":" + all;
@@ -213,7 +219,7 @@ std::string hnPacketGetContent(const HnPacket& packet) {
 };
 
 
-void hnLogCout(const std::string& message, const std::string& prefix) {
+void hnLogCout(std::string const& message, std::string const& prefix) {
     // get time
     auto time = std::time(nullptr);
     struct tm buf;

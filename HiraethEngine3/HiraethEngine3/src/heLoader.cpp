@@ -148,9 +148,9 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
     
     
     // MATERIAL
-    instance->material = heAssetPoolGetNewMaterial(assetName);
+    instance->material         = heAssetPoolGetNewMaterial(assetName);
     instance->material->shader = heAssetPoolGetShader(line);
-    instance->material->type = heMaterialGetType(line);
+    instance->material->type   = heMaterialGetType(line);
     
 	heTextFileGetLine(&file, &line);
 	while(!line.empty()) {

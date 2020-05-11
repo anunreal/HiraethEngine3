@@ -45,7 +45,7 @@ struct HeFont {
 	//	std::unordered_map<uint32_t, Character> characters;
 	std::unordered_map<int32_t, Character> characters;
 	hm::vec4<uint8_t> padding;
-	uint8_t size, lineHeight, baseLine, spaceWidth;
+	uint8_t size = 0, lineHeight = 0, baseLine = 0, spaceWidth = 0;
 	
 	HeTexture* atlas = nullptr;
 	
@@ -61,7 +61,7 @@ struct HeScaledFont {
 	
 	// all of these are in pixels, scaled up or down from the original values in font
 	
-	float lineHeight, baseLine, spaceWidth; 
+	float lineHeight = 0.f, baseLine = 0.f, spaceWidth = 0.f; 
 	hm::vec4f padding;	
 };
 

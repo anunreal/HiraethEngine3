@@ -105,6 +105,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -127,6 +128,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -153,6 +155,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -179,6 +182,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)bin\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-$(Configuration)-$(Platform).lib;glew_$(Platform).lib;Bullet3Collision_$(Configuration).lib;Bullet3Dynamics_$(Configuration).lib;BulletCollision_$(Configuration).lib;BulletDynamics_$(Configuration).lib;LinearMath_$(Configuration).lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -232,6 +236,9 @@
     <ClCompile Include="src\heWin32Layer.cpp" />
     <ClCompile Include="src\heWindow.cpp" />
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\meta\commands.meta" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

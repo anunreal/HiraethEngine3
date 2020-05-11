@@ -19,9 +19,11 @@ void hnClientDisconnect(HnClient* client) {
 void hnClientUpdateInput(HnClient* client) {    
     std::string msg = hnSocketRead(&client->socket, client->inputBuffer, 4096);
     if(msg.size() > 0) {
+		HN_LOG("Msg: " + msg);
         msg = client->lastInput + msg;
         msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
         std::vector<HnPacket> packets = hnPacketDecodeAllFromString(msg);
+		HN_LOG("Packets: " + std::to_string(packets.size()));
         for (const HnPacket& all : packets)
             hnClientHandlePacket(client, all);
         client->lastInput = msg;
@@ -206,9 +208,9 @@ void hnClientCreateVariable(HnClient* client, std::string const& name, HnDataTyp
 void hnClientSync(HnClient* client) {    
     HN_LOG("Syncing client...");
     hnSocketSendPacket(&client->socket, hnPacketBuild(HN_PACKET_SYNC_REQUEST));
-    
+	
     HnPacket incoming = hnClientReadPacket(client);
-    while (incoming.type != HN_PACKET_SYNC_REQUEST) {
+    while (client->socket.status == HN_STATUS_CONNECTED && incoming.type != HN_PACKET_SYNC_REQUEST) {
         hnClientHandlePacket(client, incoming);
         incoming = hnClientReadPacket(client);
     }

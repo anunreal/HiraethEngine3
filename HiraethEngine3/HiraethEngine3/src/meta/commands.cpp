@@ -36,35 +36,6 @@ void front_command_set_jumpheight(std::vector<std::string> const& args) {
 };
 
 
-void command_toggle_physics_debug() {
-	if(heD3Level->physics.enableDebugDraw)
-		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
-	else
-		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
-};
-
-void front_command_toggle_physics_debug(std::vector<std::string> const& args) {
-	if(args.size() != 0) {
-		heConsolePrint("Error: toggle_physics_debug requires 0 arguments");
-		return;
-	};
-	command_toggle_physics_debug();
-};
-
-
-void command_toggle_profiler() {
-	 heProfilerToggleDisplay();
-};
-
-void front_command_toggle_profiler(std::vector<std::string> const& args) {
-	if(args.size() != 0) {
-		heConsolePrint("Error: toggle_profiler requires 0 arguments");
-		return;
-	};
-	command_toggle_profiler();
-};
-
-
 void command_set_exposure(float f) {
 	 heD3Level->camera.exposure = f;
 };
@@ -107,15 +78,63 @@ void front_command_set_name(std::vector<std::string> const& args) {
 };
 
 
+void command_teleport(hm::vec3f const& position) {
+	 if(heD3Level->physics.actor) {
+		  hePhysicsActorSetPosition(heD3Level->physics.actor, position);
+	 }
+
+	 heD3Level->camera.position = position;
+};
+
+void front_command_teleport(std::vector<std::string> const& args) {
+	if(args.size() != 1) {
+		heConsolePrint("Error: teleport requires 1 arguments");
+		return;
+	};
+	hm::vec3f i0 = hm::parseVec3f(args[0]);
+	command_teleport(i0);
+};
+
+
+void command_toggle_physics_debug() {
+	if(heD3Level->physics.enableDebugDraw)
+		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
+	else
+		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
+};
+
+void front_command_toggle_physics_debug(std::vector<std::string> const& args) {
+	if(args.size() != 0) {
+		heConsolePrint("Error: toggle_physics_debug requires 0 arguments");
+		return;
+	};
+	command_toggle_physics_debug();
+};
+
+
+void command_toggle_profiler() {
+	 heProfilerToggleDisplay();
+};
+
+void front_command_toggle_profiler(std::vector<std::string> const& args) {
+	if(args.size() != 0) {
+		heConsolePrint("Error: toggle_profiler requires 0 arguments");
+		return;
+	};
+	command_toggle_profiler();
+};
+
+
 void command_help() {
 	heConsolePrint("=== HELP ===");
 	heConsolePrint("> set_position int: index, vec3: position");
 	heConsolePrint("> set_jumpheight float: height");
-	heConsolePrint("> toggle_physics_debug ");
-	heConsolePrint("> toggle_profiler ");
 	heConsolePrint("> set_exposure float: f");
 	heConsolePrint("> set_gamma float: g");
 	heConsolePrint("> set_name string: name");
+	heConsolePrint("> teleport vec3: position");
+	heConsolePrint("> toggle_physics_debug ");
+	heConsolePrint("> toggle_profiler ");
 	heConsolePrint("=== HELP ===");
 
 };
@@ -132,11 +151,12 @@ void front_command_help(std::vector<std::string> const& args) {
 void heRegisterCommands() {
 	heConsoleRegisterCommand("set_position", &front_command_set_position);
 	heConsoleRegisterCommand("set_jumpheight", &front_command_set_jumpheight);
-	heConsoleRegisterCommand("toggle_physics_debug", &front_command_toggle_physics_debug);
-	heConsoleRegisterCommand("toggle_profiler", &front_command_toggle_profiler);
 	heConsoleRegisterCommand("set_exposure", &front_command_set_exposure);
 	heConsoleRegisterCommand("set_gamma", &front_command_set_gamma);
 	heConsoleRegisterCommand("set_name", &front_command_set_name);
+	heConsoleRegisterCommand("teleport", &front_command_teleport);
+	heConsoleRegisterCommand("toggle_physics_debug", &front_command_toggle_physics_debug);
+	heConsoleRegisterCommand("toggle_profiler", &front_command_toggle_profiler);
 	heConsoleRegisterCommand("help", &front_command_help);
 };
 

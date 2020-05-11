@@ -43,7 +43,6 @@ void heUboAllocate(HeUbo* ubo, std::string const& variable, uint32_t const size)
 
 void heUboUploadData(HeUbo const* ubo) {
 	glBindBuffer(GL_UNIFORM_BUFFER, ubo->uboId);
-	//glBufferData(GL_UNIFORM_BUFFER, ubo->totalSize, ubo->buffer, GL_DYNAMIC_DRAW);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, ubo->totalSize, ubo->buffer);
 };
 
@@ -94,8 +93,7 @@ std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string 
 	if(!stream.open)
 		return std::unordered_map<HeShaderType, std::string>();
 	
-	std::unordered_map<HeShaderType, std::string> sourceMap;
-	
+	std::unordered_map<HeShaderType, std::string> sourceMap;	
 	std::string line;
 	
 	HeShaderType currentType;
@@ -243,6 +241,9 @@ void heShaderLoadProgram(HeShaderProgram* program, std::string const& file) {
 	std::unordered_map<HeShaderType, std::string> source = heShaderLoadSourceAll(file);
 	uint32_t vs = heShaderLoadFromSource(source[HE_SHADER_TYPE_VERTEX], GL_VERTEX_SHADER, file + "#vertex");
 	uint32_t fs = heShaderLoadFromSource(source[HE_SHADER_TYPE_FRAGMENT], GL_FRAGMENT_SHADER, file + "#fragment");
+
+	//HE_LOG("FS: " + source[HE_SHADER_TYPE_FRAGMENT]);
+
 	int32_t gs = -1;
 	if(source.find(HE_SHADER_TYPE_GEOMETRY) != source.end())
 		gs = heShaderLoadFromSource(source[HE_SHADER_TYPE_GEOMETRY], GL_GEOMETRY_SHADER, file + "#geoemtry");
