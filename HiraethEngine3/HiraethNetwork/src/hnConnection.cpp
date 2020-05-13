@@ -7,6 +7,84 @@
 HiraethNetwork* hn = nullptr;
 std::chrono::time_point<std::chrono::steady_clock> startTime;
 
+
+template<>
+void hnIntToString(uint8_t const _int, char* out, uint32_t* offset) {
+	*out = _int;
+	offset++;
+};
+
+template<>
+void hnIntToString(int8_t const _int, char* out, uint32_t* offset) {
+	*out = _int;
+	offset++;
+};
+
+template<>
+void hnIntToString(uint16_t const _int, char* out, uint32_t* offset) {
+	out[(*offset)++] = (char) (_int >> 8);
+	out[(*offset)++] = (char) _int;
+};
+
+template<>
+void hnIntToString(int16_t const _int, char* out, uint32_t* offset) {
+	out[(*offset)++] = (char) (_int >> 8);
+	out[(*offset)++] = (char) _int;
+};
+
+template<>
+void hnIntToString(uint32_t const _int, char* out, uint32_t* offset) {
+	out[(*offset)++] = (char) (_int >> 24);
+	out[(*offset)++] = (char) (_int >> 16);
+	out[(*offset)++] = (char) (_int >> 8);
+	out[(*offset)++] = (char) _int;
+};
+
+template<>
+void hnIntToString(int32_t const _int, char* out, uint32_t* offset) {
+	out[(*offset)++] = (char) (_int >> 24);
+	out[(*offset)++] = (char) (_int >> 16);
+	out[(*offset)++] = (char) (_int >> 8);
+	out[(*offset)++] = (char) _int;
+};
+
+
+void hnFloatToString(float const _float, char* out) {
+	char bytes[4];
+	*(float*) (bytes) = _float;
+	memcpy(out, bytes, 4);
+};
+
+void hnStringToFloat(char const* in, float* out, uint32_t* offset) {
+	char bytes[4];
+	memcpy(bytes, &in[*offset], 4);
+	*offset += 4;
+	*out = *(float*) (bytes);
+};
+
+template<>
+void hnStringToInt(char const* in, uint8_t* out, uint32_t* offset) {
+	*out = (uint8_t) in[*offset];
+	*offset += 1;
+};
+
+template<>
+void hnStringToInt(char const* in, uint16_t* out, uint32_t* offset) {
+	char bytes[2];
+	memcpy(bytes, &in[*offset], 2);
+	*out = (bytes[0] << 8) | bytes[1];
+	*offset += 2;
+};
+
+template<>
+void hnStringToInt(char const* in, uint32_t* out, uint32_t* offset) {
+	char bytes[4];
+	memcpy(bytes, &in[*offset], 4);
+	*out = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+	*offset += 4;
+};
+
+
 void hnSocketCreate(HnSocket* socket) {    
     if(socket->type == HN_PROTOCOL_UDP)
         hnSocketCreateUdp(socket);
@@ -21,12 +99,12 @@ void hnSocketSend(HnSocket* socket, std::string const& msg) {
         hnSocketSendDataTcp(socket, msg);
 };
 
-std::string hnSocketRead(HnSocket* socket, char* buffer, uint32_t const maxSize) {    
+std::string hnSocketRead(HnSocket* socket) {    
 	std::string msg;
     if(socket->type == HN_PROTOCOL_UDP)
-        msg = hnSocketReadUdp(socket, buffer, maxSize, nullptr);
+        msg = hnSocketReadUdp(socket nullptr);
     else if(socket->type == HN_PROTOCOL_TCP)
-        msg = hnSocketReadTcp(socket, buffer, maxSize);
+        msg = hnSocketReadTcp(socket);
     
     return msg;    
 };
@@ -138,84 +216,152 @@ void hnVariableParseFromString(void* ptr, std::string const& dataString, HnDataT
     }	
 };
 
-void hnSocketSendPacket(HnSocket* socket, HnPacket const& packet) {    
+void hnSocketReadPacket() {
+
+};
+
+void hnSocketSendPacket(HnSocket* socket, HnPacket* packet) {    
     if (socket->status != HN_STATUS_CONNECTED)
         return;
-
-	if(socket->type == HN_PROTOCOL_UDP)
-		socket->sequenceId = socket->sequenceId++);
 	
-    hnSocketSend(socket, hnPacketGetContent(packet));
-    if(packet.type != HN_PACKET_VAR_UPDATE)
-        HN_LOG("Send Packet [" + hnPacketGetContent(packet) + "]");
+    hnSocketSend(socket, hnPacketGetContent(packet, socket));
+    if(packet->type != HN_PACKET_VAR_UPDATE) {
+        HN_LOG("Sent Packet of type [" + std::to_string(packet->type) + "]:");
+		//hnStringPrintBytes(hnPacketGetContent(packet));
+	}
 };
 
-HnPacket hnPacketBuildFromParameters(uint8_t numargs, uint8_t const type, ...) {    
-    HnPacket packet(type);
-    va_list ap;
-    
-    va_start(ap, type);
-    while(numargs--)
-        packet.arguments.emplace_back(va_arg(ap, const char*));
-    va_end(ap);
-    
-    return packet;
+void hnPacketDecodeFromString(HnPacket* packet, HnSocket* socket, std::string& message) {
+	uint8_t bytes;
+	hnStringToInt(message.data(), &bytes, &packet->dataOffset);
+
+	if(socket->type == HN_PROTOCOL_UDP) {
+		//hnStringToInt(message.data, &packet->clientId, &packet->dataOffset);
+		// parse sequence id
+		hnStringToInt(message.data(), &packet->sequenceId, &packet->dataOffset);
+		if(packet->sequenceId > socket->udp.remoteSequenceId)
+			socket->udp.remoteSequenceId = packet->sequenceId;
+	}
+
+	hnStringToInt(message.data(), &packet->type, &packet->dataOffset);
+	packet->data = message.substr(packet->dataOffset, bytes);
+	packet->dataOffset = 0;
+	message = message.substr(bytes);
 };
 
-HnPacket hnPacketDecodeFromString(std::string& message) {
-    HnPacket packet;
-    std::string current;
-    unsigned int charCount = 0;
-    for(char all : message) {
-        charCount++;
-        if(all == '!') // end of packet 
-            break;
-        else if(all == ':') { // argument 
-            if(packet.type == 0)
-                packet.type = std::stoi(current); // first argument: type
-            else
-                packet.arguments.emplace_back(current);
-            current.clear();
-        } else // inside argument
-            current += all;
-    }
-    
-    if (packet.type == 0)
-        packet.type = std::stoi(current); // this packet has no arguments, only a type
-    else
-        packet.arguments.emplace_back(current);
-    message = message.substr(charCount);
-    
-    unsigned int offset = 0;
-    while(message.size() > 0 && message[offset] == 0)
-        offset++;
-    
-    if(offset > 0)
-        message = message.substr(offset);
-    
-    return packet;    
-};
-
-std::vector<HnPacket> hnPacketDecodeAllFromString(std::string& message) {    
+std::vector<HnPacket> hnPacketDecodeAllFromString(HnSocket* socket, std::string& message) {    
     std::vector<HnPacket> packets;
-    while(message.find('!') != std::string::npos)
-        packets.emplace_back(hnPacketDecodeFromString(message));
-    
+	while(message.find(-1) != std::string::npos) {
+		HnPacket* packet = &packets.emplace_back();
+		hnPacketDecodeFromString(packet, socket, message);
+	}
+		
     return packets;    
 };
 
-std::string hnPacketGetContent(HnPacket const& packet) {
-	std::string data = "";
-	if(packet.sequenceId > 0)
-		data = std::to_string(packet);
+std::string hnPacketGetContent(HnPacket* packet, HnSocket const* socket) {
+	std::string data;
+	uint32_t offset = 0;
+	uint32_t size = 2;
+	if(socket->type == HN_PROTOCOL_UDP)
+		size += 6;
+
+	data.resize(size);
+
+	packet->size = packet->data.size(); 
+	hnIntToString(packet->size, data.data(), &offset);
 	
-	data += std::to_string(packet.type);
-    
-    for (const std::string& all : packet.arguments)
-        data += ":" + all;
-    
-    data += "!";
-    return data;    
+	if(socket && socket->type == HN_PROTOCOL_UDP) {
+		hnIntToString(packet->clientId, data.data(), &offset); 
+		offset += 2;
+		hnIntToString(packet->sequenceId, data.data(), &offset);
+		offset += 4;
+	}
+		
+	hnIntToString(packet->type, data.data(), &offset);
+	offset += 1;
+
+	if(packet->data.size() > 0) {
+		//data.append(packet->data);
+		data.append(packet->data);
+		offset += (uint32_t) packet->data.size();
+	}
+	
+	//data.push_back(-1);
+	return data;    
+};
+
+
+void hnPacketCreate(HnPacket* packet, HnPacketType const type, HnSocket* socket) {
+	if(socket && socket->type == HN_PROTOCOL_UDP) {
+		packet->sequenceId = socket->udp.sequenceId++;
+		packet->clientId   = socket->udp.clientId;
+	}
+		
+	packet->type = type;
+};
+
+void hnPacketAddFloat(HnPacket* packet, float const _float) {
+	char bytes[4];
+	hnFloatToString(_float, bytes, &packet->dataOffset);
+	//packet->data.append(bytes);
+	packet->data += std::string(bytes);
+};
+
+template<>
+void hnPacketAddInt(HnPacket* packet, uint8_t const _int) {
+	char bytes;
+	hnIntToString(_int, &bytes, &packet->dataOffset);
+	packet->data.push_back(bytes);
+};
+
+template<>
+void hnPacketAddInt(HnPacket* packet, uint16_t const _int) {
+	char bytes[2];
+	hnIntToString(_int, bytes, &packet->dataOffset);
+	//packet->data += std::string(bytes);
+	packet->data.append(bytes, 2);
+};
+
+template<>
+void hnPacketAddInt(HnPacket* packet, uint32_t const _int) {
+	char bytes[4];
+	hnIntToString(_int, bytes, &packet->dataOffset);
+	packet->data.append(bytes, 4);
+	//packet->data += std::string(bytes);
+};
+
+void hnPacketAddString(HnPacket* packet, std::string const& _string) {
+	packet->data.append(_string.c_str(), _string.size() + 1);
+	//packet->data += _string;
+	//packet->data.push_back('\0');
+};
+
+void hnPacketGetFloat(HnPacket* packet, float* result) {
+	hnStringToFloat(packet->data.data(), result, &packet->dataOffset);
+};
+
+template<>
+void hnPacketGetInt(HnPacket* packet, uint8_t* result) {
+	hnStringToInt(packet->data.data(), result, &packet->dataOffset);
+};
+
+template<>
+void hnPacketGetInt(HnPacket* packet, uint16_t* result) {
+	hnStringToInt(packet->data.data(), result, &packet->dataOffset);
+};
+
+template<>
+void hnPacketGetInt(HnPacket* packet, uint32_t* result) {
+	hnStringToInt(packet->data.data(), result, &packet->dataOffset);
+};
+
+void hnPacketGetString(HnPacket* packet, std::string* result) {
+	size_t end = packet->data.find('\0', packet->dataOffset);
+	//result->clear();
+	//std::string arg = ; 
+	result->assign(packet->data.substr(packet->dataOffset, end - packet->dataOffset));
+	packet->dataOffset = (uint32_t) (end + 1);
 };
 
 
@@ -238,6 +384,22 @@ void hnLogCout(std::string const& message, std::string const& prefix) {
     
     std::cout << output;
     std::cout.flush();   
+};
+
+std::string hnStringGetBytes(std::string const& message) {
+	std::string string;
+	string.reserve(message.size() * 3);
+	
+	for(char all : message) {
+		int i = (int) all;
+		if(i < 10 && i >= 0)
+			string.append("00");
+		else if(i < 100)
+			string.append("0");
+		string.append(std::to_string(i) + ' ');
+	}
+
+	return string;
 };
 
 int64_t hnGetCurrentTime() {    

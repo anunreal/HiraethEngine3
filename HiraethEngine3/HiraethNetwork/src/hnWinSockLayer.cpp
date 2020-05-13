@@ -78,8 +78,13 @@ void hnSocketCreateClient(HnSocket* socket, const std::string& host, const uint3
                 memcpy(socket->destination.sa_data, ptr->ai_addr->sa_data, 14);
                 HN_LOG("Successfully connected to server [" + host + "][" + std::to_string(port) + "]");
 
-				if(socket->type == HN_PROTOCOL_UDP)
-					hnSocketSendPacket(socket, hnPacketBuild(HN_PACKET_CLIENT_CONNECT));
+				if(socket->type == HN_PROTOCOL_UDP) {
+					// send "welcome message"
+					HnPacket packet;
+					hnPacketCreate(&packet, HN_PACKET_CLIENT_CONNECT, socket);
+					hnSocketSendPacket(socket, &packet);
+					//hnSocketSendPacket(socket, hnPacketBuild(HN_PACKET_CLIENT_CONNECT));
+				}
 			}
         }   
     }    

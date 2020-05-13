@@ -13,9 +13,9 @@ void clientThread(HnClient* client) {
 
 int main() {    
     HnClient client;
-    hnClientConnect(&client, "localhost", 9876, HN_PROTOCOL_TCP);
+    hnClientConnect(&client, "localhost", 9876, HN_PROTOCOL_UDP);	
     hnClientSync(&client);
-    hnClientCreateVariable(&client, "testvar", HN_DATA_TYPE_FLOAT, 10);
+    hnClientCreateVariable(&client, "testvar", HN_DATA_TYPE_FLOAT, 2);
     hnClientHookVariable(&client, "testvar", &testvar);
     
     std::thread t(clientThread, &client);

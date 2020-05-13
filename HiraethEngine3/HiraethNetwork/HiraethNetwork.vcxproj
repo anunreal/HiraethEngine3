@@ -210,7 +210,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
-      <PreprocessorDefinitions>HN_EXPORTS;HN_USE_WINSOCK;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HN_EXPORTS;HN_USE_WINSOCK;HN_TEST_SERVER;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -252,7 +252,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
-      <PreprocessorDefinitions>HN_EXPORTS;HN_USE_WINSOCK;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HN_EXPORTS;HN_USE_WINSOCK;HN_TEST_SERVER;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

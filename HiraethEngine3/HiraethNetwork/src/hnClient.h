@@ -32,8 +32,6 @@ struct HnClient {
     // Once the server responds and gives an id to the variable, this pointer will be moved into the variableInfo
     // map and removed from this
     std::map<std::string, void*> temporaryDataHooks;
-    
-    
     // input buffer for reading
     char inputBuffer[4096] = {0};
     // left over message from the last input if it didnt line up with the packet ending
@@ -52,7 +50,7 @@ extern HN_API void hnClientUpdateInput(HnClient* client);
 extern HN_API void hnClientUpdateVariables(HnClient* client);
 // handles a packet recieved for a client. If this is a custom packet, it is added to the packet queue of the
 // client, else this will handle the packet internally (syncing...)
-extern HN_API void hnClientHandlePacket(HnClient* client, HnPacket const& packet);
+extern HN_API void hnClientHandlePacket(HnClient* client, HnPacket* packet);
 // requests a new variable which will be registered anywhere. syncRate is the number of ticks after which the 
 // variable should be synced with. If dataSize is zero, this tries to figure out the size of the variable. THIS
 // ONLY WORKS FOR PRIMITIVE TYPES. Strings need to have their (maximum) size set!
