@@ -5,12 +5,15 @@
 #include "hnConnection.h"
 #include <ws2tcpip.h>
 #include <cassert>
+#include <chrono>
+#include <thread>
 #pragma comment(lib, "Ws2_32.lib")
 
 
 // -- file scope
 
 bool wsaSetup = false;
+std::chrono::high_resolution_clock::time_point startTime;
 
 void hnWsaSetup() {    
     if(!wsaSetup) {
@@ -24,7 +27,8 @@ void hnWsaSetup() {
         }
 
 		wsaSetup = true;
-    }    
+		startTime = std::chrono::high_resolution_clock::now();
+    }
 };
 
 void hnWsaDestroy() {    
@@ -56,17 +60,6 @@ void hnSocketCreateTcp(HnSocket* hnSocket) {
         HN_ERROR("Could not create socket");
     else
         hnSocket->status = HN_STATUS_CONNECTED;    
-};
-
-HnSocketId hnServerAcceptClientTcp(HnSocket* serverSocket) {    
-    HnSocketId socket = accept(serverSocket->id, nullptr, nullptr);
-    if (socket == INVALID_SOCKET) {
-        HN_ERROR("Connected to invalid socket");
-        serverSocket->status = HN_STATUS_ERROR;
-        socket = 0;
-    }
-    
-    return socket;    
 };
 
 
@@ -105,7 +98,6 @@ void hnSocketCreateClient(HnSocket* socket, std::string const& host, uint32_t co
                 socket->status = HN_STATUS_CONNECTED;
                 socket->udp.sa_family = ptr->ai_addr->sa_family;
 				memcpy(socket->udp.sa_data, ptr->ai_addr->sa_data, 14);
-                HN_LOG("Successfully connected to server [" + host + "][" + std::to_string(port) + "]");
 			}
 		}   
 	}    
@@ -137,7 +129,8 @@ void hnSocketCreateServer(HnSocket* socket, uint32_t const port) {
                     HN_ERROR("Could not set up server socket: [" + std::to_string(WSAGetLastError()) + "]");
                 } else
 					HN_LOG("Successfully set up server");
-            }
+            } else
+				HN_LOG("Successfully set up server");
         }
     }
 };
@@ -183,26 +176,54 @@ void hnSocketReadData(HnSocket* socket, HnUdpConnection* connection) {
 		} else
 			socket->buffer.currentSize = (uint32_t) bytes;
 
+		socket->lastPacketTime = hnPlatformGetCurrentTime();
 	} else if(socket->type == HN_PROTOCOL_UDP) {
 		SOCKADDR fromWs;
 		int32_t fromSize = sizeof(fromWs);
 		int32_t bytes = recvfrom(socket->id, socket->buffer.buffer, HN_BUFFER_SIZE, 0, &fromWs, &fromSize);
 		if(bytes <= 0) {
 			HN_ERROR("Lost connection to socket");
-			socket->status = HN_STATUS_ERROR;
+			//socket->status = HN_STATUS_ERROR;
+			if(connection)
+				connection->status = HN_STATUS_ERROR;
+
 			socket->buffer.currentSize = 0;
 		} else {
 			socket->buffer.currentSize = bytes;
+			socket->lastPacketTime = hnPlatformGetCurrentTime();		
 
 			if(connection) {
+				connection->status = HN_STATUS_CONNECTED;
 				connection->sa_family = fromWs.sa_family;
 				memcpy(connection->sa_data, fromWs.sa_data, 14);
 			}
 		}
-			
+
 	} else
 		// Please specify a valid socket protocol
 		assert(0);
+};
+
+HnSocketId hnServerAcceptClient(HnSocket* serverSocket) {    
+    HnSocketId socket = accept(serverSocket->id, nullptr, nullptr);
+    if (socket == INVALID_SOCKET) {
+        HN_ERROR("Connected to invalid socket");
+        serverSocket->status = HN_STATUS_ERROR;
+        socket = 0;
+    }
+    
+    return socket;    
+};
+
+
+int64_t hnPlatformGetCurrentTime() {
+	auto now  = std::chrono::high_resolution_clock::now();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+};
+
+void hnPlatformSleep(uint32_t const time) {
+	std::chrono::milliseconds duration(time);
+	std::this_thread::sleep_for(duration);
 };
 
 #endif

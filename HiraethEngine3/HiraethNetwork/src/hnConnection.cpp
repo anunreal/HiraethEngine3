@@ -130,8 +130,13 @@ int32_t hnPacketGetInt(HnPacket* packet) {
 
 
 void hnSocketGetData(HnSocket* socket, char* out, uint32_t requestedSize, HnUdpConnection* connection) {
+	memset(out, 0, requestedSize);
 	uint32_t outOffset = 0;
-	while(requestedSize) {
+	
+	while(socket->status == HN_STATUS_CONNECTED && requestedSize) {
+		if(connection && connection->status == HN_STATUS_ERROR)
+			return;
+		
 		uint32_t read = socket->buffer.currentSize - socket->buffer.offset;
 		if(read > requestedSize)
 			read = requestedSize;
@@ -164,7 +169,10 @@ void hnSocketSendPacket(HnSocket* socket, HnPacketType const type) {
 void hnSocketReadPacket(HnSocket* socket, HnPacket* packet, HnUdpConnection* connection) {
 	char buffer[HN_PACKET_SIZE];
 	hnSocketGetData(socket, buffer, HN_PACKET_SIZE, connection);
-	memcpy(packet, buffer, HN_PACKET_SIZE);
+	if(!connection || connection->status == HN_STATUS_CONNECTED) {
+		memcpy(packet, buffer, HN_PACKET_SIZE);
+		packet->dataOffset = 0;
+	}
 };
 
 

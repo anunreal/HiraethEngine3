@@ -8,16 +8,18 @@
 int main() {
 	HnClient client;
 	hnClientCreate(&client, "localhost", 9876, HN_PROTOCOL_UDP, 75);
+	if(client.socket.status == HN_STATUS_ERROR) {
+		system("pause");
+		return -1;
+	}
 	
 	while(client.socket.status == HN_STATUS_CONNECTED) {
-		HnPacket incoming;
-		hnSocketReadPacket(&client.socket, &incoming);
-		if(incoming.type == HN_PACKET_CLIENT_CONNECT) {
-			HN_LOG("Connected to local client [" + std::to_string(hnPacketGetInt<HnClientId>(&incoming)) + "]");
-		}
+		hnClientUpdateInput(&client);
 	};
 
+	HN_DEBUG("Destroying client...");
 	hnClientDestroy(&client);
+	return 0;
 };
 
 #endif
@@ -26,15 +28,26 @@ int main() {
 
 #ifdef HN_TEST_SERVER
 
+void thread(HnServer* server) {
+	while(server->serverSocket.status == HN_STATUS_CONNECTED) {
+		hnServerHandleInput(server);
+	}
+};
+
 int main() {
 	HnServer server;
 	hnServerCreate(&server, 9876, HN_PROTOCOL_UDP, 75);
 
+	std::thread t(thread, &server);
+	
 	while(server.serverSocket.status == HN_STATUS_CONNECTED) {
 		hnServerUpdate(&server);
 	}
+
 	
 	hnServerDestroy(&server);
+	t.join();
+	return 0;
 };
 
 #endif

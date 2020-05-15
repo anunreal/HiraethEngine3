@@ -44,6 +44,8 @@ typedef enum HnPacketType : uint8_t {
 	HN_PACKET_CLIENT_CONNECT,
 	HN_PACKET_CLIENT_DISCONNECT,
 	HN_PACKET_SYNC_REQUEST,
+	HN_PACKET_CLIENT_DATA,
+	HN_PACKET_PING_CHECK,
 } HnPacketType;
 
 struct HnSocketBuffer {
@@ -53,12 +55,13 @@ struct HnSocketBuffer {
 };
 
 struct HnUdpConnection {
-    uint16_t sa_family        = 0;
-    char sa_data[14]          = {0};
+	HnConnectionStatus status      = HN_STATUS_WAITING;
+    uint16_t           sa_family   = 0;
+    char               sa_data[14] = {0};
 
-	HnSequenceId sequenceId       = 1;
-	HnSequenceId remoteSequenceId = 0;
-	HnClientId   clientId         = 0;
+	HnSequenceId sequenceId        = 1;
+	HnSequenceId remoteSequenceId  = 0;
+	HnClientId   clientId          = 0;
 };
 
 struct HnSocket {
@@ -69,6 +72,11 @@ struct HnSocket {
 	HnSocketBuffer     buffer;
 	
 	HnUdpConnection    udp;
+
+	int64_t lastPacketTime = 0; // time of the last packet arrival, in ms.
+	int64_t pingCheck      = 0; // the time we started to sent the ping check since the program start in ms (if the value is positive) or time since the last successfull ping check in ms (negative)
+	uint16_t ping          = 0; // the current ping of this socket in ms
+	uint32_t timeOut       = 0; // the maximum time to read in ms. If no packet could be read after waiting this amount of time, the connection is assumed to be dead. Leave this at zero to 
 };
 
 struct HnPacket {
@@ -84,12 +92,21 @@ struct HnPacket {
 
 // -- platform dependant
 
+// creates a client socket (tcp or udp) and tries to connect to the specified server. If the connection succeeds,
+// this will instantly sync itself with the server and then return. If no connection could be established, an error
+// message is printed and the sockets status is set to error
 extern HN_API void hnSocketCreateClient(HnSocket* socket, std::string const& host, uint32_t const ort);
 extern HN_API void hnSocketCreateServer(HnSocket* socket, uint32_t const port);
 extern HN_API void hnSocketDestroy(HnSocket* socket);
 
 extern HN_API void hnSocketSendData(HnSocket* socket, char const* data, uint32_t dataSize);
 extern HN_API void hnSocketReadData(HnSocket* socket, HnUdpConnection* connection = nullptr);
+extern HN_API HnSocketId hnServerAcceptClient(HnSocket* serverSocket);
+
+// returns the current time since the program start in milliseconds.
+extern HN_API int64_t hnPlatformGetCurrentTime();
+// sleeps the current thread for given time (in ms)
+extern HN_API void hnPlatformSleep(uint32_t const time);
 
 
 // -- platform independant
