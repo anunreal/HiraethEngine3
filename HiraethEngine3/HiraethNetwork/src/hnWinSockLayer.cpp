@@ -173,10 +173,10 @@ void hnSocketReadData(HnSocket* socket, HnUdpConnection* connection) {
 			HN_ERROR("Lost connection to socket");
 			socket->status = HN_STATUS_ERROR;
 			socket->buffer.currentSize = 0;
-		} else
+		} else {
 			socket->buffer.currentSize = (uint32_t) bytes;
-
-		socket->lastPacketTime = hnPlatformGetCurrentTime();
+			socket->lastPacketTime = hnPlatformGetCurrentTime();
+		}
 	} else if(socket->type == HN_PROTOCOL_UDP) {
 		SOCKADDR fromWs;
 		int32_t fromSize = sizeof(fromWs);

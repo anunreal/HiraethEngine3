@@ -15,7 +15,7 @@
 
 #define HN_BUFFER_SIZE      4096
 #define HN_PACKET_SIZE      256
-#define HN_PACKET_DATA_SIZE 248 // HN_PACKET_SIZE - 8
+#define HN_PACKET_DATA_SIZE 244 // HN_PACKET_SIZE - 12
 
 // winsock socket ids
 typedef unsigned long long HnSocketId;
@@ -23,6 +23,8 @@ typedef unsigned long long HnSocketId;
 typedef uint8_t HnProtocolId;
 // the sequence id is used to identify udp packets
 typedef uint32_t HnSequenceId;
+// stores the last sequence ids received over a socket
+typedef uint32_t HnAcks;
 // unique client id
 typedef uint16_t HnClientId;
 
@@ -59,9 +61,10 @@ struct HnUdpConnection {
     uint16_t           sa_family   = 0;
     char               sa_data[14] = {0};
 
-	HnSequenceId sequenceId        = 1;
+	HnSequenceId sequenceId        = 0;
 	HnSequenceId remoteSequenceId  = 0;
 	HnClientId   clientId          = 0;
+	HnAcks       acks              = 0;
 };
 
 struct HnSocket {
@@ -76,16 +79,16 @@ struct HnSocket {
 	int64_t lastPacketTime = 0; // time of the last packet arrival, in ms.
 	int64_t pingCheck      = 0; // the time we started to sent the ping check since the program start in ms (if the value is positive) or time since the last successfull ping check in ms (negative)
 	uint16_t ping          = 0; // the current ping of this socket in ms
-	uint32_t timeOut       = 0; // the maximum time to read in ms. If no packet could be read after waiting this amount of time, the connection is assumed to be dead. Leave this at zero to 
 };
 
 struct HnPacket {
-	HnProtocolId protocolId = 0;
-	HnSequenceId sequenceId = 0;
-	HnClientId   clientId   = 0;
-	HnPacketType type       = HN_PACKET_NONE;
+	HnProtocolId protocolId = 0;              //   1
+	HnSequenceId sequenceId = 0;              // + 4
+	HnAcks       acks       = 0;              // + 4
+	HnClientId   clientId   = 0;              // + 2
+	HnPacketType type       = HN_PACKET_NONE; // + 1 = 12
 	
-	char data[HN_PACKET_DATA_SIZE];
+	char data[HN_PACKET_DATA_SIZE] = { 0 };
 	uint8_t dataOffset = 0;
 };
 

@@ -71,10 +71,8 @@ void hnServerHandleInput(HnServer* server) {
 		HnUdpConnection connection;
 		hnSocketReadPacket(&server->serverSocket, &packet, &connection);
 
-		if(connection.status == HN_STATUS_ERROR) {
-			HN_LOG("Received null packet");
+		if(connection.status == HN_STATUS_ERROR)
 			return;
-		}
 		
 		if(packet.protocolId != server->serverSocket.protocolId) {
 			HN_DEBUG("Received packet with invalid protocol id [" + std::to_string(packet.protocolId) + "]");
@@ -137,7 +135,7 @@ void hnServerUpdate(HnServer* server) {
 			// update client correctly (ping check)
 			if(client->socket.pingCheck < 0 && -client->socket.pingCheck > server->pingCheckIntervall) {
 				// send ping check
-				client->socket.pingCheck = nowTime;
+				//client->socket.pingCheck = nowTime;
 				hnSocketSendPacket(&client->socket, HN_PACKET_PING_CHECK);
 			} else {
 				client->socket.pingCheck -= delta;
@@ -151,7 +149,7 @@ void hnServerUpdate(HnServer* server) {
 
 void hnServerBroadcastPacket(HnServer* server, HnPacket* packet) {
 	for(auto& clients : server->clients) {
-		packet->sequenceId = clients.second.socket.udp.sequenceId++;
+		packet->sequenceId = ++clients.second.socket.udp.sequenceId;
 		hnSocketSendPacket(&clients.second.socket, packet);
 	}
 };
@@ -160,7 +158,27 @@ void hnServerBroadcastPacket(HnServer* server, HnPacket* packet) {
 void hnRemoteClientHandlePacket(HnServer* server, HnRemoteClient* client, HnPacket* packet) {
 	if(packet->type != HN_PACKET_PING_CHECK)
 		HN_LOG("Remote client [" + std::to_string(client->clientId) + "] sent packet of type [" + std::to_string(packet->type) + "]");
-	
+
+	if(client->socket.type == HN_PROTOCOL_UDP) {
+		if(packet->sequenceId > client->socket.udp.remoteSequenceId) {
+			client->socket.udp.remoteSequenceId = packet->sequenceId;
+			HN_LOG("Client [" + std::to_string(packet->clientId) + "] rsi : " + std::to_string(packet->sequenceId));
+
+			HnAcks acks = packet->acks;
+			uint8_t count = (client->socket.udp.sequenceId < 32) ? client->socket.udp.sequenceId : 32;
+			uint8_t droppedCount = 0;
+			for(uint8_t i = 0; i < count; ++i) {
+				// check if we have an ack for that packet
+				if(!(acks & (0x1 << i))) {
+					droppedCount++;
+					HN_LOG("No ack for packet [" + std::to_string(client->socket.udp.sequenceId - i) + "]");
+				}
+			}
+
+			HN_LOG("Packet loss: " + std::to_string((int) (((float) droppedCount / count) * 100)));
+		}
+	}
+			
 	if(packet->type == HN_PACKET_SYNC_REQUEST) {
 		HnPacket idPacket;
 		hnPacketCreate(&idPacket, HN_PACKET_CLIENT_DATA, &client->socket);

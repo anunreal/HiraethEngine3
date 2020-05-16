@@ -13,8 +13,9 @@ void hnPacketCreate(HnPacket* packet, HnPacketType type, HnSocket* socket) {
 	if(socket) {
 		packet->protocolId = socket->protocolId;
 		if(socket->type == HN_PROTOCOL_UDP) {
-			packet->sequenceId = socket->udp.sequenceId++;
+			packet->sequenceId = ++socket->udp.sequenceId;
 			packet->clientId   = socket->udp.clientId;
+			packet->acks       = socket->udp.acks;
 		}
 	}
 };
@@ -156,6 +157,7 @@ void hnSocketSendPacket(HnSocket* socket, HnPacket* packet) {
 	char buffer[HN_PACKET_SIZE];
 	memcpy(buffer, packet, HN_PACKET_SIZE);
 	hnSocketSendData(socket, buffer, HN_PACKET_SIZE);
+	//HN_LOG("Sent packet of type [" + std::to_string(packet->type) + "][" + std::to_string(packet->sequenceId) + "]");
 };
 
 void hnSocketSendPacket(HnSocket* socket, HnPacketType const type) {
@@ -164,6 +166,7 @@ void hnSocketSendPacket(HnSocket* socket, HnPacketType const type) {
 	char buffer[HN_PACKET_SIZE];
 	memcpy(buffer, &packet, HN_PACKET_SIZE);
 	hnSocketSendData(socket, buffer, HN_PACKET_SIZE);	
+	//HN_LOG("Sent packet of type [" + std::to_string(type) + "][" + std::to_string(packet.sequenceId) + "]");
 };
 
 void hnSocketReadPacket(HnSocket* socket, HnPacket* packet, HnUdpConnection* connection) {
