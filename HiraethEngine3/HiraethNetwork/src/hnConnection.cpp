@@ -13,10 +13,32 @@ void hnPacketCreate(HnPacket* packet, HnPacketType type, HnSocket* socket) {
 	if(socket) {
 		packet->protocolId = socket->protocolId;
 		if(socket->type == HN_PROTOCOL_UDP) {
-			packet->sequenceId = ++socket->udp.sequenceId;
-			packet->clientId   = socket->udp.clientId;
-			packet->acks       = socket->udp.acks;
+			packet->sequenceId  = ++socket->udp.sequenceId;
+			packet->clientId    = socket->udp.clientId;
+			packet->ackBitfield = socket->udp.ackBitfield;
+			packet->ack         = socket->udp.remoteSequenceId;
 		}
+	}
+};
+
+void hnPacketCopy(HnPacket const* from, HnPacket* to, HnSocket* socket) {
+	//	to->data       = from->data;
+	memcpy(to->data, from->data, HN_PACKET_DATA_SIZE);
+	to->dataOffset = from->dataOffset;
+	to->type       = from->type;
+
+	if(socket) {
+		to->protocolId  = socket->protocolId;
+		to->sequenceId  = ++socket->udp.sequenceId;
+		to->ack         = socket->udp.ack;
+		to->ackBitfield = socket->udp.ackBitfield;
+		to->clientId    = socket->udp.clientId;
+	} else {
+		to->protocolId  = from->protocolId;
+		to->sequenceId  = from->sequenceId;
+		to->ack         = from->ack;
+		to->ackBitfield = from->ackBitfield;
+		to->clientId    = from->clientId;
 	}
 };
 
@@ -154,6 +176,14 @@ void hnSocketGetData(HnSocket* socket, char* out, uint32_t requestedSize, HnUdpC
 };
 
 void hnSocketSendPacket(HnSocket* socket, HnPacket* packet) {
+	// DEV: little packet loss test
+#ifdef HN_TEST_CLIENT
+	if(std::rand() % 100 < 25) {
+		HN_LOG("Dropped packet: " + std::to_string(packet->sequenceId));
+		return;
+	}
+#endif
+	
 	char buffer[HN_PACKET_SIZE];
 	memcpy(buffer, packet, HN_PACKET_SIZE);
 	hnSocketSendData(socket, buffer, HN_PACKET_SIZE);
@@ -169,6 +199,35 @@ void hnSocketSendPacket(HnSocket* socket, HnPacketType const type) {
 	//HN_LOG("Sent packet of type [" + std::to_string(type) + "][" + std::to_string(packet.sequenceId) + "]");
 };
 
+void hnSocketSendPacketReliable(HnSocket* socket, HnPacket* packet) {
+	hnSocketSendPacket(socket, packet);
+	// add to reliable history
+	if(socket->type == HN_PROTOCOL_UDP) {
+		// find free spot in history
+		int8_t index = -1;
+		for(int8_t i = 0; i < HN_MAX_RELIABLE_PACKETS; ++i) {
+			if(!socket->udp.reliablePacketsStatus[i]) {
+				index = i;
+				break;
+			}
+		}
+
+		if(index == -1) {
+			HN_ERROR("Reached max amount of reliable packets at a time, or having a really bad connection");
+			return;
+		}
+
+		socket->udp.reliablePacketsStatus[index] = true;
+		socket->udp.reliablePackets[index]       = *packet;
+	}
+};
+
+void hnSocketSendPacketReliable(HnSocket* socket, HnPacketType const type) {
+	HnPacket packet;
+	hnPacketCreate(&packet, type, socket);
+	hnSocketSendPacketReliable(socket, &packet);
+};
+
 void hnSocketReadPacket(HnSocket* socket, HnPacket* packet, HnUdpConnection* connection) {
 	char buffer[HN_PACKET_SIZE];
 	hnSocketGetData(socket, buffer, HN_PACKET_SIZE, connection);
@@ -176,6 +235,42 @@ void hnSocketReadPacket(HnSocket* socket, HnPacket* packet, HnUdpConnection* con
 		memcpy(packet, buffer, HN_PACKET_SIZE);
 		packet->dataOffset = 0;
 	}
+};
+
+void hnSocketUpdateReliable(HnSocket* socket, HnAcks const ack, HnAcks const ackBitfield) {
+	if(socket->type != HN_PROTOCOL_UDP)
+		return;
+
+	uint8_t sequenceOffset = 0;
+	for(uint8_t i = 0; i < HN_MAX_RELIABLE_PACKETS; ++i) {
+		if(socket->udp.reliablePacketsStatus[i]) {
+			HnPacket* packet = &socket->udp.reliablePackets[i];
+
+			// is the packet out of ack bounds by now (too old?)
+			if(ack >= 32 && ack - 32 >= packet->sequenceId) {
+				// resend packet
+				uint32_t prev = packet->sequenceId;
+				sequenceOffset++;
+				packet->sequenceId  = socket->udp.sequenceId + sequenceOffset;
+				packet->ackBitfield = socket->udp.ackBitfield;
+				packet->ack         = socket->udp.remoteSequenceId;
+				hnSocketSendPacket(socket, packet);
+				//HN_LOG("Resending packet [" + std::to_string(prev) + "] as [" + std::to_string(packet->sequenceId) + "]");
+			} else {	
+				// check if we have an ack for that packet now
+				int32_t offset = ack - packet->sequenceId; // if this is negative, we arent up to date with our acks -> no positive or negative ack for this packet so skip for now
+				if(offset > 0 && offset < 32) {
+					if(ackBitfield & (0x1 << offset)) {
+						// we have an ack for this packet, remove from history
+						socket->udp.reliablePacketsStatus[i] = false;
+						//HN_LOG("Successfully sent reliable packet [" + std::to_string(packet->sequenceId) + "]");
+					}
+				}
+			}
+		}
+	}
+
+	socket->udp.sequenceId += sequenceOffset;
 };
 
 

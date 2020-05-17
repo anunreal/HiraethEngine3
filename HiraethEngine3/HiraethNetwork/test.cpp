@@ -20,7 +20,20 @@ int main() {
 	
 	std::thread t(thread, &client);
 
+	HnPacket packet;
+	float i = 0.f;
+	
 	while(client.socket.status == HN_STATUS_CONNECTED) {
+		i += 0.016f;
+
+		if(i >= 5.0f) {
+			hnPacketCreate(&packet, HN_PACKET_MESSAGE, &client.socket);
+			hnPacketStoreString(&packet, "Hello World this is a message [" + std::to_string(packet.sequenceId) + "]");
+			HN_LOG("Sending message [Hello World this is a message [" + std::to_string(packet.sequenceId) + "]]");
+			hnSocketSendPacketReliable(&client.socket, &packet);
+			i = 0.f;
+		}
+		
 		hnClientUpdate(&client);
 	}
 

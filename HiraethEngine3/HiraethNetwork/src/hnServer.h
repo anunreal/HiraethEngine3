@@ -23,8 +23,8 @@ struct HnServer {
 	
 	// -- settings
 
-	uint32_t timeOut = 700000; // if a client hasnt sent a packet in this time (in ms), the connection is assumed to be timed out
-	uint32_t pingCheckIntervall = 1000; // the intervall in between to send ping checks (after the last check returned) in ms
+	uint32_t timeOut = 7000; // if a client hasnt sent a packet in this time (in ms), the connection is assumed to be timed out
+	uint32_t pingCheckIntervall = 500; // the intervall in between to send ping checks (after the last check returned) in ms
 };
 
 extern HN_API void hnServerCreate(HnServer* server, uint32_t const port, HnProtocolType const protocolType, HnProtocolId const protocolId);

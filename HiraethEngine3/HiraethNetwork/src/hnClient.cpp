@@ -15,6 +15,7 @@ void hnClientCreate(HnClient* client, std::string const& host, uint32_t const po
 			hnClientHandlePacket(client, &response);
 			hnSocketReadPacket(&client->socket, &response);
 		}
+
 		hnClientHandlePacket(client, &response); // handle this packet for acks
 			
 		if(client->socket.status == HN_STATUS_CONNECTED)
@@ -41,12 +42,6 @@ void hnClientHandleInput(HnClient* client) {
 };
 
 void hnClientHandlePacket(HnClient* client, HnPacket* packet) {
-	int rand = std::rand() % 100;
-	if(rand < 25) {
-		HN_LOG("Dropped packet [" + std::to_string(packet->sequenceId) + "] of type [" + std::to_string(packet->type) + "]");
-		return;
-	}
-	
 	if(packet->type != HN_PACKET_PING_CHECK)
 		HN_LOG("Received packet of type [" + std::to_string(packet->type) + "] from server");
 
@@ -54,10 +49,25 @@ void hnClientHandlePacket(HnClient* client, HnPacket* packet) {
 		int32_t dif = packet->sequenceId - client->socket.udp.remoteSequenceId;
 		if(dif > 0) {
 			client->socket.udp.remoteSequenceId = packet->sequenceId;
-			HN_LOG("Server [" + std::to_string(packet->clientId) + "] rsi : " + std::to_string(packet->sequenceId));
-			client->socket.udp.acks = client->socket.udp.acks << dif;
-			client->socket.udp.acks |= 0x1;
+			//HN_LOG("Server [" + std::to_string(packet->clientId) + "] rsi : " + std::to_string(packet->sequenceId));
+
+			// we received this packet, store local ack
+			client->socket.udp.ack          = packet->sequenceId;
+			client->socket.udp.ackBitfield  = client->socket.udp.ackBitfield << dif;
+			client->socket.udp.ackBitfield |= 0x1;
+
+			// check which packets the server received from us
+			HnAcks acks = packet->ackBitfield;
+			uint8_t count = (client->socket.udp.ack < 32) ? client->socket.udp.ack : 32;
+			for(uint8_t i = 0; i < count; ++i) {
+				// check if we have an ack for that packet
+				if(!(acks & (0x1 << i))) {
+					//HN_LOG("No ack for packet [" + std::to_string(client->socket.udp.sequenceId - i) + "]");
+				}
+			}
 		}
+
+		hnSocketUpdateReliable(&client->socket, packet->ack, packet->ackBitfield);
 	}
 	
 	if(packet->type == HN_PACKET_CLIENT_CONNECT) {
@@ -81,8 +91,14 @@ void hnClientHandlePacket(HnClient* client, HnPacket* packet) {
 
 		hnSocketSendPacket(&client->socket, HN_PACKET_PING_CHECK);
 	} else if(packet->type == HN_PACKET_SYNC_REQUEST) {
+
 		// done syncing, maybe print debug message? We just need this for acks
-	} else {
+	} else if(packet->type == HN_PACKET_MESSAGE) {
+
+		std::string msg = hnPacketGetString(packet);
+		HN_DEBUG("Received message from server: " + msg);
+	}
+	else {
 		HN_DEBUG("Received invalid packet of type [" + std::to_string(packet->type) + "] from server");
 	}
 };
