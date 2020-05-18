@@ -71,8 +71,14 @@ void hnServerHandleInput(HnServer* server) {
 		HnUdpConnection connection;
 		hnSocketReadPacket(&server->serverSocket, &packet, &connection);
 
-		if(connection.status == HN_STATUS_ERROR)
-			return;
+		if(connection.status == HN_STATUS_ERROR) {
+            HnClientId id = hnServerGetClientIdOfAddress(server, &connection.address);
+            if(id > 0) {
+                HN_DEBUG("Lost connection to remote client [" + std::to_string(id) + "]");
+                hnClientDisconnect(server, &server->clients[id]);
+            }
+            return;
+        }
 		
 		if(packet.protocolId != server->serverSocket.protocolId) {
 			HN_DEBUG("Received packet with invalid protocol id [" + std::to_string(packet.protocolId) + "]");
@@ -81,7 +87,7 @@ void hnServerHandleInput(HnServer* server) {
 		
 		if(packet.clientId == 0) {
 			HnClientId id = ++server->clientCounter;
-			HN_LOG("Connected to remote client [" + std::to_string(id) + "]");
+			HN_DEBUG("Connected to remote client [" + std::to_string(id) + "]");
 
 			// broadcast client connect
 			HnPacket connectPacket;
@@ -100,7 +106,7 @@ void hnServerHandleInput(HnServer* server) {
 			client->socket.udp.clientId   = id;
 			client->socket.udp.status     = HN_STATUS_CONNECTED;
 			client->socket.lastPacketTime = hnPlatformGetCurrentTime();
-			
+
 			// handle packet
 			hnRemoteClientHandlePacket(server, client, &packet);
 			
@@ -128,7 +134,7 @@ void hnServerUpdate(HnServer* server) {
 
 		// check for disconnect
 		if(client->socket.status != HN_STATUS_CONNECTED || nowTime - client->socket.lastPacketTime > server->timeOut) {
-			HN_LOG("Lost connection to remote client [" + std::to_string(client->clientId) + "]");
+			HN_DEBUG("Lost connection to remote client [" + std::to_string(client->clientId) + "]");
 			hnClientDisconnect(server, client);
 		} else {
 			
@@ -136,7 +142,10 @@ void hnServerUpdate(HnServer* server) {
 			if(client->socket.pingCheck < 0 && -client->socket.pingCheck > server->pingCheckIntervall) {
 				// send ping check
 				//client->socket.pingCheck = nowTime;
-				hnSocketSendPacket(&client->socket, HN_PACKET_PING_CHECK);
+                HnPacket packet;
+                hnPacketCreate(&packet, HN_PACKET_PING_CHECK, &client->socket);
+                hnPacketStoreInt(&packet, client->socket.ping);
+				hnSocketSendPacket(&client->socket, &packet);
 			} else {
 				client->socket.pingCheck -= delta;
 			}
@@ -154,6 +163,19 @@ void hnServerBroadcastPacket(HnServer* server, HnPacket* packet) {
 		hnPacketCopy(packet, &clientPacket, &clients.second.socket);
 		hnSocketSendPacket(&clients.second.socket, (clients.second.socket.type == HN_PROTOCOL_UDP) ? &clientPacket : nullptr);
 	}
+};
+
+HnClientId hnServerGetClientIdOfAddress(HnServer const* server, HnUdpAddress const* address) {
+    HnClientId id = 0;
+
+    for(auto const& all : server->clients) {
+        if(all.second.socket.udp.address == *address) {
+            id = all.first;
+            break;
+        }
+    }
+
+    return id;
 };
 
 
@@ -214,7 +236,7 @@ void hnRemoteClientHandlePacket(HnServer* server, HnRemoteClient* client, HnPack
 	} else if(packet->type == HN_PACKET_CLIENT_DISCONNECT) {
 
 		// this client disconnected
-		HN_LOG("Remote client [" + std::to_string(client->clientId) + "] disconnected");
+		HN_DEBUG("Remote client [" + std::to_string(client->clientId) + "] disconnected");
 		hnClientDisconnect(server, client);
 	} else if(packet->type == HN_PACKET_PING_CHECK) {
 

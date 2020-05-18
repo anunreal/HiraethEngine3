@@ -89,6 +89,8 @@ void hnClientHandlePacket(HnClient* client, HnPacket* packet) {
 		HN_DEBUG("Received client id [" + std::to_string(clientId) + "]");
 	} else if(packet->type == HN_PACKET_PING_CHECK) {
 
+        uint16_t ping = hnPacketGetInt<uint16_t>(packet);
+        client->socket.ping = ping;
 		hnSocketSendPacket(&client->socket, HN_PACKET_PING_CHECK);
 	} else if(packet->type == HN_PACKET_SYNC_REQUEST) {
 

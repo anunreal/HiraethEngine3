@@ -30,77 +30,83 @@ typedef uint32_t HnAcks;
 typedef uint16_t HnClientId;
 typedef bool b8;
 
-typedef enum HnProtocolType : uint8_t {	
+typedef enum HnProtocolType : uint8_t { 
     HN_PROTOCOL_NONE,
-	HN_PROTOCOL_UDP,
-	HN_PROTOCOL_TCP
+    HN_PROTOCOL_UDP,
+    HN_PROTOCOL_TCP
 } HnProtocolType;
 
 typedef enum HnConnectionStatus : uint8_t {
     HN_STATUS_WAITING,
     HN_STATUS_CONNECTED,
     HN_STATUS_ERROR,
-	HN_STATUS_CLOSED
+    HN_STATUS_CLOSED
 } HnConnectionStatus;
 
 typedef enum HnPacketType : uint8_t {
     HN_PACKET_NONE,
-	HN_PACKET_CLIENT_CONNECT,
-	HN_PACKET_CLIENT_DISCONNECT,
-	HN_PACKET_SYNC_REQUEST,
-	HN_PACKET_CLIENT_DATA,
-	HN_PACKET_PING_CHECK,
-	HN_PACKET_MESSAGE,
+    HN_PACKET_CLIENT_CONNECT,
+    HN_PACKET_CLIENT_DISCONNECT,
+    HN_PACKET_SYNC_REQUEST,
+    HN_PACKET_CLIENT_DATA,
+    HN_PACKET_PING_CHECK,
+    HN_PACKET_MESSAGE,
 } HnPacketType;
 
 struct HnPacket {
-	HnProtocolId protocolId  = 0;              //   1
-	HnSequenceId sequenceId  = 0;              // + 4
-	HnAcks       ack         = 0;              // + 4
-	HnAcks       ackBitfield = 0;              // + 4
-	HnClientId   clientId    = 0;              // + 2
-	HnPacketType type        = HN_PACKET_NONE; // + 1 = 16
-	
-	char data[HN_PACKET_DATA_SIZE] = { 0 };
-	uint8_t dataOffset = 0;
+    HnProtocolId protocolId  = 0;              //   1
+    HnSequenceId sequenceId  = 0;              // + 4
+    HnAcks       ack         = 0;              // + 4
+    HnAcks       ackBitfield = 0;              // + 4
+    HnClientId   clientId    = 0;              // + 2
+    HnPacketType type        = HN_PACKET_NONE; // + 1 = 16
+    
+    char data[HN_PACKET_DATA_SIZE] = { 0 };
+    uint8_t dataOffset = 0;
 };
 
 struct HnSocketBuffer {
-	uint32_t currentSize   = 0;
-	uint32_t offset        = 0;
-	char buffer[HN_BUFFER_SIZE] = { 0 };
+    uint32_t currentSize   = 0;
+    uint32_t offset        = 0;
+    char buffer[HN_BUFFER_SIZE] = { 0 };
 };
 
-struct HnUdpConnection {
-	HnConnectionStatus status      = HN_STATUS_WAITING;
+struct HnUdpAddress {
     uint16_t           sa_family   = 0;
     char               sa_data[14] = {0};
 
-	HnSequenceId sequenceId        = 0;
-	HnSequenceId remoteSequenceId  = 0;
-	HnClientId   clientId          = 0;
-	HnAcks       ack               = 0; // the last packet that received an ack
-	HnAcks       ackBitfield       = 0; // a bitfield of the last 32 sequences where 1 means we received an ack
-	
-	// status of the packets in the reliablePackets array. If this is false, the packet at that index is invalid
-	// (spot) is free. If a new reliable packet is sent, the status will be set to true until we are sure that that
-	// packet arrived.
-	b8 reliablePacketsStatus[HN_MAX_RELIABLE_PACKETS] = { false };	
-	HnPacket reliablePackets[HN_MAX_RELIABLE_PACKETS] = { 0 };
+    b8 operator==(HnUdpAddress const& rhs) const;
+};
+
+struct HnUdpConnection {
+    HnConnectionStatus status      = HN_STATUS_WAITING;
+    HnUdpAddress       address;
+    
+    HnSequenceId sequenceId        = 0;
+    HnSequenceId remoteSequenceId  = 0;
+    HnClientId   clientId          = 0;
+    HnAcks       ack               = 0; // the last packet that received an ack
+    HnAcks       ackBitfield       = 0; // a bitfield of the last 32 sequences where 1 means we received an ack
+    
+    // status of the packets in the reliablePackets array. If this is false, the packet at that index is invalid
+    // (spot) is free. If a new reliable packet is sent, the status will be set to true until we are sure that that
+    // packet arrived.
+    b8 reliablePacketsStatus[HN_MAX_RELIABLE_PACKETS] = { false };  
+    HnPacket reliablePackets[HN_MAX_RELIABLE_PACKETS] = { 0 };
 };
 
 struct HnSocket {
-	HnSocketId         id         = 0;	
-	HnProtocolId       protocolId = 0;
-	HnProtocolType     type       = HN_PROTOCOL_NONE; 
-	HnConnectionStatus status     = HN_STATUS_WAITING;
-	HnSocketBuffer     buffer;
-	
-	HnUdpConnection    udp;
+    HnSocketId         id         = 0;  
+    HnProtocolId       protocolId = 0;
+    HnProtocolType     type       = HN_PROTOCOL_NONE; 
+    HnConnectionStatus status     = HN_STATUS_WAITING;
+    HnSocketBuffer     buffer;
+    
+    HnUdpConnection    udp;
 
-	int64_t lastPacketTime = 0; // time of the last packet arrival, in ms.
-	int64_t pingCheck      = 0; // the time we started to sent the ping check since the program start in ms (if the value is positive) or time since the last successfull ping check in ms (negative)
-	uint16_t ping          = 0; // the current ping of this socket in ms
+    int64_t lastPacketTime = 0; // time of the last packet arrival, in ms.
+    int64_t pingCheck      = 0; // the time we started to sent the ping check since the program start in ms (if the value is positive) or time since the last successfull ping check in ms (negative)
+    uint16_t ping          = 0; // the current ping of this socket in ms
 };
 
 

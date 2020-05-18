@@ -4,6 +4,22 @@
 
 
 // -- platform independant
+b8 HnUdpAddress::operator==(HnUdpAddress const& rhs) const {
+    if(rhs.sa_family != sa_family)
+        return false;
+
+    b8 same = true;
+
+    for(uint8_t i = 0; i < 14; ++i) {
+        if(rhs.sa_data[i] != sa_data[i]) {
+            same = false;
+            break;
+        }
+    }
+
+    return same;
+};
+
 
 void hnPacketCreate(HnPacket* packet, HnPacketType type, HnSocket* socket) {
 	memset(packet, 0, HN_PACKET_SIZE);
