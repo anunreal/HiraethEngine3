@@ -1,28 +1,69 @@
 #include <iostream>
 #include <windows.h>
-#include "src/hnClient.h"
-#include "src/hnServer.h"
+#include <thread>
 
 #ifdef HN_TEST_CLIENT
+#include "src/hnClient.h"
+
+struct vec2 {
+    float x = 0.f, y = 0.f;
+};
+
+vec2 localTestVar;
+
+struct Player {
+    vec2 testVar;
+};
+
+std::unordered_map<HnClientId, Player> players;
 
 void thread(HnClient* client) {
 	while(client->socket.status == HN_STATUS_CONNECTED)
 		hnClientHandleInput(client);
 };
 
+void clientConnect(HnClient* client, HnLocalClient* local) {
+    Player* p = &players[local->clientId];
+    hnLocalClientHookVariable(client, local, "testvar", &p->testVar);
+};
+
+void clientDisconnect(HnClient* client, HnLocalClient* local) {
+    players.erase(local->clientId);
+};
+
 int main() {
 	HnClient client;
+    client.callbacks.clientConnect = clientConnect;
+    client.callbacks.clientDisconnect = clientDisconnect;
 	hnClientCreate(&client, "localhost", 9876, HN_PROTOCOL_UDP, 75);
+    
 	if(client.socket.status == HN_STATUS_ERROR) {
 		system("pause");
 		return -1;
 	}
-	
+
 	std::thread t(thread, &client);
-	
+
+    hnClientCreateVariableFixed(&client, "testvar", HN_VARIABLE_TYPE_FLOAT, 2, 60);
+    hnClientHookVariable(&client, "testvar", &localTestVar); 
+    
 	while(client.socket.status == HN_STATUS_CONNECTED) {		
-		hnClientUpdate(&client);
-	}
+        //hnClientSendVariable(&client, client.variableNames["testvar"]);
+        hnClientUpdate(&client);
+        //HN_LOG("Client stats: ping " + std::to_string(client.socket.stats.ping) + "ms, packet loss " + std::to_string((int) (client.socket.stats.packetLoss * 100)) + "%");
+
+        localTestVar.x += 0.16f;
+        if(localTestVar.x > 10.f) {
+            localTestVar.x = 0.f;
+            localTestVar.y++;
+        }
+
+        if(client.tick % 10 == 0) {
+            HN_LOG("Local: " + std::to_string(localTestVar.x) + ", " + std::to_string(localTestVar.y));
+            for(auto const& all : players)
+                HN_LOG("Remote: " + std::to_string(all.second.testVar.x) + ", " + std::to_string(all.second.testVar.y));
+        }
+    }
 
 	HN_DEBUG("Destroying client...");
 	hnClientDestroy(&client);
@@ -35,6 +76,7 @@ int main() {
 
 
 #ifdef HN_TEST_SERVER
+#include "src/hnServer.h"
 
 void thread(HnServer* server) {
 	while(server->serverSocket.status == HN_STATUS_CONNECTED) {

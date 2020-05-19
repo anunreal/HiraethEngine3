@@ -21,13 +21,16 @@
 // winsock socket ids
 typedef unsigned long long HnSocketId;
 // The protocol id should be unique for a program. This ensures that 
-typedef uint8_t HnProtocolId;
+typedef uint8_t  HnProtocolId;
 // the sequence id is used to identify udp packets
 typedef uint32_t HnSequenceId;
 // stores the last sequence ids received over a socket
 typedef uint32_t HnAcks;
 // unique client id
 typedef uint16_t HnClientId;
+// unique ids for variables
+typedef uint8_t  HnVariableId;
+
 typedef bool b8;
 
 typedef enum HnProtocolType : uint8_t { 
@@ -51,7 +54,16 @@ typedef enum HnPacketType : uint8_t {
     HN_PACKET_CLIENT_DATA,
     HN_PACKET_PING_CHECK,
     HN_PACKET_MESSAGE,
+    HN_PACKET_VAR_NEW,
+    HN_PACKET_VAR_UPDATE,
 } HnPacketType;
+
+typedef enum HnVariableType : uint8_t {
+    HN_VARIABLE_TYPE_NONE,
+    HN_VARIABLE_TYPE_FLOAT,
+    HN_VARIABLE_TYPE_INT32,
+    HN_VARIABLE_TYPE_CHAR,
+} HnVariableType;
 
 struct HnPacket {
     HnProtocolId protocolId  = 0;              //   1
@@ -63,6 +75,13 @@ struct HnPacket {
     
     char data[HN_PACKET_DATA_SIZE] = { 0 };
     uint8_t dataOffset = 0;
+};
+
+struct HnSocketStats {
+    int64_t  lastPacketTime = 0; // time of the last packet arrival, in ms.
+    int64_t  pingCheck      = 0; // the time we started to sent the ping check since the program start in ms (if the value is positive) or time since the last successfull ping check in ms (negative)
+    uint16_t ping           = 0; // the current ping of this socket in ms
+    float    packetLoss     = 0.f;
 };
 
 struct HnSocketBuffer {
@@ -103,10 +122,14 @@ struct HnSocket {
     HnSocketBuffer     buffer;
     
     HnUdpConnection    udp;
+    HnSocketStats      stats;
+};
 
-    int64_t lastPacketTime = 0; // time of the last packet arrival, in ms.
-    int64_t pingCheck      = 0; // the time we started to sent the ping check since the program start in ms (if the value is positive) or time since the last successfull ping check in ms (negative)
-    uint16_t ping          = 0; // the current ping of this socket in ms
+struct HnVariableInfo {
+    HnVariableId   id       = 0;
+    HnVariableType type     = HN_VARIABLE_TYPE_NONE;
+    uint8_t        length   = 0; // the length of the array of given type, or 1 if this is a single member. A string is just a char array of given length
+    uint8_t        syncRate = 0; // in ticks. I.e. if this is 2, this variable gets updated every second tick. If this is zero, the variable doesnt get updated automatically but only through manual updates
 };
 
 
@@ -155,17 +178,26 @@ extern HN_API inline void hnPacketStoreFloat(HnPacket* packet, float const _floa
 // dataOffset by the size of that int
 template<typename T>
 extern HN_API inline void hnPacketStoreInt(HnPacket* packet, T const _int);
+// copies a bool into the packet. A bool is just one byte in this packet, either 0 or 1
+extern HN_API inline void hnPacketStoreBool(HnPacket* packet, b8 const _bool);
+// adds the variables data to the packet. This adds either chars (uint8_t), ints or floats to that packet. The
+// amount of bytes written depends on the variable type and length
+extern HN_API void hnPacketStoreVariable(HnPacket* packet, HnVariableInfo const* info, void* ptr);
 
 // copies dataSize amount of bytes from the packets buffer into out
-extern HN_API void        hnPacketGetData(HnPacket* packet, void* out, uint32_t const dataSize);
+extern HN_API void hnPacketGetData(HnPacket* packet, void* out, uint32_t const dataSize);
 // tries to find the next \0 char in the packets buffer and returns the byte chunk from the current packets
 // dataOffset to that char 
 extern HN_API std::string hnPacketGetString(HnPacket* packet);
 // returns the next four bytes of the packets data, interpreted as float
-extern HN_API float       hnPacketGetFloat(HnPacket* packet);
+extern HN_API float hnPacketGetFloat(HnPacket* packet);
 // returns an int of specified size
 template<typename T>
-extern HN_API T           hnPacketGetInt(HnPacket* packet);
+extern HN_API T hnPacketGetInt(HnPacket* packet);
+// returns false if the next char in the buffer is 0. Else this returns true
+extern HN_API b8 hnPacketGetBool(HnPacket* packet);
+// tries to read variable info from packet into ptr.
+extern HN_API void hnPacketGetVariable(HnPacket* packet, HnVariableInfo const* info, void* ptr);
 
 // tries to read requestedSize bytes from the sockets buffer. If the buffer does not have enough valid data, this
 // waits until new data can be read from the socket and then refills the buffer. 
@@ -192,7 +224,7 @@ extern HN_API void hnSocketReadPacket(HnSocket* socket, HnPacket* packet, HnUdpC
 // of that packet in the reliable packet is cleared. If we dont have an ack, and the sequence id of the socket
 // is 32 bigger than the sequence id of the original packet, we resent that packet with an updated sequence id.
 // This should be called after every packet we receive over a socket (everytime the acks are updated)
-extern HN_API void hnSocketUpdateReliable(HnSocket* socket, HnAcks const ack, HnAcks const ackBitfield);
+extern HN_API void hnSocketUpdateReliable(HnSocket* socket, HnPacket const* packet);
 
 
 // -- logging

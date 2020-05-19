@@ -139,7 +139,6 @@ void hnSocketDestroy(HnSocket* socket) {
     closesocket(socket->id);
     socket->id     = 0;
     socket->status = HN_STATUS_CLOSED;    
-    socket->type   = HN_PROTOCOL_NONE;
 };
 
 void hnSocketSendData(HnSocket* socket, char const* data, uint32_t const dataSize) {
@@ -149,7 +148,7 @@ void hnSocketSendData(HnSocket* socket, char const* data, uint32_t const dataSiz
     if(socket->type == HN_PROTOCOL_TCP) {
         int32_t res = send(socket->id, data, dataSize, 0);
         if(res <= 0) {
-            HN_ERROR("Lost connection to socket while writing");
+            HN_LOG("Lost connection to socket while writing");
             socket->status = HN_STATUS_ERROR;
         }
     } else if(socket->type == HN_PROTOCOL_UDP) {
@@ -158,7 +157,7 @@ void hnSocketSendData(HnSocket* socket, char const* data, uint32_t const dataSiz
         memcpy(addr.sa_data, socket->udp.address.sa_data, 14);
         int32_t res = sendto(socket->id, data, dataSize, 0, &addr, sizeof(addr));
         if(res <= 0) {
-            HN_ERROR("Lost connection to socket while writing");
+            HN_LOG("Lost connection to socket while writing");
             socket->status = HN_STATUS_ERROR;
         }    
     } else
@@ -176,19 +175,19 @@ void hnSocketReadData(HnSocket* socket, HnUdpConnection* connection) {
     if(socket->type == HN_PROTOCOL_TCP) {
         int32_t bytes = recv(socket->id, socket->buffer.buffer, HN_BUFFER_SIZE, 0);
         if(bytes <= 0) {
-            HN_ERROR("Lost connection to socket while reading");
+            HN_LOG("Lost connection to socket while reading");
             socket->status = HN_STATUS_ERROR;
             socket->buffer.currentSize = 0;
         } else {
             socket->buffer.currentSize = (uint32_t) bytes;
-            socket->lastPacketTime = hnPlatformGetCurrentTime();
+            socket->stats.lastPacketTime = hnPlatformGetCurrentTime();
         }
     } else if(socket->type == HN_PROTOCOL_UDP) {
         SOCKADDR fromWs;
         int32_t fromSize = sizeof(fromWs);
         int32_t bytes = recvfrom(socket->id, socket->buffer.buffer, HN_BUFFER_SIZE, 0, &fromWs, &fromSize);
         if(bytes <= 0) {
-            HN_ERROR("Lost connection to socket while reading (error [" + std::to_string(WSAGetLastError()) + "])");
+            HN_LOG("Lost connection to socket while reading (error [" + std::to_string(WSAGetLastError()) + "])");
             //socket->status = HN_STATUS_ERROR; 
             if(connection) {
                 connection->status = HN_STATUS_ERROR;
@@ -199,7 +198,7 @@ void hnSocketReadData(HnSocket* socket, HnUdpConnection* connection) {
             socket->buffer.currentSize = 0;
         } else {
             socket->buffer.currentSize = bytes;
-            socket->lastPacketTime = hnPlatformGetCurrentTime();        
+            socket->stats.lastPacketTime = hnPlatformGetCurrentTime();        
 
             if(connection) {
                 connection->status = HN_STATUS_CONNECTED;

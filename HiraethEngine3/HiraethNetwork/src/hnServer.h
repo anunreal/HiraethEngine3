@@ -9,13 +9,18 @@ struct HnRemoteClient {
     HnSocket    socket;
     HnClientId  clientId = 0;
     std::thread tcpThread;
+    std::unordered_map<HnVariableId, void*> variableData;
 };
 
 struct HnServer {
     HnSocket serverSocket;
 
-    std::unordered_map<HnClientId, HnRemoteClient> clients;
+    std::unordered_map<HnClientId, HnRemoteClient>   clients;
+    std::unordered_map<HnVariableId, HnVariableInfo> variables;
+    std::unordered_map<std::string, HnVariableId>    variableNames; 
+
     HnClientId clientCounter = 0;
+    HnVariableId variableCounter = 0;
     
     // -- timing
 
@@ -32,6 +37,7 @@ extern HN_API void hnServerDestroy(HnServer* server);
 extern HN_API void hnServerHandleInput(HnServer* server);
 extern HN_API void hnServerUpdate(HnServer* server);
 extern HN_API void hnServerBroadcastPacket(HnServer* server, HnPacket* packet);
+extern HN_API void hnServerBroadcastPacketReliable(HnServer* server, HnPacket* packet);
 extern HN_API HnClientId hnServerGetClientIdOfAddress(HnServer const* server, HnUdpAddress const* address);
 
 extern HN_API void hnRemoteClientHandlePacket(HnServer* server, HnRemoteClient* client, HnPacket* packet);
