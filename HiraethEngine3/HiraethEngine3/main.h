@@ -13,7 +13,7 @@
 struct Player {
 	HnLocalClient* client = nullptr;
 	HeD3Instance*  model  = nullptr;
-	char name[256];
+	char name[200];
 	hm::vec3f velocity;
 };
 
@@ -25,7 +25,7 @@ struct App {
 	HeRenderEngine engine;
 	std::map<unsigned int, Player> players;
 
-	char ownName[256];
+	char ownName[200];
 };
 
 extern App app;

@@ -132,7 +132,7 @@ void hnClientUpdate(HnClient* client) {
         }
         
         client->tick++;
-        hnPlatformSleep(16);
+        //hnPlatformSleep(16);
     }
 };
 

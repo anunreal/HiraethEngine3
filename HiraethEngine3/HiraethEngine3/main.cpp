@@ -90,7 +90,7 @@ void checkWindowInput(HeWindow* window, HeD3Camera* camera, float const delta) {
 };
 
 void _onClientConnect(HnClient* client, HnLocalClient* local) {
-	Player* p = &app.players[local->id];
+	Player* p = &app.players[local->clientId];
 	p->client = local;
 
 	HeD3Instance* instance = &app.level.instances.emplace_back();
@@ -105,9 +105,9 @@ void _onClientConnect(HnClient* client, HnLocalClient* local) {
 };
 
 void _onClientDisconnect(HnClient* client, HnLocalClient* local) {
-	Player* p = &app.players[local->id];
+	Player* p = &app.players[local->clientId];
 	heD3LevelRemoveInstance(&app.level, p->model);
-	app.players.erase(local->id);
+	app.players.erase(local->clientId);
 };
 
 void createClient() {
@@ -115,27 +115,24 @@ void createClient() {
 	
 	app.client.callbacks.clientConnect = &_onClientConnect;
 	app.client.callbacks.clientDisconnect = &_onClientDisconnect;
-	//hnClientConnect(&app.client, "tealfire.de", 9876, HN_PROTOCOL_TCP);
-	hnClientConnect(&app.client, "localhost", 9876, HN_PROTOCOL_UDP);
-
-	hnClientSync(&app.client);
+	//hnClientCreate(&app.client, "tealfire.de", 9876, HN_PROTOCOL_TCP);
+	hnClientCreate(&app.client, "localhost", 9876, HN_PROTOCOL_UDP, 75);
 
 	if(app.client.socket.status != HN_STATUS_CONNECTED)
 		return;
 
-	hnClientCreateVariable(&app.client, "position", HN_DATA_TYPE_VEC3, 10);
-	hnClientHookVariable(  &app.client, "position", &app.level.physics.actor->feetPosition);
-	hnClientCreateVariable(&app.client, "velocity", HN_DATA_TYPE_VEC3, 2);
-	hnClientHookVariable(  &app.client, "velocity", &app.level.physics.actor->velocity);
-	hnClientCreateVariable(&app.client, "rotation", HN_DATA_TYPE_VEC4, 10);
-	hnClientHookVariable(  &app.client, "rotation", &cameraRotation);
-	hnClientCreateVariable(&app.client, "name",     HN_DATA_TYPE_STRING, 60, 256);
-	hnClientHookVariable(  &app.client, "name",     &app.ownName);
-	hnClientUpdateVariable(&app.client, "name");
+	hnClientCreateVariableFixed(&app.client, "position", HN_VARIABLE_TYPE_FLOAT, 3, 10);
+	hnClientHookVariable(&app.client, "position", &app.level.physics.actor->feetPosition);
+	hnClientCreateVariableFixed(&app.client, "velocity", HN_VARIABLE_TYPE_FLOAT, 3, 2);
+	hnClientHookVariable(&app.client, "velocity", &app.level.physics.actor->velocity);
+	hnClientCreateVariableFixed(&app.client, "rotation", HN_VARIABLE_TYPE_FLOAT, 4, 10);
+	hnClientHookVariable(&app.client, "rotation", &cameraRotation);
+	hnClientCreateVariableFixed(&app.client, "name",     HN_VARIABLE_TYPE_CHAR, 200, 60);
+	hnClientHookVariable(&app.client, "name",     &app.ownName);
 	
 	while(app.client.socket.status == HN_STATUS_CONNECTED) {
 		cameraRotation = hm::fromEulerDegrees(-app.level.camera.rotation);
-		hnClientUpdateInput(&app.client);
+		hnClientHandleInput(&app.client);
 	};
 };
 
@@ -322,13 +319,13 @@ int main() {
 		
 #if USE_NETWORKING
 		if(app.client.socket.status == HN_STATUS_CONNECTED)
-			hnClientUpdateVariables(&app.client);
+			hnClientUpdate(&app.client);
 #endif
 	}
 	
 #if USE_NETWORKING
 	if(app.client.socket.status == HN_STATUS_CONNECTED) {
-		hnClientDisconnect(&app.client);
+		hnClientDestroy(&app.client);
 	}
 	thread.join();
 #endif
