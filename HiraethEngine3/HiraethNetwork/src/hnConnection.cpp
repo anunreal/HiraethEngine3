@@ -292,7 +292,7 @@ void hnSocketSendPacketReliable(HnSocket* socket, HnPacketType const type) {
 void hnSocketReadPacket(HnSocket* socket, HnPacket* packet, HnUdpConnection* connection) {
     char buffer[HN_PACKET_SIZE];
     hnSocketGetData(socket, buffer, HN_PACKET_SIZE, connection);
-    if(!connection || connection->status == HN_STATUS_CONNECTED) {
+    if(socket->status == HN_STATUS_CONNECTED && (!connection || connection->status == HN_STATUS_CONNECTED)) {
         memcpy(packet, buffer, HN_PACKET_SIZE);
         packet->dataOffset = 0;
     }

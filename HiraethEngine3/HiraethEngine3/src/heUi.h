@@ -37,5 +37,6 @@ struct HeUiTextField {
 };
 
 extern HE_API void heUiCreate();
+extern HE_API void heUiSetActiveInput(HeTextInput* input);
 
 #endif // HE_UI_H

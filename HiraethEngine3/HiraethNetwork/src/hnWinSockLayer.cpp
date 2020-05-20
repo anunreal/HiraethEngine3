@@ -193,7 +193,8 @@ void hnSocketReadData(HnSocket* socket, HnUdpConnection* connection) {
                 connection->status = HN_STATUS_ERROR;
                 connection->address.sa_family = fromWs.sa_family;
                 memcpy(connection->address.sa_data, fromWs.sa_data, 14);
-            }
+            } else
+                socket->status = HN_STATUS_ERROR;
                 
             socket->buffer.currentSize = 0;
         } else {

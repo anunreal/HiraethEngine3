@@ -4,6 +4,7 @@
 #include "src/heLoader.h"
 #include "src/heCore.h"
 #include "src/heDebugUtils.h"
+#include "src/heUi.h"
 #include <windows.h>
 #include <thread>
 #include <vector>
@@ -234,7 +235,8 @@ int main() {
 	
 	heConsoleCreate(font);
 	heProfilerCreate(font);
-
+    heUiCreate();
+    
 	HE_LOG("Set up engine");
 	
 #if USE_NETWORKING

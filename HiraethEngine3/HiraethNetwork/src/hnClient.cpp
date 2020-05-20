@@ -6,12 +6,12 @@ void hnClientCreate(HnClient* client, std::string const& host, uint32_t const po
     client->socket.protocolId = protocolId;
     hnSocketCreateClient(&client->socket, host, port);
 
-    if(client->socket.status != HN_STATUS_ERROR) {
-        hnSocketSendPacketReliable(&client->socket, HN_PACKET_SYNC_REQUEST);
+    hnSocketSendPacketReliable(&client->socket, HN_PACKET_SYNC_REQUEST);
 
+    if(client->socket.status == HN_STATUS_CONNECTED) {
         HnPacket response;
         hnSocketReadPacket(&client->socket, &response);
-        while(response.type != HN_PACKET_SYNC_REQUEST) {
+        while(client->socket.status == HN_STATUS_CONNECTED && response.type != HN_PACKET_SYNC_REQUEST) {
             hnClientHandlePacket(client, &response);
             hnSocketReadPacket(&client->socket, &response);
         }
@@ -37,8 +37,10 @@ void hnClientHandleInput(HnClient* client) {
     HnPacket packet;
     hnSocketReadPacket(&client->socket, &packet);
 
-    // handle packet
-    hnClientHandlePacket(client, &packet);  
+    if(client->socket.status == HN_STATUS_CONNECTED) {
+        // handle packet
+        hnClientHandlePacket(client, &packet);
+    }
 };
 
 void hnClientHandlePacket(HnClient* client, HnPacket* packet) {
@@ -111,7 +113,7 @@ void hnClientHandlePacket(HnClient* client, HnPacket* packet) {
                 hnPacketGetVariable(packet, &client->variables[var], local->variableData[var]);            
         }
     }
-    else {
+    else if(packet->type != 0) { // type zero means lost connection
         HN_DEBUG("Received invalid packet of type [" + std::to_string(packet->type) + "] from server");
     }
 };

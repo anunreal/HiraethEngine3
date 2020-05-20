@@ -42,20 +42,8 @@ b8 heKeyPressCallback(HeWindow* window, HeKeyCode const input) {
         }
         activeInput->timeSinceLastInput = 0.f;
 
-    /*} else if(input == HE_KEY_ENTER) {
-        // run command
-        if(activeInput->inputString.size() > 0) {
-        heConsolePrint(activeInput->inputString);
-        heConsoleCommandRun(activeInput->inputString);
-        activeInput->history.insert(activeInput->history.begin(), activeInput->inputString);
-        activeInput->inputString.clear();
-        activeInput->cursorPosition    = 0;
-        activeInput->historyIndex      = -1;
-        activeInput->backlogIndex      = 0;
-        activeInput->autoCompleteCycle = 0;
-        activeInput->autoCompleteOptions.clear();
-        }
-        */
+    } else if(input == HE_KEY_ENTER) {
+        activeInput->entered = true;
     } else if(input == HE_KEY_ARROW_UP) {
         // move up in history
         if((int32_t) activeInput->history.size() > activeInput->historyIndex + 1) {
@@ -156,4 +144,8 @@ b8 heKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 void heUiCreate() {
     heRenderEngine->window->keyboardInfo.textInputCallbacks.emplace_back(&heTextInputCallback);
 	heRenderEngine->window->keyboardInfo.keyPressCallbacks.emplace_back(&heKeyPressCallback);	
+};
+
+void heUiSetActiveInput(HeTextInput* input) {
+    activeInput = input;
 };
