@@ -148,7 +148,6 @@ void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile) {
 	heShaderUnbind();
     heShaderDestroy(&shader);
 	heTextureDestroy(&hdr);
-	HE_LOG("Computed successfully");
-
-    heWin32TimerPrint("Skybox creation");
+	
+    heWin32TimerPrint("SKYBOX CREATION");
 };

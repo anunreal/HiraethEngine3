@@ -147,7 +147,6 @@ void hnServerUpdate(HnServer* server) {
                 hnPacketCreate(&packet, HN_PACKET_PING_CHECK, &client->socket);
                 hnPacketStoreInt(&packet, client->socket.stats.ping);
                 hnSocketSendPacketReliable(&client->socket, &packet);
-                HN_LOG("Client ping: " + std::to_string(client->socket.stats.ping));
             } else {
                 client->socket.stats.pingCheck -= delta;
             }

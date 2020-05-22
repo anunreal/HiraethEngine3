@@ -4,6 +4,8 @@
 #include "heTypes.h"
 #include "heAssets.h"
 
+struct HeRenderEngine; // avoid include
+
 // sets up the ingame console with the given font
 extern HE_API void heConsoleCreate(HeFont* backlogFont);
 // sets the next state of the console. The console will interpolate to that state now
@@ -14,7 +16,7 @@ extern HE_API void heConsoleToggleOpen(HeConsoleState const state);
 // adds given message to the backlog of the console
 extern HE_API void heConsolePrint(std::string const& message);
 // renders the console (if its not closed)
-extern HE_API void heConsoleRender(float const delta);
+extern HE_API void heConsoleRender(HeRenderEngine* engine);
 // registeres a new command for this console.
 extern HE_API void heConsoleRegisterCommand(std::string const& name, void(*proc)(std::vector<std::string> const& args));
 // tries to run the given command. Arguments must be seperated by a whitespace

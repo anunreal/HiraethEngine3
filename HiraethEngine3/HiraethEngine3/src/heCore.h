@@ -12,6 +12,7 @@ extern HE_API void heLogCout(std::string const& message, std::string const& pref
 #define HE_ENABLE_DEBUG_MSG
 #define HE_ENABLE_WARNING_MSG
 #define HE_ENABLE_ERROR_MSG
+//#define HE_ENABLE_CRASH_LOG_MSG
 #endif
 
 
@@ -40,6 +41,12 @@ extern HE_API void heLogCout(std::string const& message, std::string const& pref
 #define HE_ERROR(msg) heLogCout(msg, "[ERROR]:")
 #else
 #define HE_ERROR(msg)
+#endif
+
+#ifdef HE_ENABLE_CRASH_LOG_MSG
+#define HE_CRASH_LOG(msg) heLogCout(msg, "[CRASH]:");
+#else
+#define HE_CRASH_LOG(ms)
 #endif
 
 #endif

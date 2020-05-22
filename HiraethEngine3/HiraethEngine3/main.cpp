@@ -9,24 +9,24 @@
 #include <thread>
 #include <vector>
 
-bool						   inputActive = true;
-bool						   freeCam = false;
-hm::vec2i					   lastPosition;
-hm::vec3f					   velocity;
-hm::quatf					   cameraRotation;
+bool	  inputActive = false;
+bool	  freeCam = false;
+hm::vec2i lastPosition;
+hm::vec3f velocity;
+hm::quatf cameraRotation;
 
 App app;
 
 void checkWindowInput(HeWindow* window, HeD3Camera* camera, float const delta) {
-	if (window->mouseInfo.leftButtonDown) {
+	if (app.state == GAME_STATE_INGAME && window->mouseInfo.leftButtonPressed) {
 		inputActive = !inputActive;
 		heWindowToggleCursor(inputActive);
 	}
 	
-	if(window->mouseInfo.rightButtonDown)
+	if(window->mouseInfo.rightButtonPressed)
 		freeCam = !freeCam;
 	
-	if(inputActive) {
+	if(inputActive && app.state == GAME_STATE_INGAME) {
 		POINT current_mouse_pos = {};
 		::GetCursorPos(&current_mouse_pos);
 		hm::vec2i current(current_mouse_pos.x, current_mouse_pos.y);
@@ -111,13 +111,13 @@ void _onClientDisconnect(HnClient* client, HnLocalClient* local) {
 	app.players.erase(local->clientId);
 };
 
-void createClient() {
-	strcpy_s(app.ownName, "player");
+void createClient(std::string const& host, std::string const& name) {
+	strcpy_s(app.ownName, name.c_str());
 	
 	app.client.callbacks.clientConnect = &_onClientConnect;
 	app.client.callbacks.clientDisconnect = &_onClientDisconnect;
 	//hnClientCreate(&app.client, "tealfire.de", 9876, HN_PROTOCOL_TCP);
-	hnClientCreate(&app.client, "localhost", 9876, HN_PROTOCOL_UDP, 75);
+	hnClientCreate(&app.client, host, 9876, HN_PROTOCOL_UDP, 75);
 
 	if(app.client.socket.status != HN_STATUS_CONNECTED)
 		return;
@@ -218,8 +218,7 @@ int main() {
 	app.window.windowInfo		= windowInfo;
 	
 	heWindowCreate(&app.window);
-	heWindowToggleCursor(true);
-
+	
 	heGlPrintInfo();
 	
     app.engine.renderMode = HE_RENDER_MODE_FORWARD;
@@ -239,22 +238,45 @@ int main() {
     
 	HE_LOG("Set up engine");
 	
-#if USE_NETWORKING
-	std::thread thread(createClient);
-#endif
-	
 #if USE_PHYSICS == 0
 	freeCam = true;
 #endif
-	
+
+#if USE_NETWORKING == 0
+    app.state = GAME_STATE_INGAME;
+    #endif
+    
 	heGlErrorSaveAll();
 	heErrorsPrint();
 
 	heWin32TimerPrint("TOTAL STARTUP");
 	HE_DEBUG("Starting game loop");
+    double sleepTime = 0.;
 
-	double sleepTime = 0;
-	
+    HeUiPanel mainPanel;
+    mainPanel.textFields.resize(2);
+    HeUiTextField* field     = &mainPanel.textFields[0];
+    field->backgroundColour  = hm::colour(40);
+    field->shape.size        = hm::vec2f(256, 32);
+    field->shape.position    = app.window.windowInfo.size / 2.f;
+    field->shape.position.x -= 128;
+    field->input.font        = scaledFont;
+    field->input.description = "host";
+    
+    HeUiTextField* field2     = &mainPanel.textFields[1];
+    field2->backgroundColour  = hm::colour(40);
+    field2->shape.size        = hm::vec2f(256, 32);
+    field2->shape.position    = app.window.windowInfo.size / 2.f;
+    field2->shape.position.y += 40;
+    field2->shape.position.x -= 128;
+    field2->input.font        = scaledFont;
+    field2->input.description = "name";
+    
+    
+    heUiSetActiveInput(&field->input);
+
+    std::thread thread;
+    
 	while (!app.window.shouldClose) {
 		if (heThreadLoader.updateRequested)
 			heThreadLoaderUpdate();
@@ -277,7 +299,7 @@ int main() {
 
 		heProfilerFrameMark("input", hm::colour(255, 0, 0));
 		
-		{ // d3 rendering
+		if(app.state == GAME_STATE_INGAME) { // d3 rendering
 #if USE_PHYSICS == 1
 			hePhysicsLevelUpdate(&app.level.physics, (float) app.window.frameTime);
 			if(!freeCam)
@@ -306,8 +328,22 @@ int main() {
 				
 		{ // ui rendering
 			heRenderEnginePrepareUi(&app.engine);
-			heConsoleRender((float) app.window.frameTime);
-			heUiQueueRender(&app.engine);
+			heConsoleRender(&app.engine);
+
+            if(app.state == GAME_STATE_MAIN_MENU) {
+#if USE_NETWORKING
+                if(heUiPushButton(&app.engine, &scaledFont, "connect", app.window.windowInfo.size / 2.f + hm::vec2f(-128, 80), hm::vec2f(256, 32))) {
+                    app.state = GAME_STATE_INGAME;
+                    thread = std::thread(createClient, field->input.string, field2->input.string);
+                    heWindowToggleCursor(true);
+                    inputActive = true;
+                }
+#endif
+
+                heUiRenderPanel(&app.engine, &mainPanel);
+            }
+            
+            heUiQueueRender(&app.engine);
 			heProfilerFrameMark("ui render", hm::colour(255, 255, 0));
 			heProfilerAddEntry("sleep", sleepTime, hm::colour(100));
 			heProfilerRender(&app.engine);
@@ -326,10 +362,11 @@ int main() {
 	}
 	
 #if USE_NETWORKING
-	if(app.client.socket.status == HN_STATUS_CONNECTED) {
+	if(app.client.socket.status == HN_STATUS_CONNECTED)
 		hnClientDestroy(&app.client);
-	}
-	thread.join();
+        
+    if(thread.joinable())
+        thread.join();
 #endif
 
 	commandThread.detach();

@@ -56,6 +56,8 @@ void heConsoleCreate(HeFont* backlogFont) {
 	heRenderEngine->window->mouseInfo.scrollCallbacks.emplace_back(&heConsoleScrollCallback);
 	heRegisterCommands();
 
+    heConsole.input.description = "command";
+    
     // set auto complete options
     heConsole.input.autoCompleteList.reserve(heConsole.commands.size());
     for(HeConsoleCommand const& all : heConsole.commands) {
@@ -79,6 +81,7 @@ void heConsoleOpen(HeConsoleState const state) {
 	if(state == HE_CONSOLE_STATE_CLOSED) {
 		heConsole.targetY = 0.f;
         heUiSetActiveInput(nullptr);
+        heConsole.input.active = false;
     } else if(state == HE_CONSOLE_STATE_OPEN) {
 		heConsole.targetY = 0.3f;
         heUiSetActiveInput(&heConsole.input);
@@ -87,7 +90,6 @@ void heConsoleOpen(HeConsoleState const state) {
         heUiSetActiveInput(&heConsole.input);
     }
 
-    heConsole.input.active = true;
     heConsole.state = state;
 	heConsoleUpdateSize((float) heRenderEngine->window->frameTime);
 };
@@ -108,34 +110,34 @@ void heConsolePrint(std::string const& message) {
 		heConsole.backlog.emplace_back(message);
 };
 
-void heConsoleRender(float const delta) {
-	heConsoleUpdateSize((float) heRenderEngine->window->frameTime);
+void heConsoleRender(HeRenderEngine* engine) {
+	heConsoleUpdateSize((float) engine->window->frameTime);
 
 	if(heConsole.currentY == 0.f)
 		return;
 
 
     // check for command sent
-    if(heConsole.input.entered && heConsole.input.inputString.size() > 0) {
+    if(heConsole.input.entered && heConsole.input.string.size() > 0) {
         heConsole.input.entered = false;
-        heConsolePrint(heConsole.input.inputString);
-        heConsoleCommandRun(heConsole.input.inputString);
-        heConsole.input.history.insert(heConsole.input.history.begin(), heConsole.input.inputString);
-        heConsole.input.inputString.clear();
+        heConsolePrint(heConsole.input.string);
+        heConsoleCommandRun(heConsole.input.string);
+        heConsole.input.history.insert(heConsole.input.history.begin(), heConsole.input.string);
+        heConsole.input.string.clear();
         heConsole.input.autoCompleteOptions.clear();
-        heConsole.input.cursorPosition    = 0;
+        heConsole.input.cursorPosition    =  0;
         heConsole.input.historyIndex      = -1;
-        heConsole.input.autoCompleteCycle = 0;
-        heConsole.backlogIndex            = 0;
+        heConsole.input.autoCompleteCycle =  0;
+        heConsole.backlogIndex            =  0;
     }
 
     
-	HeWindow* window = heRenderEngine->window;
+	HeWindow* window = engine->window;
 	uint32_t sizeY = (uint32_t) (heConsole.currentY * window->windowInfo.size.y);
 
 	{ // render background
-		heUiPushQuad(heRenderEngine, hm::vec2i(0, 0), hm::vec2i(0, sizeY), hm::vec2i(window->windowInfo.size.x, 0), hm::vec2i(window->windowInfo.size.x, sizeY), hm::colour(40, 40, 40, 200));
-		heUiPushQuad(heRenderEngine, hm::vec2i(0, sizeY), hm::vec2i(0, sizeY + TYPE_BAR_HEIGHT), hm::vec2i(window->windowInfo.size.x, sizeY), hm::vec2i(window->windowInfo.size.x, sizeY + TYPE_BAR_HEIGHT), hm::colour(10, 10, 10, 255));
+		heUiPushQuad(engine, hm::vec2i(0, 0), hm::vec2i(0, sizeY), hm::vec2i(window->windowInfo.size.x, 0), hm::vec2i(window->windowInfo.size.x, sizeY), hm::colour(40, 40, 40, 200));
+		heUiPushQuad(engine, hm::vec2i(0, sizeY), hm::vec2i(0, sizeY + TYPE_BAR_HEIGHT), hm::vec2i(window->windowInfo.size.x, sizeY), hm::vec2i(window->windowInfo.size.x, sizeY + TYPE_BAR_HEIGHT), hm::colour(10, 10, 10, 255));
 	}
 
 	{ // render backlog
@@ -145,7 +147,7 @@ void heConsoleRender(float const delta) {
 		int32_t index = (int32_t) (heConsole.backlog.size() - heConsole.backlogIndex - 1);
 		uint32_t displayedCount = 0;
 		while(textY > 0 && index >= 0) {
-			heUiPushText(heRenderEngine, &heConsole.input.font, heConsole.backlog[index], hm::vec2i(10, (int32_t) textY), hm::colour(255, 255, 255, 200));
+			heUiPushText(engine, &heConsole.input.font, heConsole.backlog[index], hm::vec2i(10, (int32_t) textY), hm::colour(255, 255, 255, 200));
 			index--;
 			textY -= heConsole.input.font.lineHeight;
 			displayedCount++;
@@ -161,34 +163,15 @@ void heConsoleRender(float const delta) {
 			float yOffset        = totalHeight * (scrollOffset) + 10 - height;
 
 			float width = 10;
-			hm::vec2f offset(heRenderEngine->window->windowInfo.size.x - 20.f, yOffset);
+			hm::vec2f offset(engine->window->windowInfo.size.x - 20.f, yOffset);
 			
-			heUiPushQuad(heRenderEngine, hm::vec2f(offset.x, 10.f), hm::vec2f(offset.x, 10.f + totalHeight), hm::vec2f(offset.x + width, 10.f), hm::vec2f(offset.x + width, 10.f + totalHeight), hm::colour(50));
-			heUiPushQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + height), hm::vec2f(offset.x + width, offset.y), hm::vec2f(offset.x + width, offset.y + height), hm::colour(70));
+			heUiPushQuad(engine, hm::vec2f(offset.x, 10.f), hm::vec2f(offset.x, 10.f + totalHeight), hm::vec2f(offset.x + width, 10.f), hm::vec2f(offset.x + width, 10.f + totalHeight), hm::colour(50));
+			heUiPushQuad(engine, offset, hm::vec2f(offset.x, offset.y + height), hm::vec2f(offset.x + width, offset.y), hm::vec2f(offset.x + width, offset.y + height), hm::colour(70));
 		}
 	}
 
 	{ // render input
-		// cursor
-		hm::vec2f padding = hm::vec2f(0, 3);
-		hm::vec2f size    = hm::vec2f(heScaledFontGetCharacterSize(&heConsole.input.font, 'M').x, heConsole.input.font.lineHeight - padding.y * 2);
-		hm::vec2f offset  = hm::vec2f(10, (float) sizeY) + padding;
-		if(heConsole.input.inputString.size() > 0) {
-			uint32_t cursorPos = heConsole.input.cursorPosition;
-			offset.x += heScaledFontGetStringWidthInPixels(&heConsole.input.font, heConsole.input.inputString.substr(0, cursorPos)) + 4 * heConsole.input.font.scale;
-		}
-
-		uint8_t alpha = 255;
-
-		if((heConsole.input.timeSinceLastInput - std::floor(heConsole.input.timeSinceLastInput)) > 0.5f)
-			alpha = 0;
-		
-		heUiPushQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + size.y), hm::vec2f(offset.x + size.x, offset.y), offset + size, hm::colour(100, 100, 100, alpha));
-		heConsole.input.timeSinceLastInput += delta;
-
-		// input string
-		if(heConsole.input.inputString.size() > 0)
-			heUiPushText(heRenderEngine, &heConsole.input.font, heConsole.input.inputString, hm::vec2i(10, (int32_t) sizeY), hm::colour(255, 255, 255, 255));	
+        heUiRenderTextInput(engine, &heConsole.input, hm::vec2f(10.f, (float) sizeY));
 	}
 };
 

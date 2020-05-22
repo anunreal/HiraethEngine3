@@ -24,6 +24,7 @@ void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window) {
 	heFboCreate(&engine->bloomFbo);
 	heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGB16); // the bright pass, blur input
 	heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGBA16, bloomSize, 4); // blur output -> actual bloom
+    heFboUnbind(window->windowInfo.size);
 
 	engine->brightPassShader = heAssetPoolGetShader("bright_pass", "res/shaders/quad_v.glsl", "res/shaders/brightPassFilter.glsl");
 	engine->combineShader = heAssetPoolGetShader("combine_shader", "res/shaders/quad_v.glsl", "res/shaders/3d_final.glsl");
@@ -166,6 +167,7 @@ void heRenderEngineResize(HeRenderEngine* engine) {
 
 		// clear text meshes
 		heTextManager.texts.clear();
+        heFboUnbind(engine->window->windowInfo.size);
 	}
 };
 
@@ -918,6 +920,10 @@ void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string 
 
 void heUiPushQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour) {
 	engine->uiQueue.quads.emplace_back(p0, p1, p2, p3, colour);
+};
+
+void heUiPushQuad(HeRenderEngine* engine, hm::vec2f const& position, hm::vec2f const& size, hm::colour const& colour) {
+	engine->uiQueue.quads.emplace_back(position, position + hm::vec2f(0, size.y), position + hm::vec2f(size.x, 0), position + size, colour);
 };
 
 

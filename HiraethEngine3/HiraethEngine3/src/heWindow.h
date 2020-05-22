@@ -38,9 +38,11 @@ struct HeMouseInfo {
 	hm::vec2i mousePosition;
 	// pixels the mouse moved during the last frame. Positive if the mouse moved down/right
 	hm::vec2i deltaMousePosition;
-	b8 leftButtonDown = false;
-	b8 rightButtonDown = false;
-
+	b8 leftButtonDown     = false; // true if the left button is currently being held down
+	b8 rightButtonDown    = false; // true if the right button is currently being held down
+    b8 leftButtonPressed  = false; // true if the left button was pressed in the current frame
+    b8 rightButtonPressed = false; // true if the right button was pressed in the current frame
+    
 	// a vector of callbacks that should be called when the mouse wheel is scrolled
 	std::vector<HeWindowMouseScrollCallback> scrollCallbacks;
 };

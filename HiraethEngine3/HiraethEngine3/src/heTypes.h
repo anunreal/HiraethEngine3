@@ -9,22 +9,6 @@
 #define HE_API __declspec(dllimport)
 #endif
 
-/*
-#define HE_STRIPPATH(s)\
-    (sizeof(s) > 2 && (s)[sizeof(s)-2] == '/' ? (s) + sizeof(s) - 1 : \
-    sizeof(s) > 3 && (s)[sizeof(s)-3] == '/' ? (s) + sizeof(s) - 2 : \
-    sizeof(s) > 4 && (s)[sizeof(s)-4] == '/' ? (s) + sizeof(s) - 3 : \
-    sizeof(s) > 5 && (s)[sizeof(s)-5] == '/' ? (s) + sizeof(s) - 4 : \
-    sizeof(s) > 6 && (s)[sizeof(s)-6] == '/' ? (s) + sizeof(s) - 5 : \
-    sizeof(s) > 7 && (s)[sizeof(s)-7] == '/' ? (s) + sizeof(s) - 6 : \
-    sizeof(s) > 8 && (s)[sizeof(s)-8] == '/' ? (s) + sizeof(s) - 7 : \
-    sizeof(s) > 9 && (s)[sizeof(s)-9] == '/' ? (s) + sizeof(s) - 8 : \
-    sizeof(s) > 10 && (s)[sizeof(s)-10] == '/' ? (s) + sizeof(s) - 9 : \
-    sizeof(s) > 11 && (s)[sizeof(s)-11] == '/' ? (s) + sizeof(s) - 10 : (s))
-
-#define __HE_FILE__ HE_STRIPPATH(__FILE__)
-*/
-
 // possible macro definitions:
 // HE_USE_WIN32
 // HE_USE_STBI
@@ -247,6 +231,14 @@ typedef enum HeTextAlignMode {
 	HE_TEXT_ALIGN_RIGHT,
 	HE_TEXT_ALIGN_CENTER,
 } HeTextAlignMode;
+
+typedef enum HeUiInteractionStatus {
+    HE_UI_INTERACTION_STATUS_NONE,
+    HE_UI_INTERACTION_STATUS_HOVERED, // mouse is over this widget
+    HE_UI_INTERACTION_STATUS_PRESSED, // mouse just pressed on this widget in the last frame(therefore is currently hovered)
+    HE_UI_INTERACTION_STATUS_CLICKED, // mouse just pressed on this widget (doesnt have to be hovered), (should only be one widget at a time in total)
+    HE_UI_INTERACTION_STATUS_UNPRESSED, // mouse just pressed somewhere else on the screen, but this widget was clicked before
+} HeUiInteractionStatus;
 
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) { return (T)((int) a | (int) b); }; \

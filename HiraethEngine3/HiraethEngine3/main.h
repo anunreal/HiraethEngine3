@@ -8,24 +8,31 @@
 #include <map>
 
 #define USE_PHYSICS 1
-#define USE_NETWORKING 1
+#define USE_NETWORKING 0
+
+enum GameState {
+    GAME_STATE_MAIN_MENU,
+    GAME_STATE_INGAME
+};
 
 struct Player {
-	HnLocalClient* client = nullptr;
-	HeD3Instance*  model  = nullptr;
-	char name[200];
-	hm::vec3f velocity;
+    HnLocalClient* client = nullptr;
+    HeD3Instance*  model  = nullptr;
+    char name[200];
+    hm::vec3f velocity;
 };
 
 struct App {
-	HnClient	   client;
-	HeD3Level	   level;
-	HePhysicsActor actor;
-	HeWindow       window;
-	HeRenderEngine engine;
-	std::map<unsigned int, Player> players;
+    HnClient       client;
+    HeD3Level      level;
+    HePhysicsActor actor;
+    HeWindow       window;
+    HeRenderEngine engine;
+    std::map<unsigned int, Player> players;
 
-	char ownName[200];
+    GameState state = GAME_STATE_MAIN_MENU;
+    
+    char ownName[200];
 };
 
 extern App app;

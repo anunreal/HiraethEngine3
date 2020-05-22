@@ -26,10 +26,9 @@ b8 heWindowCreate(HeWindow* window) {
 #endif
 };
 
-void heWindowUpdate(HeWindow* window) {
-	
-	window->mouseInfo.leftButtonDown = false;
-	window->mouseInfo.rightButtonDown = false;
+void heWindowUpdate(HeWindow* window) {	
+	window->mouseInfo.leftButtonPressed  = false;
+	window->mouseInfo.rightButtonPressed = false;
 	window->mouseInfo.deltaMousePosition = hm::vec2i(0);
 	window->keyboardInfo.keysPressed.clear();
 	

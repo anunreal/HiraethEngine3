@@ -168,8 +168,7 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 #endif
 	
 	if (window != nullptr) {		
-		switch (msg) {
-			
+		switch (msg) {			
 		case WM_SETFOCUS: {
 			window->active = true;
 			break;
@@ -178,17 +177,17 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 		case WM_KILLFOCUS: {
 			window->active = false;
 			break;
-		}
+		};
 			
 		case WM_CLOSE: {
 			window->shouldClose = true;
 			break;
-		}
+		};
 			
 		case WM_DESTROY: {
 			PostQuitMessage(0);
 			break;
-		}
+		};
 			
 		case WM_SIZE: {
 			window->windowInfo.size.x = LOWORD(lparam);
@@ -196,7 +195,7 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 			heViewport(hm::vec2i(0), window->windowInfo.size);
 			window->resized = true;
 			break;
-		}
+		};
 			
 #if HE_RAW_INPUT
 		case WM_INPUT: {
@@ -237,13 +236,25 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
 			
 		case WM_LBUTTONDOWN: {
 			window->mouseInfo.leftButtonDown = true;
+            window->mouseInfo.leftButtonPressed = true;
 			break;
-		}
+		};
 			
 		case WM_RBUTTONDOWN: {
 			window->mouseInfo.rightButtonDown = true;
+			window->mouseInfo.rightButtonPressed = true;
 			break;
-		}
+		};
+
+        case WM_LBUTTONUP: {
+            window->mouseInfo.leftButtonDown = false;
+            break;
+        };
+
+        case WM_RBUTTONUP: {
+            window->mouseInfo.rightButtonDown = false;
+            break;
+        };
 			
 		case WM_KEYDOWN: {
 			HeKeyCode key = heWin32GetKeyCode(wparam, lparam);

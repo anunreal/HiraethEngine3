@@ -228,8 +228,14 @@ extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const
 extern HE_API inline void heUiPushLineD3(HeRenderEngine* engine, hm::vec3f const& p0, hm::vec3f const& p1, hm::colour const& colour, float const width);
 // pushes a new text with position in window space (pixels)
 extern HE_API inline void heUiPushText(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::vec2f const& position, hm::colour const& colour, HeTextAlignMode const align = HE_TEXT_ALIGN_LEFT);
-// pushes a new quad at given coordinates in window space
+// pushes a new quad at given coordinates in window space. The coordinates are the 4 corners of the quad to render,
+// in the following order:
+// p0    p2
+//
+// p1    p3
 extern HE_API inline void heUiPushQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour);
+// pushes a new quad at given position with given size (both in window space)
+extern HE_API inline void heUiPushQuad(HeRenderEngine* engine, hm::vec2f const& position, hm::vec2f const& size, hm::colour const& colour);
 
 
 // -- utils

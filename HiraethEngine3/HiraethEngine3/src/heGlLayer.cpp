@@ -18,6 +18,8 @@
 #include "..\stb_image.h"
 #pragma warning(pop)
 
+float maxAnisotropicValue = -1.f;
+
 
 // -- ubos
 
@@ -655,9 +657,11 @@ void heVboDestroy(HeVbo* vbo) {
 };
 
 void heVaoCreate(HeVao* vao, HeVaoType const type) {
+    HE_CRASH_LOG("Vao Create");
 	glGenVertexArrays(1, &vao->vaoId);
 	vao->type = type;
-	
+
+    
 #ifdef HE_ENABLE_NAMES
 	glBindVertexArray(vao->vaoId); // we have to bind it so that its valid for naming
 	if(!vao->name.empty())
@@ -667,6 +671,7 @@ void heVaoCreate(HeVao* vao, HeVaoType const type) {
 };
 
 void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
+    HE_CRASH_LOG("Vao AddVboData");
 	if(vbo->type == HE_DATA_TYPE_FLOAT) {
 		heVboCreate(vbo, vbo->dataf, vbo->dimensions, vbo->usage);
 		glVertexAttribPointer(attributeIndex, vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
@@ -680,7 +685,8 @@ void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
 		glVertexAttribIPointer(attributeIndex, vbo->dimensions, vbo->type, 0, (GLvoid*)0);
 		vbo->dataui.clear();
 	}
-	
+
+    	
 #ifdef HE_ENABLE_NAMES
 	int32_t currentVao;
 	glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVao);
@@ -693,6 +699,8 @@ void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
 };
 
 void heVaoAddVbo(HeVao* vao, HeVbo* vbo) {
+    HE_CRASH_LOG("Vao AddVbo");
+    	
 	if(vbo->type == HE_DATA_TYPE_FLOAT)
 		glVertexAttribPointer((uint32_t) vao->vbos.size(), vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 	else
@@ -701,7 +709,7 @@ void heVaoAddVbo(HeVao* vao, HeVbo* vbo) {
 	vao->vbos.emplace_back(*vbo);
 	if (vao->vbos.size() == 1)
 		vao->verticesCount = vbo->verticesCount;
-	
+
 #ifdef HE_ENABLE_NAMES
 	std::string name = vao->name + "[" + std::to_string(vao->vbos.size()) + "]";
 	glObjectLabel(GL_BUFFER, vbo->vboId, (uint32_t) name.size(), name.c_str());
@@ -751,7 +759,8 @@ void heVaoAddDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t con
 };
 
 void heVaoUpdateData(HeVao* vao, std::vector<float> const& data, uint8_t const vboIndex) {
-	size_t size = data.size();
+    HE_CRASH_LOG("Vao UpdateData");
+    size_t size = data.size();
 	size_t bytes = size * sizeof(float);
 	HeVbo* vbo = &vao->vbos[vboIndex];
 	glBindBuffer(GL_ARRAY_BUFFER, vbo->vboId);
@@ -768,9 +777,12 @@ void heVaoUpdateData(HeVao* vao, std::vector<float> const& data, uint8_t const v
 	
 	if(vboIndex == 0)
 		vao->verticesCount = vbo->verticesCount;
+
 };
 
 void heVaoUpdateDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t const vboIndex) {
+    HE_CRASH_LOG("Vao UpdateDataInt");
+    
 	size_t size = data.size();
 	size_t bytes = size * sizeof(float);
 	HeVbo* vbo = &vao->vbos[vboIndex];
@@ -791,6 +803,8 @@ void heVaoUpdateDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t co
 };
 
 void heVaoUpdateDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t const vboIndex) {
+    HE_CRASH_LOG("Vao UpdateDataUint");
+    
 	size_t size = data.size();
 	size_t bytes = size * sizeof(float);
 	HeVbo* vbo = &vao->vbos[vboIndex];
@@ -811,18 +825,21 @@ void heVaoUpdateDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t 
 };
 
 void heVaoBind(HeVao const* vao) {
+    HE_CRASH_LOG("Vao Bind");
 	glBindVertexArray(vao->vaoId);
 	for (uint32_t i = 0; i < (uint32_t)vao->vbos.size(); ++i)
 		glEnableVertexAttribArray(i);
 };
 
 void heVaoUnbind(HeVao const* vao) {
-	for (uint32_t i = 0; i < (uint32_t) vao->vbos.size(); ++i)
+	HE_CRASH_LOG("Vao Unbind");
+    for (uint32_t i = 0; i < (uint32_t) vao->vbos.size(); ++i)
 		glDisableVertexAttribArray(i);
 	glBindVertexArray(0);
 };
 
 void heVaoDestroy(HeVao* vao) {
+    HE_CRASH_LOG("Vao Destroy");
 	for (HeVbo& vbos : vao->vbos)
 		heVboDestroy(&vbos);
 	
@@ -838,6 +855,7 @@ void heVaoDestroy(HeVao* vao) {
 };
 
 void heVaoRender(HeVao const* vao) {
+    HE_CRASH_LOG("Vao Render");
 	glDrawArrays(vao->type, 0, vao->verticesCount);
 };
 
@@ -1104,7 +1122,9 @@ HeTexture heFboCreateColourTextureWrapper(HeFboAttachment const* attachment) {
 // --- Textures
 
 void heTextureCreateEmptyCubeMap(HeTexture* texture) {
-	texture->cubeMap = true;
+    HE_CRASH_LOG("Texture EmptyCubeMap");
+
+    texture->cubeMap = true;
 	glGenTextures(1, &texture->textureId);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texture->textureId);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, texture->mipMapCount);
@@ -1141,10 +1161,12 @@ void heTextureCreateEmptyCubeMap(HeTexture* texture) {
 };
 
 void heTextureCreateEmpty(HeTexture* texture) {
-	heTextureCreateFromBuffer(texture);
+    HE_CRASH_LOG("Texture CreateEmpty");
+    heTextureCreateFromBuffer(texture);
 };
 
 void heTextureLoadFromFile(HeTexture* texture, std::string const& fileName) {
+    HE_CRASH_LOG("Texture LoadFromFile");
 	unsigned char* buffer = nullptr;
 	
 	//#ifdef HE_USE_STBI
@@ -1179,7 +1201,8 @@ void heTextureLoadFromFile(HeTexture* texture, std::string const& fileName) {
 };
 
 void heTextureLoadHdrFromFile(HeTexture* texture, std::string const& fileName) {
-	stbi_set_flip_vertically_on_load(true);
+    HE_CRASH_LOG("Texture LoadHdrFromFile");
+    stbi_set_flip_vertically_on_load(true);
 	float* buffer = stbi_loadf(fileName.c_str(), &texture->size.x, &texture->size.y, &texture->channels, 4);
 	if(!buffer) {
 		HE_ERROR("Could not open texture [" + fileName + "]!");
@@ -1203,7 +1226,8 @@ void heTextureLoadHdrFromFile(HeTexture* texture, std::string const& fileName) {
 };
 
 void heTextureLoadFromFile(HeTexture* texture, FILE* stream) {
-	stbi_set_flip_vertically_on_load(true);
+    HE_CRASH_LOG("Texture LoadFromFile*");
+    stbi_set_flip_vertically_on_load(true);
 	unsigned char* buffer = stbi_load_from_file(stream, &texture->size.x, &texture->size.y, &texture->channels, 0);
 	if(buffer == nullptr) {
 		HE_ERROR("Could not open texture from FILE!");
@@ -1227,11 +1251,13 @@ void heTextureLoadFromFile(HeTexture* texture, FILE* stream) {
 };
 
 void heTextureCreateFromBuffer(HeTexture* texture) {
-	glGenTextures(1, &texture->textureId);
+    HE_CRASH_LOG("Texture CreateFromBuffer");
+    glGenTextures(1, &texture->textureId);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture->textureId);
 	if(texture->format == HE_COLOUR_FORMAT_RGBA16) {
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
+        HE_CRASH_LOG("Texture CreateFromBuffer rgba16");
+    	glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
 		glTexImage2D(GL_TEXTURE_2D, 0, texture->format, texture->size.x, texture->size.y, 0, (texture->channels == 4) ? GL_RGBA : GL_RGB, GL_FLOAT, texture->bufferf);
 		
 		//#ifdef HE_USE_STBI
@@ -1241,7 +1267,8 @@ void heTextureCreateFromBuffer(HeTexture* texture) {
 		//#endif
 		texture->bufferf = nullptr;
 	} else {
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        HE_CRASH_LOG("Texture CreateFromBuffer normal");
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexImage2D(GL_TEXTURE_2D, 0, texture->format, texture->size.x, texture->size.y, 0, (texture->channels == 4) ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, texture->bufferc);
 		
 		//#ifdef HE_USE_STBI
@@ -1251,7 +1278,9 @@ void heTextureCreateFromBuffer(HeTexture* texture) {
 		//#endif
 		texture->bufferc = nullptr;
 	}
-
+    
+    HE_CRASH_LOG("Texture CreateFromBuffer Parameters");
+    	
 	if(texture->parameters & HE_TEXTURE_CLAMP_EDGE)
 		heTextureClampEdge(texture);
 	if(texture->parameters & HE_TEXTURE_CLAMP_BORDER)
@@ -1263,10 +1292,10 @@ void heTextureCreateFromBuffer(HeTexture* texture) {
 		heTextureFilterLinear(texture);
 	if(texture->parameters & HE_TEXTURE_FILTER_BILINEAR)
 		heTextureFilterBilinear(texture);
-	if(texture->parameters & HE_TEXTURE_FILTER_TRILINEAR)
-		heTextureFilterTrilinear(texture, texture->mipMapCount);
 	if(texture->parameters & HE_TEXTURE_FILTER_ANISOTROPIC)
 		heTextureFilterAnisotropic(texture);
+	if(texture->parameters & HE_TEXTURE_FILTER_TRILINEAR)
+		heTextureFilterTrilinear(texture, texture->mipMapCount);
 	
 	// memory tracker
 	uint8_t perPixel = heMemoryGetBytesPerPixel(texture->format);
@@ -1279,10 +1308,12 @@ void heTextureCreateFromBuffer(HeTexture* texture) {
 #ifdef HE_ENABLE_NAMES
 	glObjectLabel(GL_TEXTURE, texture->textureId, (uint32_t) texture->name.size(), texture->name.c_str());
 #endif
+    HE_CRASH_LOG("Texture CreateFromBuffer Done!");
 };
 
 void heTextureBind(HeTexture const* texture, int8_t const slot) {
-	if(texture != nullptr) {
+    HE_CRASH_LOG("Texture Bind");
+    if(texture != nullptr) {
 		glActiveTexture(GL_TEXTURE0 + slot);
 		uint32_t format = (texture->cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 		glBindTexture(format, texture->textureId);
@@ -1294,12 +1325,14 @@ void heTextureBind(HeTexture const* texture, int8_t const slot) {
 };
 
 void heTextureBind(uint32_t const texture, int8_t const slot, b8 const cubeMap) {
+    HE_CRASH_LOG("Texture BindId");
 	uint32_t format = (cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(format, texture);
 };
 
 void heImageTextureBind(HeTexture const* texture, int8_t const slot, int8_t const level, int8_t const layer, HeAccessType const access) {
+    HE_CRASH_LOG("Texture ImageTextureBind");
 	if(texture != nullptr)
 		glBindImageTexture(slot, texture->textureId, level, (layer == -1) ? GL_TRUE : GL_FALSE, (layer == -1) ? 0 : layer, access, texture->format);
 	else
@@ -1308,13 +1341,15 @@ void heImageTextureBind(HeTexture const* texture, int8_t const slot, int8_t cons
 };
 
 void heTextureUnbind(int8_t const slot, b8 const cubeMap) {
+    HE_CRASH_LOG("Texture Unbind");
 	uint32_t format = (cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(format, 0);
 };
 
 void heTextureDestroy(HeTexture* texture) {
-	if(--texture->referenceCount == 0) {
+    HE_CRASH_LOG("Texture Destroy");
+    if(--texture->referenceCount == 0) {
 		heMemoryTracker[HE_MEMORY_TYPE_TEXTURE] -= texture->memory;
 		glDeleteTextures(1, &texture->textureId);
 		texture->textureId = 0;
@@ -1325,6 +1360,7 @@ void heTextureDestroy(HeTexture* texture) {
 };
 
 void heTextureCreateMipmaps(uint32_t const id, uint32_t const count, b8 const cubeMap) {
+    HE_CRASH_LOG("Texture CreateMipmaps");
 	uint32_t format = (cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 	glTexParameteri(format, GL_TEXTURE_MAX_LEVEL, count);
 	glTexParameteri(format, GL_TEXTURE_BASE_LEVEL, 0);
@@ -1363,10 +1399,15 @@ void heTextureFilterTrilinear(HeTexture const* texture, uint16_t const count) {
 void heTextureFilterAnisotropic(HeTexture const* texture) {
 	uint32_t format = (texture->cubeMap) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 
-	float value;
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &value);
-	const float amount = std::fmin(4.0f, value);
-	glTexParameterf(format, GL_TEXTURE_MAX_ANISOTROPY_EXT, amount);
+	//float value;
+	//glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &value);
+
+    if(maxAnisotropicValue == -1.f) {
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropicValue);
+    }
+    
+    //const float amount = std::fmin(4.0f, value);
+    glTexParameterf(format, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropicValue);
 };
 
 void heTextureClampEdge(HeTexture const* texture) {
