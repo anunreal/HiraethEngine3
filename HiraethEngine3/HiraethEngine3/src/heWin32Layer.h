@@ -12,6 +12,12 @@
 
 // -- filesystem
 
+struct HeFileDescriptor {
+    std::string name;
+    std::string fullPath;
+    std::string type;
+};
+
 // returns true if the file was modified since the last time it was checked (with this function). If this is
 // the first time this file is checked, it is assumed to not have changed. From then on the last access time will
 // be stored
@@ -20,7 +26,7 @@ extern HE_API b8 heWin32FileModified(std::string const& file);
 extern HE_API b8 heWin32FileExists(std::string const& file);
 // adds the (relative) paths of all the files in given folder to the vector. If the given path does not exist or is not a folder,
 // the vector will not be modified. If recursive is true, all subfolders will be searched too
-extern HE_API void heWin32FolderGetFiles(std::string const& folder, std::vector<std::string>& files, b8 const recursive);
+extern HE_API void heWin32FolderGetFiles(std::string const& folder, std::vector<HeFileDescriptor>& files, b8 const recursive);
 // creates a folder with given relative or absolute path if it doesnt exist
 extern HE_API void heWin32FolderCreate(std::string const& path);
 

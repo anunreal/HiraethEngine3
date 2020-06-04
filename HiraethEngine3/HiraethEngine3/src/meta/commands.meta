@@ -1,4 +1,5 @@
 #include "..\..\main.h"
+#include "..\heConverter.h"
 
 void command_set_position(int index, hm::vec3f const& position) {
 	HeD3Instance* instance = heD3LevelGetInstance(heD3Level, index);
@@ -39,4 +40,70 @@ void command_toggle_physics_debug() {
 
 void command_toggle_profiler() {
 	 heProfilerToggleDisplay();
+};
+
+void command_export_texture(std::string const& in, std::string const& out) {
+     heTextureCompress(in, out);
+     HE_LOG("Successfully converted texture");
+};
+
+void command_export_textures() {
+    std::string folder = "res/textures/instances";
+    std::vector<HeFileDescriptor> files; 
+    heWin32FolderGetFiles(folder, files, true);
+
+    for(auto& all : files) {
+        std::string out = "bin" + all.fullPath;
+        heTextureCompress(all.fullPath, out);
+    }
+    
+    HE_LOG("Successfully converted textures");
+};
+
+void command_export_assets() {
+    std::string folder = "res/instances";
+    std::vector<HeFileDescriptor> files; 
+    heWin32FolderGetFiles(folder, files, true);
+
+    for(auto& all : files) {
+        std::string out = "bin" + all.fullPath;
+        heBinaryConvertD3InstanceFile(all.fullPath, out);
+    }
+    
+    HE_LOG("Successfully converted textures");
+};
+
+void command_export_skybox() {
+    HeD3Skybox* skybox = &heD3Level->skybox; 
+    heTextureExport(skybox->specular, "binres/textures/skybox/" + skybox->specular->name + ".h3asset");
+    heTextureExport(skybox->irradiance, "binres/textures/skybox/" + skybox->irradiance->name + ".h3asset");
+    HE_LOG("Successfully exported skybox");
+};
+
+void command_print_memory() {
+    HE_LOG("=== MEMORY ===");
+    uint64_t total = heMemoryTracker[HE_MEMORY_TYPE_TEXTURE] +
+        heMemoryTracker[HE_MEMORY_TYPE_VAO] + 
+        heMemoryTracker[HE_MEMORY_TYPE_FBO] +
+        heMemoryTracker[HE_MEMORY_TYPE_SHADER] + 
+        heMemoryTracker[HE_MEMORY_TYPE_CONTEXT];
+
+    HE_LOG("textures = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_TEXTURE]));
+    HE_LOG("vaos     = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_VAO]));
+    HE_LOG("fbos     = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_FBO]));
+    HE_LOG("context  = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_CONTEXT]));
+    HE_LOG("shaders  = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_SHADER]));
+    HE_LOG("total    = " + he_bytes_to_string(total));
+    HE_LOG("total    = " + he_bytes_to_string(heMemoryGetUsage()));
+    HE_LOG("=== MEMORY ===");
+};
+
+void command_print_textures() {
+    HE_LOG("=== TEXTURES ===");
+    std::string string;
+    for(auto const& all : heAssetPool.texturePool)
+        he_to_string(&all.second, string);
+
+    HE_LOG(string);   
+    HE_LOG("=== TEXTURES ===");
 };

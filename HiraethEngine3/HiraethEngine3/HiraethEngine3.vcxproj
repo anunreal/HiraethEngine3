@@ -30,6 +30,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableUnitySupport>true</EnableUnitySupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -43,6 +44,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableUnitySupport>false</EnableUnitySupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -83,6 +85,8 @@
     <OutDir>$(SolutionDir)bin\$(ProjectName)\</OutDir>
     <IntDir>$(SolutionDir)bin-int\$(ProjectName)\</IntDir>
     <TargetName>$(ProjectName)-$(Configuration)-$(Platform)</TargetName>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)bin\$(ProjectName)\</OutDir>
@@ -97,8 +101,8 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\GLEW\include;$(SolutionDir)HiraethNetwork\src;$(SolutionDir)Dependencies\bullet\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/wd26812 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>_CRTDBG_MAP_ALLOC;HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;GLEW_STATIC;HE_EXPORTS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd26812 /analyze %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -194,6 +198,7 @@
     <ClInclude Include="src\heAssets.h" />
     <ClInclude Include="src\heBinary.h" />
     <ClInclude Include="src\heConsole.h" />
+    <ClInclude Include="src\heConverter.h" />
     <ClInclude Include="src\heCore.h" />
     <ClInclude Include="src\heD3.h" />
     <ClInclude Include="src\heDebugUtils.h" />
@@ -221,9 +226,11 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="src\heAssets.cpp" />
     <ClCompile Include="src\heBinary.cpp" />
     <ClCompile Include="src\heConsole.cpp" />
+    <ClCompile Include="src\heConverter.cpp" />
     <ClCompile Include="src\heCore.cpp" />
     <ClCompile Include="src\heD3.cpp" />
     <ClCompile Include="src\heDebugUtils.cpp" />
@@ -235,7 +242,6 @@
     <ClCompile Include="src\heUtils.cpp" />
     <ClCompile Include="src\heWin32Layer.cpp" />
     <ClCompile Include="src\heWindow.cpp" />
-    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\meta\commands.meta" />

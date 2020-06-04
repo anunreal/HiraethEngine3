@@ -4,6 +4,7 @@
 #include "heUtils.h"
 #include "heRenderer.h"
 #include "heBinary.h"
+#include "heConverter.h"
 #include "heWin32Layer.h"
 #include "heConsole.h"
 #include <sstream> // for he_float_to_string
@@ -54,31 +55,31 @@ void heDebugRequestInfo(const HeDebugInfoFlags flags) {
     
     if(flags & HE_DEBUG_INFO_ENGINE) {
         heDebugPrint("=== ENGINE ===\n");
-		if(heRenderEngine->renderMode == HE_RENDER_MODE_DEFERRED) {
-			std::string string;
-			he_to_string(&heRenderEngine->deferred.gBufferFbo, string);
-			heDebugPrint("gBuffer = " + string);
-		}
+        if(heRenderEngine->renderMode == HE_RENDER_MODE_DEFERRED) {
+            std::string string;
+            he_to_string(&heRenderEngine->deferred.gBufferFbo, string);
+            heDebugPrint("gBuffer = " + string);
+        }
         heDebugPrint("=== ENGINE ===");
     }
 
-	if(flags & HE_DEBUG_INFO_MEMORY) {
-		heDebugPrint("=== MEMORY ===");
-		uint64_t total = heMemoryTracker[HE_MEMORY_TYPE_TEXTURE] +
-			heMemoryTracker[HE_MEMORY_TYPE_VAO] + 
-			heMemoryTracker[HE_MEMORY_TYPE_FBO] +
-			heMemoryTracker[HE_MEMORY_TYPE_SHADER] + 
-			heMemoryTracker[HE_MEMORY_TYPE_CONTEXT];
-		
-		heDebugPrint("textures = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_TEXTURE]));
-		heDebugPrint("vaos     = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_VAO]));
-		heDebugPrint("fbos     = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_FBO]));
-		heDebugPrint("context  = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_CONTEXT]));
-		heDebugPrint("shaders  = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_SHADER]));
-		heDebugPrint("total    = " + he_bytes_to_string(total));
-		heDebugPrint("total    = " + he_bytes_to_string(heMemoryGetUsage()));
-		heDebugPrint("=== MEMORY ===");
-	}
+    if(flags & HE_DEBUG_INFO_MEMORY) {
+        heDebugPrint("=== MEMORY ===");
+        uint64_t total = heMemoryTracker[HE_MEMORY_TYPE_TEXTURE] +
+            heMemoryTracker[HE_MEMORY_TYPE_VAO] + 
+            heMemoryTracker[HE_MEMORY_TYPE_FBO] +
+            heMemoryTracker[HE_MEMORY_TYPE_SHADER] + 
+            heMemoryTracker[HE_MEMORY_TYPE_CONTEXT];
+        
+        heDebugPrint("textures = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_TEXTURE]));
+        heDebugPrint("vaos     = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_VAO]));
+        heDebugPrint("fbos     = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_FBO]));
+        heDebugPrint("context  = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_CONTEXT]));
+        heDebugPrint("shaders  = " + he_bytes_to_string(heMemoryTracker[HE_MEMORY_TYPE_SHADER]));
+        heDebugPrint("total    = " + he_bytes_to_string(total));
+        heDebugPrint("total    = " + he_bytes_to_string(heMemoryGetUsage()));
+        heDebugPrint("=== MEMORY ===");
+    }
 };
 
 b8 heDebugIsInfoRequested(const HeDebugInfoFlags flag) {
@@ -97,7 +98,7 @@ void heDebugPrint(const std::string& message) {
     output.push_back('\n');
     
     if (heDebugInfo.stream == nullptr) {
-		heConsolePrint(output);
+        heConsolePrint(output);
         std::cout << output;
         std::cout.flush();
     } else {
@@ -160,20 +161,32 @@ std::string he_to_string(HeColourFormat const& type) {
     std::string s;
     
     switch(type) {
-        case HE_COLOUR_FORMAT_RGB8:
+    case HE_COLOUR_FORMAT_RGB8:
         s = "rgb8";
         break;
         
-        case HE_COLOUR_FORMAT_RGBA8:
+    case HE_COLOUR_FORMAT_RGBA8:
         s = "rgba8";
         break;
         
-        case HE_COLOUR_FORMAT_RGB16:
+    case HE_COLOUR_FORMAT_RGB16:
         s = "rgb16";
         break;
         
-        case HE_COLOUR_FORMAT_RGBA16:
+    case HE_COLOUR_FORMAT_RGBA16:
         s = "rgba16";
+        break;
+
+    case HE_COLOUR_FORMAT_COMPRESSED_RGB8:
+        s = "compressed_rgb8";
+        break;
+
+    case HE_COLOUR_FORMAT_COMPRESSED_RGBA8:
+        s = "compressed_rgba8";
+        break;
+
+    default:
+        s = "unknown_colour_format";
         break;
     };
     
@@ -181,68 +194,68 @@ std::string he_to_string(HeColourFormat const& type) {
 };
 
 std::string he_to_string(HeMemoryType const& type) {
-	std::string s;
+    std::string s;
 
-	switch(type) {
-	case HE_MEMORY_TYPE_TEXTURE:
-		s = "textures";
-		break;
+    switch(type) {
+    case HE_MEMORY_TYPE_TEXTURE:
+        s = "textures";
+        break;
 
-	case HE_MEMORY_TYPE_VAO:
-		s = "vaos";
-		break;
+    case HE_MEMORY_TYPE_VAO:
+        s = "vaos";
+        break;
 
-	case HE_MEMORY_TYPE_FBO:
-		s = "fbos";
-		break;
-	}
+    case HE_MEMORY_TYPE_FBO:
+        s = "fbos";
+        break;
+    }
 
-	return s;
-	
+    return s;
+    
 };
 
 std::string he_gl_error_to_string(uint32_t const& error) {
-	std::string s;
+    std::string s;
 
-	switch(error) {
-	case 0x0500:
-		s = "Invalid Enum";
-		break;
+    switch(error) {
+    case 0x0500:
+        s = "Invalid Enum";
+        break;
 
-	case 0x0501:
-		s = "Invalid Value";
-		break;
+    case 0x0501:
+        s = "Invalid Value";
+        break;
 
-	case 0x0502:
-		s = "Invalid Operation";
-		break;
+    case 0x0502:
+        s = "Invalid Operation";
+        break;
 
-	case 0x0503:
-		s = "Stack Overflow";
-		break;
+    case 0x0503:
+        s = "Stack Overflow";
+        break;
 
-	case 0x0504:
-		s = "Stack Underflow";
-		break;
+    case 0x0504:
+        s = "Stack Underflow";
+        break;
 
-	case 0x0505:
-		s = "Out of Memory";
-		break;
+    case 0x0505:
+        s = "Out of Memory";
+        break;
 
-	case 0x0506:
-		s = "Invalid Framebuffer Operation";
-		break;
+    case 0x0506:
+        s = "Invalid Framebuffer Operation";
+        break;
 
-	case 0x0507:
-		s = "Lost Context";
-		break;
-		
-	default:
-		s = std::to_string(error);
-		break;
-	}
-	
-	return s;
+    case 0x0507:
+        s = "Lost Context";
+        break;
+        
+    default:
+        s = std::to_string(error);
+        break;
+    }
+    
+    return s;
 };
 
 
@@ -278,18 +291,19 @@ std::string he_to_string(HeShaderData const* ptr) {
 
 
 void he_to_string(HeTexture const* ptr, std::string& output, std::string const& prefix) {
-	output += prefix + "HeTexture {\n";
+    output += prefix + "HeTexture {\n";
 #ifdef HE_ENABLE_NAMES
-	output += prefix + "\tname = " + ptr->name + '\n';
-#endif	
-	output += prefix + "\treferences = " + std::to_string(ptr->referenceCount) + '\n';
-	output += prefix + "\tid         = " + std::to_string(ptr->textureId)      + '\n';
-	output += prefix + "\tformat     = " + he_to_string(ptr->format)           + '\n';
-	output += prefix + "\tsize       = " + hm::to_string(ptr->size)            + '\n';
-	output += prefix + "\tchannels   = " + std::to_string(ptr->channels)       + '\n';
-	output += prefix + "\tcubeMap    = " + std::to_string(ptr->cubeMap)        + '\n';
-	output += prefix + "\tmemory     = " + he_bytes_to_string(ptr->memory)     + '\n';
-	output += prefix + "};\n";
+    output += prefix + "\tname       = " + ptr->name + '\n';
+#endif  
+    output += prefix + "\treferences = " + std::to_string(ptr->referenceCount) + '\n';
+    output += prefix + "\tid         = " + std::to_string(ptr->textureId)      + '\n';
+    output += prefix + "\tformat     = " + he_to_string(ptr->format)           + '\n';
+    output += prefix + "\tsize       = " + hm::to_string(ptr->size)            + '\n';
+    output += prefix + "\tchannels   = " + std::to_string(ptr->channels)       + '\n';
+    output += prefix + "\tcubeMap    = " + std::to_string(ptr->cubeMap)        + '\n';
+    output += prefix + "\tmipmaps    = " + std::to_string(ptr->mipmapCount)    + '\n';
+    output += prefix + "\tmemory     = " + he_bytes_to_string(ptr->memory)     + '\n';
+    output += prefix + "};\n";
 };
 
 void he_to_string(HeFboAttachment const* ptr, std::string& output, std::string const& prefix) {
@@ -302,7 +316,7 @@ void he_to_string(HeFboAttachment const* ptr, std::string& output, std::string c
     }
     output += prefix + "\tformat  = " + he_to_string(ptr->format)        + '\n';
     output += prefix + "\tsize    = " + hm::to_string(ptr->size)         + '\n';
-	output += prefix + "\tmemory  = " + he_bytes_to_string(ptr->memory)  + '\n';
+    output += prefix + "\tmemory  = " + he_bytes_to_string(ptr->memory)  + '\n';
     output += prefix + "};\n";
 };
 
@@ -313,12 +327,12 @@ void he_to_string(HeFbo const* ptr, std::string& output, std::string const& pref
 #endif
     output += prefix + "\tid      = " + std::to_string(ptr->fboId) + '\n';
     output += prefix + "\tsize    = " + hm::to_string(ptr->size) + '\n';
-	std::string depth;
-	he_to_string(&ptr->depthAttachment, depth, prefix + '\t');
-	output += prefix + "\tdepth   = " + depth + '\n';
+    std::string depth;
+    he_to_string(&ptr->depthAttachment, depth, prefix + '\t');
+    output += prefix + "\tdepth   = " + depth + '\n';
     //output += prefix + "\tmemory  = " + std::to_string(ptr->memory) + '\n';
 
-	output += prefix + "\tattachments:\n";
+    output += prefix + "\tattachments:\n";
     for(auto const& all : ptr->colourAttachments)
         he_to_string(&all, output, prefix + "\t\t");
     
@@ -434,96 +448,109 @@ void he_to_string(HeMaterial const* ptr, std::string& output, std::string const&
 // -- other
 
 std::string he_bytes_to_string(uint64_t const bytes) {
-	std::string s;
+    std::string s;
 
-	if(bytes < 1000)
-		s = std::to_string(bytes) + "b";
-	else if(bytes < 1000000)
-		s = he_float_to_string(bytes / 1000.f, 1) + "kb";
-	else if(bytes < 1000000000)
-		s = he_float_to_string(bytes / 1000000.f, 1) + "mb";
-	
-	return s;
+    if(bytes < 1000)
+        s = std::to_string(bytes) + "b";
+    else if(bytes < 1000000)
+        s = he_float_to_string(bytes / 1000.f, 1) + "kb";
+    else if(bytes < 1000000000)
+        s = he_float_to_string(bytes / 1000000.f, 1) + "mb";
+    
+    return s;
 };
 
 std::string he_float_to_string(float const _float, uint8_t const precision) {
-	std::stringstream stream;
-	stream << std::fixed << std::setprecision(precision) << _float;
-	return stream.str();
+    std::stringstream stream;
+    stream << std::fixed << std::setprecision(precision) << _float;
+    return stream.str();
 };
 
 
 // -- profiler
 
 void heProfilerCreate(HeFont const* font) {
-	heFontCreateScaled(font, &heProfiler.font, 10);
+    heFontCreateScaled(font, &heProfiler.font, 10);
 };
 
 void heProfilerAddEntry(std::string const& name, double const duration, hm::colour const& colour) {
-	heProfiler.entries[heProfiler.entryOffset++] = HeProfiler::HeProfilerEntry(name, duration, colour);
+    heProfiler.entries[heProfiler.entryOffset++] = HeProfiler::HeProfilerEntry(name, duration, colour);
 };
 
 void heProfilerAddEntry(std::string const& name, double const duration) {
-	hm::colour c;
-	c.r = std::rand() % 255;
-	c.g = std::rand() % 255;
-	c.b = std::rand() % 255;
-	heProfilerAddEntry(name, duration, c);
+    hm::colour c;
+    c.r = std::rand() % 255;
+    c.g = std::rand() % 255;
+    c.b = std::rand() % 255;
+    c.a = 255;
+    heProfilerAddEntry(name, duration, c);
 };
 
 void heProfilerRender(HeRenderEngine* engine) { 
-	if(heProfiler.displayed) {
-		// render profiler	
-		float const MS_COUNT   = 16.f;                 // the amount of milliseconds displayed
-		float const MAX_WIDTH  = 0.99f;                // in clip space
-		float const PER_MS     = MAX_WIDTH / MS_COUNT; // clip space per millisecond
-		float const HEIGHT     = 15.f;                 // bar height in pixels
-		float const BARYOFFSET = (float) engine->window->windowInfo.size.y - 20.f; 
-	
-		float xoffset = (1.0f - MAX_WIDTH) / 2.f * engine->window->windowInfo.size.x; // in pixels
-		float yoffset = BARYOFFSET - HEIGHT - 10;
-		
-		hm::vec2f colourQuadSize = hm::vec2f(20, 10);
-		
-		for(uint32_t i = 0; i < heProfiler.entryOffset; ++i) {
-			HeProfiler::HeProfilerEntry const& entry = heProfiler.entries[i];
-			float widthInPixels = PER_MS * (float) entry.duration * engine->window->windowInfo.size.x;
+    if(heProfiler.displayed) {
+        // render profiler  
+        //float const MS_COUNT   = 1000.f / engine->window->windowInfo.fpsCap; 
+        float const MS_COUNT   = (float) engine->window->frameTime * 1000.f; // the amount of ms displayed
+        float const MAX_WIDTH  = 0.99f;                            // in clip space
+        float const PER_MS     = MAX_WIDTH / MS_COUNT;             // clip space per millisecond
+        float const HEIGHT     = 15.f;                             // bar height in pixels
+        float const BARYOFFSET = (float) engine->window->windowInfo.size.y - 20.f; 
+    
+        float xoffset = (1.0f - MAX_WIDTH) / 2.f * engine->window->windowInfo.size.x; // in pixels
+        float yoffset = BARYOFFSET - HEIGHT - 10;
+        
+        hm::vec2f colourQuadSize = hm::vec2f(20, 10);
+        
+        for(uint32_t i = 0; i < heProfiler.entryOffset; ++i) {
+            HeProfiler::HeProfilerEntry const& entry = heProfiler.entries[i];
+            float widthInPixels = PER_MS * (float) entry.duration * engine->window->windowInfo.size.x;
+            if(xoffset + widthInPixels > engine->window->windowInfo.size.x * MAX_WIDTH)
+                widthInPixels = engine->window->windowInfo.size.x * MAX_WIDTH - xoffset;
+            
+            // draw in graph
+            heUiRenderQuad(engine, hm::vec2f(xoffset, BARYOFFSET), hm::vec2f(xoffset, BARYOFFSET + HEIGHT), hm::vec2f(xoffset + widthInPixels, BARYOFFSET), hm::vec2f(xoffset + widthInPixels, BARYOFFSET + HEIGHT), entry.colour);
 
-			// draw in graph
-			heUiRenderQuad(engine, hm::vec2f(xoffset, BARYOFFSET), hm::vec2f(xoffset, BARYOFFSET + HEIGHT), hm::vec2f(xoffset + widthInPixels, BARYOFFSET), hm::vec2f(xoffset + widthInPixels, BARYOFFSET + HEIGHT), entry.colour);
+            // draw description
+            heUiRenderQuad(engine, hm::vec2f(10, yoffset), hm::vec2f(10, yoffset + colourQuadSize.y), hm::vec2f(10 + colourQuadSize.x, yoffset), hm::vec2f(10, yoffset) + colourQuadSize, entry.colour);
 
-			// draw description
-			heUiRenderQuad(engine, hm::vec2f(10, yoffset), hm::vec2f(10, yoffset + colourQuadSize.y), hm::vec2f(10 + colourQuadSize.x, yoffset), hm::vec2f(10, yoffset) + colourQuadSize, entry.colour);
+            heUiRenderText(engine, &heProfiler.font, entry.name + ":", hm::vec2f(10 + colourQuadSize.x + 5, yoffset), hm::colour(255)); // immediate mode
+            heUiRenderText(engine, &heProfiler.font, std::to_string(entry.duration) + "ms", hm::vec2f(10 + colourQuadSize.x + 155, yoffset), hm::colour(255), HE_TEXT_ALIGN_RIGHT); // immediate mode
+            
+            xoffset += widthInPixels;   
+            yoffset -= 15;
+        }
 
-			heUiRenderText(engine, &heProfiler.font, entry.name + ":  " + std::to_string(entry.duration) + "ms" , hm::vec2f(10 + colourQuadSize.x + 5, yoffset), hm::colour(255)); // immediate mode
-			
-			xoffset += widthInPixels;	
-			yoffset -= 15;
-		}
+        // draw frame time
+        heUiRenderText(engine, &heProfiler.font, "Frame: " + std::to_string((int) (1. / engine->window->frameTime)) + " (" + std::to_string(engine->window->frameTime) + ")", hm::vec2f(10, yoffset), hm::colour(255));
 
-		// draw frame time
-		heUiRenderText(engine, &heProfiler.font, "Frame: " + std::to_string((int) (1. / engine->window->frameTime)) + " (" + std::to_string(engine->window->frameTime) + ")", hm::vec2f(10, yoffset), hm::colour(255));
-
-		// draw sleep time
-		float remaining = (MAX_WIDTH * engine->window->windowInfo.size.x) - xoffset;
-		heUiRenderQuad(engine, hm::vec2f(xoffset, BARYOFFSET), hm::vec2f(xoffset, BARYOFFSET + HEIGHT), hm::vec2f(xoffset + remaining, BARYOFFSET), hm::vec2f(xoffset + remaining, BARYOFFSET + HEIGHT), hm::colour(0));
-	}	
+        // draw sleep time
+        float remaining = (MAX_WIDTH * engine->window->windowInfo.size.x) - xoffset;
+        if(remaining > 0.f)
+            heUiRenderQuad(engine, hm::vec2f(xoffset, BARYOFFSET), hm::vec2f(xoffset, BARYOFFSET + HEIGHT), hm::vec2f(xoffset + remaining, BARYOFFSET), hm::vec2f(xoffset + remaining, BARYOFFSET + HEIGHT), hm::colour(0));
+    }   
 };
 
 void heProfilerFrameStart() {
-	heProfiler.currentMark = heWin32TimeGet();
-	heProfiler.entryOffset = 0;
+    heProfiler.currentMark = heWin32TimeGet();
+    heProfiler.entryOffset = 0;
 };
 
 void heProfilerFrameMark(std::string const& name, hm::colour const& colour) {
-	__int64 now = heWin32TimeGet();
-	double duration = heWin32TimeCalculateMs(now - heProfiler.currentMark);
-	heProfiler.currentMark = now;
-	heProfilerAddEntry(name, duration, colour);
+    __int64 now = heWin32TimeGet();
+    double duration = heWin32TimeCalculateMs(now - heProfiler.currentMark);
+    heProfiler.currentMark = now;
+    heProfilerAddEntry(name, duration, colour);
+};
+
+void heProfilerFrameMark(std::string const& name) {
+    __int64 now = heWin32TimeGet();
+    double duration = heWin32TimeCalculateMs(now - heProfiler.currentMark);
+    heProfiler.currentMark = now;
+    heProfilerAddEntry(name, duration);
 };
 
 void heProfilerToggleDisplay() {
-	heProfiler.displayed = !heProfiler.displayed;
+    heProfiler.displayed = !heProfiler.displayed;
 };
 
 
@@ -556,25 +583,25 @@ b8 heCommandRun(std::string const& message) {
             heDebugRequestInfo(HE_DEBUG_INFO_ENGINE);
             found = true;
         } else if(args[1] == "memory") {
-			heDebugRequestInfo(HE_DEBUG_INFO_MEMORY);
-			found = true;
-		} else if(args[1] == "textures") {
-			heDebugPrint("=== TEXTURES ===");
-			std::string string;
-			for(auto const& all : heAssetPool.texturePool)
-				he_to_string(&all.second, string);
+            heDebugRequestInfo(HE_DEBUG_INFO_MEMORY);
+            found = true;
+        } else if(args[1] == "textures") {
+            heDebugPrint("=== TEXTURES ===");
+            std::string string;
+            for(auto const& all : heAssetPool.texturePool)
+                he_to_string(&all.second, string);
 
-			heDebugPrint(string);	
-			heDebugPrint("=== TEXTURES ===");
-			found = true;
-		} else if(args[1] == "window") {
-			heDebugPrint("=== WINDOW ===");
+            heDebugPrint(string);   
+            heDebugPrint("=== TEXTURES ===");
+            found = true;
+        } else if(args[1] == "window") {
+            heDebugPrint("=== WINDOW ===");
 
-			heDebugPrint("Size: " + hm::to_string(heRenderEngine->window->windowInfo.size));
-			
-			heDebugPrint("=== WINDOW ===");
-		}
-		
+            heDebugPrint("Size: " + hm::to_string(heRenderEngine->window->windowInfo.size));
+            
+            heDebugPrint("=== WINDOW ===");
+        }
+        
     } else if(args[0] == "set") {
         // set some information
         if(args[1].compare(0, 9, "instances") == 0) {
@@ -670,27 +697,26 @@ b8 heCommandRun(std::string const& message) {
         if(args[1] == "instance") {
             // convert file to binary
             heBinaryConvertD3InstanceFile(args[2], args[3]);
-			HE_LOG("Successfully converted instance file");
+            HE_LOG("Successfully converted instance file");
             found = true;
         }
         
         if(args[1] == "instances") {
             // convert folder
             std::string folder = args[2];
-            std::vector<std::string> files;
+            std::vector<HeFileDescriptor> files;
             heWin32FolderGetFiles(folder, files, false);
             heWin32FolderCreate(folder + "/bin/");
             for(auto const& all : files) {
-                HE_LOG("File: " + all);
-                size_t pathEnd = all.find_last_of('/');
-                heBinaryConvertD3InstanceFile(all, all.substr(0, pathEnd) + "/bin/" + all.substr(pathEnd + 1));
+                HE_LOG("File: " + all.name);
+                heBinaryConvertD3InstanceFile(all.fullPath, "bin/" + all.fullPath);
             }
             found = true;
         }
         
         if(args[1] == "texture") {
             // convert texture to binary
-            heBinaryConvertTexture(args[2], args[3]);
+            heTextureCompress(args[2], args[3]);
             found = true;
         }
         
@@ -698,15 +724,12 @@ b8 heCommandRun(std::string const& message) {
             // convert folder
             std::string folder = args[2];
             size_t folderLength = folder.size();
-            std::vector<std::string> files;
+            std::vector<HeFileDescriptor> files;
             heWin32FolderGetFiles(folder, files, true);
             heWin32FolderCreate(folder + "/bin/");
             for(auto& all : files) {
-                HE_LOG("File: " + all);
-                std::string out = folder + "/bin/" + all.substr(folderLength);
-                size_t pathEnd = out.find_last_of('/');
-                heWin32FolderCreate(out.substr(0, pathEnd));
-                heBinaryConvertTexture(all, out);
+                HE_LOG("File: " + all.name);
+                heTextureCompress(all.fullPath, "bin/" + all.fullPath);
             }
             found = true;
         }
@@ -718,9 +741,9 @@ b8 heCommandRun(std::string const& message) {
 void heCommandThread(b8* running) {
     std::string line;
     while((running == nullptr || *running) && std::getline(std::cin, line))
-		if(!line.empty())
-			if(!heCommandRun(line))
-				HE_DEBUG("Invalid command!");
+        if(!line.empty())
+            if(!heCommandRun(line))
+                HE_DEBUG("Invalid command!");
 };
 
 void heErrorsPrint() {

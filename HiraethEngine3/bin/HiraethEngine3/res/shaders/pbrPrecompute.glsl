@@ -88,7 +88,7 @@ vec3 calculateIrradiance(vec3 normal) {
 	vec3 right = cross(up, normal);
 	up         = cross(normal, right);
 
-	float phiDelta = 0.025;
+	float phiDelta = 0.03;
 	float thetaDelta = 0.05;
 	float nrSamples = 0.0; 
 	for(float phi = 0.0; phi < 2.0 * PI; phi += phiDelta) {
@@ -178,8 +178,6 @@ void main(void) {
 	vec3 worldPos = normalize(getPosition(samplePos));
 	
 	const vec2 uv = sampleSphericalMap(worldPos);
-	//imageStore(t_outEnv, samplePos, imageLoad(t_inHdr, ivec2(uv * u_inputSize)));
-	//imageStore(t_outEnv, samplePos, vec4(worldPos, 1.0));
 	imageStore(t_outEnv, samplePos, vec4(calculateEnvironment(worldPos, worldPos), 1.0));
 	
 	if(u_firstPass)

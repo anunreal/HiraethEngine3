@@ -34,7 +34,7 @@ uniform sampler2D t_arm;
 uniform sampler2D t_emission;
 uniform sampler2D t_brdf;
 uniform samplerCube t_irradiance;
-uniform samplerCube t_environment;
+uniform samplerCube t_specular;
 uniform vec3 u_cameraPos;
 uniform Light u_lights[lightCount];
 
@@ -192,7 +192,7 @@ void main(void) {
 	vec3 diffuse    = irradiance * albedo.rgb;
 	
 	float lod = 0.0;
-	vec3 prefilteredColour = textureLod(t_environment, reflect(-viewDir, normal), roughness * 4).rgb;
+	vec3 prefilteredColour = textureLod(t_specular, reflect(-viewDir, normal), roughness * 4).rgb;
 	vec2 envBRDF = texture(t_brdf, vec2(dot(normal, viewDir), arm.g)).xy;
 	vec3 specular = prefilteredColour * (kS * envBRDF.x + envBRDF.y);
 	

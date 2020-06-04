@@ -152,7 +152,7 @@ b8 heKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 
 void heUiCreate() {
     heRenderEngine->window->keyboardInfo.textInputCallbacks.emplace_back(&heTextInputCallback);
-	heRenderEngine->window->keyboardInfo.keyPressCallbacks.emplace_back(&heKeyPressCallback);	
+    heRenderEngine->window->keyboardInfo.keyPressCallbacks.emplace_back(&heKeyPressCallback);   
 };
 
 void heUiSetActiveInput(HeTextInput* input) {
@@ -193,7 +193,7 @@ void heUiRenderTextInput(HeRenderEngine* engine, HeTextInput* input, hm::vec2f c
     // input string
     if(input->string.size() > 0)
         heUiPushText(heRenderEngine, &input->font, input->string, position, hm::colour(255, 255, 255, 255));
-	else if(!input->active && input->description.size() > 0)
+    else if(!input->active && input->description.size() > 0)
         heUiPushText(heRenderEngine, &input->font, input->description, position, hm::colour(190, 190, 190, 255));
 };
 

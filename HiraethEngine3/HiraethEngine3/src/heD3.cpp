@@ -73,10 +73,24 @@ void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance) {
     level->instances.erase(it);
 };
 
-void heD3LevelUpdate(HeD3Level* level) {
+void heD3LevelUpdate(HeD3Level* level, float const delta) {
+    if(level->physics.setup) {
+        hePhysicsLevelUpdate(&level->physics, delta);
+
+        if(!level->freeCamera)
+            level->camera.position = hePhysicsActorGetEyePosition(level->physics.actor);
+    }
+        
+    // update camera
+    level->camera.viewMatrix = hm::createViewMatrix(level->camera.position, level->camera.rotation);
+    
     // update all instances
     for(auto& all : level->instances)
         heD3InstanceUpdate(&all);
+};
+
+void heD3LevelDestroy(HeD3Level* level) {
+    hePhysicsLevelDestroy(&level->physics);
 };
 
 HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16_t const index) {
@@ -92,62 +106,83 @@ HeD3LightSource* heD3LevelGetLightSource(HeD3Level* level, uint16_t const index)
 };
 
 void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile) {
-    heWin32TimerStart();
+    const hm::vec2i OUT_RES(512);
+    const uint8_t MIP_COUNT = 5;
 
-	const hm::vec2i OUT_RES(512);
-	const uint8_t MIP_COUNT = 5;
-
-	std::string name = hdrFile.substr(hdrFile.find_last_of('/') + 1, hdrFile.find('.'));
+    size_t index = hdrFile.find_last_of('/') + 1;
+    std::string name = hdrFile.substr(index, hdrFile.find('.') - index);
     HeTexture hdr;
     HeShaderProgram shader;
     heShaderCreateCompute(&shader, "res/shaders/pbrPrecompute.glsl");
+
+    hdr.parameters = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    hdr.mipmapCount = MIP_COUNT;
+    heTextureLoadFromHdrImageFile(&hdr, hdrFile);
     
-    skybox->specular = &heAssetPool.texturePool[name + "_spec"];
+    skybox->specular = &heAssetPool.texturePool[name + "_specular"];
     skybox->specular->format      = HE_COLOUR_FORMAT_RGBA16;
+    skybox->specular->channels    = 4;
     skybox->specular->size        = OUT_RES;
 #ifdef HE_ENABLE_NAMES
-	skybox->specular->name        = "outEnvironment";
+    skybox->specular->name        = name + "_specular";
 #endif
-	skybox->specular->parameters  = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
-	skybox->specular->mipMapCount = MIP_COUNT;
+    skybox->specular->parameters  = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    skybox->specular->mipmapCount = MIP_COUNT;
     heTextureCreateEmptyCubeMap(skybox->specular);
     
-    skybox->irradiance = &heAssetPool.texturePool[name + "_irr"];
+    skybox->irradiance = &heAssetPool.texturePool[name + "_irradiance"];
     skybox->irradiance->format     = HE_COLOUR_FORMAT_RGBA16;
+    skybox->irradiance->channels   = 4;
     skybox->irradiance->size       = OUT_RES;
 #ifdef HE_ENABLE_NAMES
-    skybox->irradiance->name       = "outIrradiance";
+    skybox->irradiance->name       = name + "_irradiance";
 #endif
-	skybox->irradiance->parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE;
-	heTextureCreateEmptyCubeMap(skybox->irradiance);
-
-	hdr.parameters = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
-    hdr.mipMapCount = MIP_COUNT;
-	heTextureLoadHdrFromFile(&hdr, hdrFile);
+    skybox->irradiance->parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    heTextureCreateEmptyCubeMap(skybox->irradiance);
 
     heShaderBind(&shader);
-	heShaderLoadUniform(&shader, "u_inputSize", hm::vec2f(hdr.size));
+    heShaderLoadUniform(&shader, "u_inputSize", hm::vec2f(hdr.size));
     heShaderLoadUniform(&shader, "u_firstPass", true);
-	heImageTextureBind(skybox->irradiance, heShaderGetSamplerLocation(&shader, "t_outIrr", 1), 0, -1, HE_ACCESS_WRITE_ONLY);
-	heImageTextureBind(&hdr, heShaderGetSamplerLocation(&shader, "t_inHdr", 2), 0, -1, HE_ACCESS_READ_ONLY);
+    heImageTextureBind(skybox->irradiance, heShaderGetSamplerLocation(&shader, "t_outIrr", 1), 0, -1, HE_ACCESS_WRITE_ONLY);
+    heImageTextureBind(&hdr, heShaderGetSamplerLocation(&shader, "t_inHdr", 2), 0, -1, HE_ACCESS_READ_ONLY);
     heTextureBind(&hdr, heShaderGetSamplerLocation(&shader, "t_inHdrSamp", 3));
-	
-	hm::vec2i mipSize = OUT_RES;
-	for(uint8_t i = 0; i < MIP_COUNT; ++i) { 
+    
+    hm::vec2i mipSize = OUT_RES;
+    for(uint8_t i = 0; i < MIP_COUNT; ++i) { 
         float roughness = i / ((float) MIP_COUNT - 1);
-		heShaderLoadUniform(&shader, "u_roughness", roughness);
-		heShaderLoadUniform(&shader, "u_outputSize", hm::vec2f(mipSize));
+        heShaderLoadUniform(&shader, "u_roughness", roughness);
+        heShaderLoadUniform(&shader, "u_outputSize", hm::vec2f(mipSize));
         heImageTextureBind(skybox->specular, heShaderGetSamplerLocation(&shader, "t_outEnv", 0), i, -1, HE_ACCESS_WRITE_ONLY);
-    	heShaderRunCompute(&shader, mipSize.x / 16, mipSize.y / 16, 6);
-		if(i == 0)
-			heShaderLoadUniform(&shader, "u_firstPass", false);
+        heShaderRunCompute(&shader, mipSize.x / 16, mipSize.y / 16, 6);
+        if(i == 0)
+            heShaderLoadUniform(&shader, "u_firstPass", false);
         mipSize = mipSize / 2;
-	}
-	
-    //heTextureFilterTrilinear(skybox->specular);
-	heShaderUnbind();
+    }
+    
+    heShaderUnbind();
     heShaderDestroy(&shader);
-	heTextureDestroy(&hdr);
-	
-    heWin32TimerPrint("SKYBOX CREATION");
+    heTextureDestroy(&hdr);
+};
+
+
+void heParticleSourceCreate(HeParticleSource* source, HeD3Transformation const& transformation, HeSpriteAtlas* atlas, uint32_t const atlasIndex, uint32_t const particleCount) {
+    source->transformation = transformation;
+    source->atlas          = atlas;
+    source->particleCount  = particleCount;
+    source->atlasIndex     = atlasIndex;
+    source->particles      = (HeParticle*) malloc(particleCount * sizeof(HeParticle));
+};
+
+void heParticleSourceDestroy(HeParticleSource* source) {
+    heTextureDestroy(source->atlas->texture);
+    free(source->particles);
+};
+    
+void heParticleSourceSpawnParticle(HeParticleSource* source, uint32_t const index) {
+    HeParticle* particle = &source->particles[index];
+    
+    particle->velocity.x = std::rand() / (float) RAND_MAX;
+    particle->velocity.y = std::rand() / (float) RAND_MAX;
+    particle->velocity.z = std::rand() / (float) RAND_MAX;
+    particle->colour = hm::colour(255);
 };

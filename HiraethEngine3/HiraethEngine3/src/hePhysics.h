@@ -19,85 +19,86 @@ class btCollisionDispatcher;
 class btBroadphaseInterface;
 class btSequentialImpulseConstraintSolver;
 class btDiscreteDynamicsWorld;
+class btTriangleMesh;
 
 struct HeD3Transformation;
 struct HeRenderEngine;
 
 struct HePhysicsShapeInfo {
-	// the primitive type of this shape
-	HePhysicsShape type;
-	// a mass of 0 makes this object static (immovable)
-	float mass		  = 0.f;
-	// friction to the ground. The higher, the less it moves on other surfaces
-	float friction	  = 0.f;
-	// bounciness of this shape on other surfaces. The higher the more it will bounce
-	float restitution = 0.f;
-	
-	// additional information, depending on the type
-	union {
-		float sphere;	   // radius of the sphere
-		hm::vec3f box;	   // half axis of the box (dimensions)
-		hm::vec2f capsule; // total dimensions (width and height) of the capsule
-	};
-	
-	// only set if this is a custom shape
-	// if type is convex, all the points will be connected to a surface. That surface will be wrapped over the given points
-	// if type is concave, the points will be connected to triangles. This is slower but useful if there is a "hole" in the mesh
-	// that objects should be able to go through
-	std::vector<hm::vec3f> mesh;
-HePhysicsShapeInfo() : sphere(0.f), type(HE_PHYSICS_SHAPE_NONE) {};
+    // the primitive type of this shape
+    HePhysicsShape type;
+    // a mass of 0 makes this object static (immovable)
+    float mass        = 0.f;
+    // friction to the ground. The higher, the less it moves on other surfaces
+    float friction    = 0.f;
+    // bounciness of this shape on other surfaces. The higher the more it will bounce
+    float restitution = 0.f;
+    
+    // additional information, depending on the type
+    union {
+        float sphere;      // radius of the sphere
+        hm::vec3f box;     // half axis of the box (dimensions)
+        hm::vec2f capsule; // total dimensions (width and height) of the capsule
+    };
+    
+    // only set if this is a custom shape
+    // if type is convex, all the points will be connected to a surface. That surface will be wrapped over the
+    // given points if type is concave, the points will be connected to triangles. This is slower but useful if
+    // there is a "hole" in the mesh that objects should be able to go through
+    std::vector<hm::vec3f> mesh;
+HePhysicsShapeInfo() : box(0.f), type(HE_PHYSICS_SHAPE_NONE) {};
 };
 
 struct HePhysicsActorInfo {
-	// how high a character can step (in units)
-	float stepHeight = 0.2f;
-	// the force with which the character jumps. The actual jump height depents on the gravity
-	float jumpHeight = 4.0f;
-	// the offset of the camera from the bottom of the actors shape
-	float eyeOffset	 = 1.8f;
+    // how high a character can step (in units)
+    float stepHeight = 0.2f;
+    // the force with which the character jumps. The actual jump height depents on the gravity
+    float jumpHeight = 4.0f;
+    // the offset of the camera from the bottom of the actors shape
+    float eyeOffset  = 1.8f;
 };
 
 struct HePhysicsLevelInfo {
-	hm::vec3f gravity;
-	
+    hm::vec3f gravity;
+    
 HePhysicsLevelInfo() : gravity(0, -10, 0) {};
 HePhysicsLevelInfo(hm::vec3f const& gravity) : gravity(gravity) {};
 };
 
 struct HePhysicsComponent {
-	btCollisionShape*	  shape	 = nullptr;
-	btRigidBody*		  body	 = nullptr;
-	btDefaultMotionState* motion = nullptr;
-	HePhysicsShapeInfo	  shapeInfo;
+    btCollisionShape*     shape  = nullptr;
+    btRigidBody*          body   = nullptr;
+    btDefaultMotionState* motion = nullptr;
+    HePhysicsShapeInfo    shapeInfo;
 };
 
 struct HePhysicsActor {
-	btKinematicCharacterController* controller = nullptr;
-	btPairCachingGhostObject*		ghost	   = nullptr;
-	btConvexShape*					shape	   = nullptr;
-	HePhysicsShapeInfo				shapeInfo;
-	HePhysicsActorInfo				actorInfo;
+    btKinematicCharacterController* controller = nullptr;
+    btPairCachingGhostObject*       ghost      = nullptr;
+    btConvexShape*                  shape      = nullptr;
+    HePhysicsShapeInfo              shapeInfo;
+    HePhysicsActorInfo              actorInfo;
 
-
-	// -- read only
-	
-	hm::vec3f position;     // position of the shape (center)
-	hm::vec3f feetPosition; // position of the feet (position - height / 2) 
-	hm::vec3f velocity;     // the current velocity of the actor
+    // -- read only
+    
+    hm::vec3f position;     // position of the shape (center)
+    hm::vec3f feetPosition; // position of the feet (position - height / 2) 
+    hm::vec3f velocity;     // the current velocity of the actor
 };
 
 struct HePhysicsLevel {
-	btDefaultCollisionConfiguration*		config	   = nullptr;
-	btCollisionDispatcher*					dispatcher = nullptr;
-	btBroadphaseInterface*					broadphase = nullptr;
-	btSequentialImpulseConstraintSolver*	solver	   = nullptr;
-	btDiscreteDynamicsWorld*				world	   = nullptr;
-	b8 ghostPairCallbackSet = false;
-	b8 enableDebugDraw		= false;
-	
-	HePhysicsLevelInfo info;
-	HePhysicsActor* actor	= nullptr;
-	std::list<HePhysicsComponent> components;
+    btDefaultCollisionConfiguration*     config     = nullptr;
+    btCollisionDispatcher*               dispatcher = nullptr;
+    btBroadphaseInterface*               broadphase = nullptr;
+    btSequentialImpulseConstraintSolver* solver     = nullptr;
+    btDiscreteDynamicsWorld*             world      = nullptr;
+    b8 ghostPairCallbackSet = false;
+    b8 enableDebugDraw      = false;    
+    b8 setup                = false;
+    
+    HePhysicsLevelInfo info;
+    HePhysicsActor* actor   = nullptr;
+    std::list<HePhysicsComponent> components;
 };
 
 // -- shape
@@ -127,16 +128,14 @@ extern HE_API void hePhysicsLevelEnableDebugDraw(HePhysicsLevel* level, HeRender
 extern HE_API void hePhysicsLevelDisableDebugDraw(HePhysicsLevel* level);
 // renders the debug information of this physics level if debug drawing is enabled. Should be called after the d3 render
 extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel const* level);
-// returns true if the given level was successfully set up
-extern HE_API inline b8 hePhysicsLevelIsSetup(HePhysicsLevel const* level);
 
 
 // -- component
 
 // creates a new physics component from a shape
 extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& shape);
-// destroys given physics component. The component should be removed from all levels before this. This function simply deletes all
-// pointers and other data allocated
+// destroys given physics component. The component should be removed from all levels before this. This function
+// simply deletes all pointers and other data allocated
 extern HE_API void hePhysicsComponentDestroy(HePhysicsComponent* component);
 // updates the position of given component
 extern HE_API void hePhysicsComponentSetPosition(HePhysicsComponent* component, hm::vec3f const& position);

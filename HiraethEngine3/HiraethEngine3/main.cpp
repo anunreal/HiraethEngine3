@@ -1,3 +1,251 @@
+#ifdef HE_ENABLE_MEMORY_CHECK
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
+#include "main.h"
+#include "src/heWin32Layer.h"
+#include "src/heConsole.h"
+#include "src/heLoader.h"
+#include "src/heCore.h"
+#include "src/heDebugUtils.h"
+#include "src/heUi.h"
+#include <windows.h>
+#include <thread>
+#include <vector>
+
+App app;
+
+void updateInput() {
+    // key binds
+    if(heWindowKeyWasPressed(&app.window, HE_KEY_F1)) {
+        if(app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT])
+            heConsoleToggleOpen(HE_CONSOLE_STATE_OPEN_FULL);    
+        else
+            heConsoleToggleOpen(HE_CONSOLE_STATE_OPEN);
+        //app.state = (heConsoleGetState() == HE_CONSOLE_STATE_CLOSED) ? GAME_STATE_INGAME : GAME_STATE_PAUSED;
+    }
+
+    if(heWindowKeyWasPressed(&app.window, HE_KEY_F3)) {
+        heProfilerToggleDisplay();
+    }
+
+    if(heWindowKeyWasPressed(&app.window, HE_KEY_ESCAPE)) {
+        if(app.state == GAME_STATE_PAUSED) {
+            app.state = GAME_STATE_INGAME;
+            heWindowToggleCursor(true);
+            app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
+        } else if(app.state == GAME_STATE_INGAME) {
+            app.state = GAME_STATE_PAUSED;
+            heWindowToggleCursor(false);
+            app.window.mouseInfo.cursorLock = hm::vec2f(0.f);
+        }
+    }
+
+    // game input
+    if(app.window.active && app.state == GAME_STATE_INGAME) {
+        if(app.window.mouseInfo.rightButtonPressed)
+            app.level.freeCamera = !app.level.freeCamera;
+
+        // rotation
+		app.level.camera.rotation.x += app.window.mouseInfo.deltaMousePosition.y * 0.05f;
+		app.level.camera.rotation.y += app.window.mouseInfo.deltaMousePosition.x * 0.05f;
+        
+        // movement
+        hm::vec3f velocity = hm::vec3f(0.f);
+        double angle = hm::to_radians(app.level.camera.rotation.y);
+        float speed = 4.0f * (float) app.window.frameTime;
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_W]) {
+            // move forward
+            velocity.x = (float)std::sin(angle) * speed;
+            velocity.z = (float)-std::cos(angle) * speed;
+        }
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_A]) {
+            // move left
+            velocity.x -= (float)std::cos(angle) * (speed);
+            velocity.z -= (float)std::sin(angle) * (speed);
+        }
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_D]) {
+            // move right
+            velocity.x += (float)std::cos(angle) * (speed);
+            velocity.z += (float)std::sin(angle) * (speed);
+        }
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_S]) {
+            // move backwards
+            velocity.x += (float)-std::sin(angle) * speed;
+            velocity.z += (float)std::cos(angle) * speed;
+        }
+	
+        if (app.level.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_E])
+            velocity.y = speed;
+	
+        if (app.level.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_Q])
+            velocity.y = -speed;
+
+        velocity *= 30.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+
+        if(app.level.freeCamera) {
+            hePhysicsActorSetVelocity(&app.actor, hm::vec3f(0.f));
+            app.level.camera.position += velocity * (float) app.window.frameTime;
+        } else {
+            hePhysicsActorSetVelocity(&app.actor, velocity * 0.016f);
+            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.actor))
+                hePhysicsActorJump(&app.actor);
+        }
+    }
+};
+
+void enterGameState() {
+    app.state = GAME_STATE_INGAME;
+
+    heWin32TimerStart();
+    heD3LevelLoad("res/level/level0.h3level", &app.level, USE_PHYSICS, true);
+    heWin32TimerPrint("LEVEL LOAD");
+
+    heWin32TimerStart();
+    //heD3SkyboxCreate(&app.level.skybox, "res/textures/hdr/pink_sunrise.hdr");
+
+    
+    app.level.skybox.specular = &heAssetPool.texturePool["binres/textures/skybox/pink_sunrise_specular.h3asset"];
+    app.level.skybox.specular->parameters = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    heTextureLoadFromHdrCubemapFile(app.level.skybox.specular, "binres/textures/skybox/pink_sunrise_specular.h3asset");
+
+    app.level.skybox.irradiance = &heAssetPool.texturePool["binres/textures/skybox/pink_sunrise_irradiance.h3asset"];
+    app.level.skybox.irradiance->parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    heTextureLoadFromHdrCubemapFile(app.level.skybox.irradiance, "binres/textures/skybox/pink_sunrise_irradiance.h3asset");
+    /**/
+    
+    heWin32TimerPrint("SKYBOX CREATION");
+    
+#if USE_PHYSICS == 1
+	HePhysicsShapeInfo actorShape;
+	actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
+	actorShape.capsule = hm::vec2f(0.75f, 2.0f);
+	
+	HePhysicsActorInfo actorInfo;
+	actorInfo.eyeOffset = 1.6f;
+	
+	hePhysicsActorCreate(&app.actor, actorShape, actorInfo);
+	hePhysicsLevelSetActor(&app.level.physics, &app.actor);
+	hePhysicsActorSetEyePosition(&app.actor, hm::vec3f(-5.f, 0.1f, 5.f));
+#endif
+
+    app.state = GAME_STATE_INGAME;
+    heD3Level = &app.level;
+    if(app.window.active) {
+        app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
+        heWindowToggleCursor(true);
+    }
+};
+
+int main() {
+#ifdef HE_ENABLE_MEMORY_CHECK
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+#endif
+
+    // create engine
+    heWin32TimerStart(); // total
+    heWin32TimerStart(); // engine
+    HeWindowInfo windowInfo;
+	windowInfo.title			= L"He3 Test";
+	windowInfo.backgroundColour = hm::colour(135, 206, 235);
+	windowInfo.fpsCap			= 120;
+	windowInfo.size				= hm::vec2i(1366, 768);
+	app.window.windowInfo		= windowInfo;	
+    heWindowCreate(&app.window);
+        
+	heGlPrintInfo();
+	
+    app.engine.renderMode = HE_RENDER_MODE_FORWARD;
+	heRenderEngineCreate(&app.engine, &app.window);
+	hePostProcessEngineCreate(&app.engine.postProcess, &app.window);
+	heRenderEngine = &app.engine;
+    
+    // set shit up
+    heConsoleCreate(heAssetPoolGetFont("inconsolata"));
+	heProfilerCreate(heAssetPoolGetFont("inconsolata"));
+    heUiCreate();
+    heWin32TimerPrint("ENGINE STARTUP");    
+    
+    enterGameState();
+
+    double sleepTime = 0.;
+    double profilerTime = 0.;
+    heWin32TimerPrint("TOTAL STARTUP");    
+
+    while(!app.window.shouldClose) {
+        // frame setup
+        heProfilerFrameStart();
+        {
+            heWindowUpdate(&app.window);
+            heRenderEnginePrepare(&app.engine);
+        }
+        heProfilerFrameMark("prepare", hm::colour(100));
+
+        // input
+        {
+            updateInput();
+        }
+		heProfilerFrameMark("input", hm::colour(255, 0, 0));
+        
+        // render d3
+        {
+            heRenderEnginePrepareD3(&app.engine);
+            heD3LevelUpdate(&app.level, (float) app.window.frameTime);
+            heProfilerFrameMark("physics", hm::colour(255, 100, 100));
+            heD3LevelRender(&app.engine, &app.level);
+            heRenderEngineFinishD3(&app.engine);
+        }
+        heProfilerFrameMark("render d3", hm::colour(0, 255, 0));
+
+        // post process
+        {
+            hePostProcessRender(&app.engine);
+        }
+        heProfilerFrameMark("post process", hm::colour(0, 255, 255));
+        
+
+        // render ui
+        {
+            heRenderEnginePrepareUi(&app.engine);
+            heConsoleRender(&app.engine);
+            heUiQueueRender(&app.engine);
+            heRenderEngineFinishUi(&app.engine);
+        }
+        heProfilerFrameMark("ui render", hm::colour(0, 0, 255));
+        // render profiler
+        {
+            heWin32TimerStart();
+            heProfilerAddEntry("profiler", profilerTime, hm::colour(255, 255, 0));
+            heProfilerAddEntry("sleep", sleepTime, hm::colour(20, 20, 20));
+            heProfilerRender(&app.engine);            
+            profilerTime = heWin32TimerGet();
+        }        
+        
+        // frame finish
+        {
+            heWin32TimerStart();
+            heRenderEngineFinish(&app.engine);
+            sleepTime = heWin32TimerGet();
+            heWindowSyncToFps(&app.window);
+        }
+    }    
+
+    HE_DEBUG("Cleaning up...");
+    heD3LevelDestroy(&app.level);
+    heRenderEngineDestroy(&app.engine);
+    heWindowDestroy(&app.window);
+    HE_DEBUG("Successfull shutdown");
+};
+
+
+/*
 #include "main.h"
 #include "src/heWin32Layer.h"
 #include "src/heConsole.h"
@@ -165,11 +413,6 @@ void modelStressTest(std::string const& file) {
 void createWorld(HeWindow* window) {
 	//modelStressTest("cerberus");
 	
-	HeD3Camera* camera = &app.level.camera;
-	camera->position = hm::vec3f(0, 1, 0);
-	camera->rotation = hm::vec3f(0);
-	camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
-	camera->projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, window->windowInfo.size.x / (float)window->windowInfo.size.y, 0.1f, 1000.0f);
 	heWin32TimerStart();
 	heD3LevelLoad("res/level/level0.h3level", &app.level, USE_PHYSICS);
 
@@ -182,14 +425,19 @@ void createWorld(HeWindow* window) {
 	heWin32TimerPrint("LEVEL LOAD");
 	
 	heD3SkyboxCreate(&app.level.skybox, "res/textures/hdr/pink_sunrise.hdr");
-	heD3Level = &app.level;
+    heD3Level = &app.level;
 
 	HeD3Instance* instance = &app.level.instances.emplace_back();
     heD3InstanceLoadBinary("res/assets/bin/player.h3asset", instance, nullptr);
 	instance->transformation.position = hm::vec3f(5, 0, -5);
-	
+
+    HeParticleSource* particles = &app.level.particles.emplace_back();
+    heParticleSourceCreate(particles, HeD3Transformation(), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png", 1, 1, 1), 0, 1000);
+    for(uint32_t i = 0; i < 1000; ++i)
+        heParticleSourceSpawnParticle(particles, i);
+    
 	HE_LOG("Successfully loaded lvl");
-	
+
 #if USE_PHYSICS == 1
 	HePhysicsShapeInfo actorShape;
 	actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
@@ -244,7 +492,7 @@ int main() {
 
 #if USE_NETWORKING == 0
     app.state = GAME_STATE_INGAME;
-    #endif
+#endif
     
 	heGlErrorSaveAll();
 	heErrorsPrint();
@@ -298,58 +546,60 @@ int main() {
 		}
 
 		heProfilerFrameMark("input", hm::colour(255, 0, 0));
-		
-		if(app.state == GAME_STATE_INGAME) { // d3 rendering
-#if USE_PHYSICS == 1
-			hePhysicsLevelUpdate(&app.level.physics, (float) app.window.frameTime);
-			if(!freeCam)
-				app.level.camera.position = hePhysicsActorGetEyePosition(&app.actor);
-			heProfilerFrameMark("physics update", hm::colour(0, 255, 0));
-#endif
-			app.level.camera.viewMatrix = hm::createViewMatrix(app.level.camera.position, app.level.camera.rotation);
-			heRenderEnginePrepareD3(&app.engine);
-			heD3LevelUpdate(&app.level);
-			heD3LevelRender(&app.engine, &app.level);
-			heProfilerFrameMark("d3 render", hm::colour(0, 0, 255));
-#if USE_PHYSICS == 1
-			hePhysicsLevelDebugDraw(&app.level.physics);
-#endif
-			heRenderEngineFinishD3(&app.engine);
-			heProfilerFrameMark("d3 final", hm::colour(255, 0, 255));
 
-			for(auto const& all : app.players) {
-				all.second.model->transformation.position += all.second.velocity /* * app.window.frameTime */;
-				hm::vec3f playerPosition = all.second.model->transformation.position + hm::vec3f(0, 2.2f, 0);
-				hm::vec3f screenSpace    = heSpaceWorldToScreen(playerPosition, &app.level.camera, &app.window);
-				if(screenSpace.z > 0.f)
-					heUiPushText(&app.engine, &scaledFont, std::string(all.second.name), hm::vec2f(screenSpace.x, screenSpace.y), hm::colour(255, 200, 100), HE_TEXT_ALIGN_CENTER);
-			}
-		}
-				
-		{ // ui rendering
-			heRenderEnginePrepareUi(&app.engine);
-			heConsoleRender(&app.engine);
+        if(true) {
+            if(app.state == GAME_STATE_INGAME) { // d3 rendering
+#if USE_PHYSICS == 1
+                hePhysicsLevelUpdate(&app.level.physics, (float) app.window.frameTime);
+                if(!freeCam)
+                    app.level.camera.position = hePhysicsActorGetEyePosition(&app.actor);
+                heProfilerFrameMark("physics update", hm::colour(0, 255, 0));
+#endif
+                app.level.camera.viewMatrix = hm::createViewMatrix(app.level.camera.position, app.level.camera.rotation);
+                heRenderEnginePrepareD3(&app.engine);
+                heD3LevelUpdate(&app.level);
+                heD3LevelRender(&app.engine, &app.level);
+                heProfilerFrameMark("d3 render", hm::colour(0, 0, 255));
+#if USE_PHYSICS == 1
+                hePhysicsLevelDebugDraw(&app.level.physics);
+#endif
+                heRenderEngineFinishD3(&app.engine);
+                heProfilerFrameMark("d3 final", hm::colour(255, 0, 255));
 
-            if(app.state == GAME_STATE_MAIN_MENU) {
-#if USE_NETWORKING
-                if(heUiPushButton(&app.engine, &scaledFont, "connect", app.window.windowInfo.size / 2.f + hm::vec2f(-128, 80), hm::vec2f(256, 32))) {
-                    app.state = GAME_STATE_INGAME;
-                    thread = std::thread(createClient, field->input.string, field2->input.string);
-                    heWindowToggleCursor(true);
-                    inputActive = true;
+                for(auto const& all : app.players) {
+                    all.second.model->transformation.position += all.second.velocity;
+                    hm::vec3f playerPosition = all.second.model->transformation.position + hm::vec3f(0, 2.2f, 0);
+                    hm::vec3f screenSpace    = heSpaceWorldToScreen(playerPosition, &app.level.camera, &app.window);
+                    if(screenSpace.z > 0.f)
+                        heUiPushText(&app.engine, &scaledFont, std::string(all.second.name), hm::vec2f(screenSpace.x, screenSpace.y), hm::colour(255, 200, 100), HE_TEXT_ALIGN_CENTER);
                 }
+            }
+				
+            { // ui rendering
+                heRenderEnginePrepareUi(&app.engine);
+                heConsoleRender(&app.engine);
+
+                if(app.state == GAME_STATE_MAIN_MENU) {
+#if USE_NETWORKING
+                    if(heUiPushButton(&app.engine, &scaledFont, "connect", app.window.windowInfo.size / 2.f + hm::vec2f(-128, 80), hm::vec2f(256, 32))) {
+                        app.state = GAME_STATE_INGAME;
+                        thread = std::thread(createClient, field->input.string, field2->input.string);
+                        heWindowToggleCursor(true);
+                        inputActive = true;
+                    }
 #endif
 
-                heUiRenderPanel(&app.engine, &mainPanel);
-            }
+                    heUiRenderPanel(&app.engine, &mainPanel);
+                }
             
-            heUiQueueRender(&app.engine);
-			heProfilerFrameMark("ui render", hm::colour(255, 255, 0));
-			heProfilerAddEntry("sleep", sleepTime, hm::colour(100));
-			heProfilerRender(&app.engine);
-			heRenderEngineFinishUi(&app.engine);
-		}		
-		
+                heUiQueueRender(&app.engine);
+                heProfilerFrameMark("ui render", hm::colour(255, 255, 0));
+                heProfilerAddEntry("sleep", sleepTime, hm::colour(100));
+                heProfilerRender(&app.engine);
+                heRenderEngineFinishUi(&app.engine);
+            }		
+        }
+        
 		heWin32TimerStart();
 		heRenderEngineFinish(&app.engine);
 		heWindowSyncToFps(&app.window);
@@ -374,3 +624,4 @@ int main() {
 	heWindowDestroy(&app.window);
 	return 0;
 };
+/**/

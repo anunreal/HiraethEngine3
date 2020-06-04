@@ -7,7 +7,8 @@ struct HnRemoteClient;
 
 // -- client callbacks
 
-// called after a successfull connection to a local client, either when a new client connected to the server or on client sync
+// called after a successfull connection to a local client, either when a new client connected to the server or
+// on client sync
 typedef void(*HnLocalClientConnectCallback)(HnClient*, HnLocalClient*);
 // called when a client disconnected from the server
 typedef void(*HnLocalClientDisconnectCallback)(HnClient*, HnLocalClient*);

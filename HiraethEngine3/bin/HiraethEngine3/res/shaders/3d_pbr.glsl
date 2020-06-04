@@ -29,8 +29,8 @@ vec3 getScale(mat4 transMat) {
 	return s;
 }
 
-mat3 getTangentMatrix(mat4 tMat) {
-	vec3 norm = normalize(tMat * vec4(in_normal, 0.0)).xyz;
+mat3 getTangentMatrix(mat4 tMat, mat3 nMat) {
+	vec3 norm = normalize(nMat * in_normal);
 	vec3 tang = normalize(tMat * vec4(in_tangent, 0.0)).xyz; 
 	tang = (tang - dot(tang, norm) * norm);
 	vec3 bitang = normalize(cross(norm, tang));
@@ -46,7 +46,7 @@ void main(void) {
 	pass_worldPos = worldPos.xyz;
 	//pass_cameraPos = (inverse(u_viewMat) * vec4(0, 0, 0, 1)).xyz;
 	pass_cameraPos = u_cameraPos;
-	pass_tangSpace = getTangentMatrix(u_transMat);
+	pass_tangSpace = getTangentMatrix(u_transMat, u_normMat);
 	//pass_uv = in_uv * getScale(u_transMat).xy * u_tiling;
 	pass_uv = in_uv * u_tiling;
 	pass_tangent = in_tangent;
@@ -54,74 +54,23 @@ void main(void) {
 
 #fragment
 #version 430
+#include "res/shaders/3d_shader.glh"
 
 const float pi = 3.14159;
-const int maxLightCount = 1;
-
-struct Light {
-	vec4 vector;
-	vec4 colour;
-	vec4 data1;
-	vec4 data2;
-};
-
-in vec2 pass_uv;
-in vec3 pass_normal;
-in vec3 pass_worldPos;
-in vec3 pass_cameraPos;
+ 
 in mat3 pass_tangSpace;
 in vec3 pass_tangent;
 
 out vec4 out_colour;
 
 uniform samplerCube t_irradiance;
-uniform samplerCube t_environment;
+uniform samplerCube t_specular;
 uniform sampler2D t_diffuse;
 uniform sampler2D t_normal;
 uniform sampler2D t_arm;
 uniform sampler2D t_brdf;
 uniform vec3 u_cameraPos;
 uniform vec4 u_emission;
-//uniform Light u_lights[lightCount];
-
-layout(std140) uniform LightInformation {
-	Light u_lights[maxLightCount];
-	int numLights;
-};
-
-vec4 getLightVector(Light light) {
-	int type = int(light.vector.x);
-
-	if(type == 1) {
-		// point light
-		vec3 dir = normalize(light.vector.yzw - pass_worldPos);
-		float dist = length(dir);
-		float attenuation = 1.0 / (light.data1.x + light.data1.y * dist + light.data1.z * (dist * dist));    
-		return vec4(dir, attenuation);		
-	}
-	
-	if(type == 2)
-		// directional light
-		return vec4(normalize(-light.vector.yzw), 1.0);
-
-	if(type == 3) {
-		// spot light
-		vec3 dir = normalize(light.vector.yzw - pass_worldPos);
-		vec3 lightDir = vec3(-light.data1.xyz);
-		float theta = dot(dir, lightDir);
-		if(theta > light.data2.x) {
-			float epsilon   = light.data2.x - light.data1.w;
-			float intensity = clamp((theta - light.data2.x) / epsilon, 0.0, 1.0);
-			float dist = length(dir);
-			float attenuation = 1.0 / (light.data2.y + light.data2.z * dist + light.data2.w * (dist * dist));   
-			return vec4(dir, intensity * attenuation);
-		}
-	
-		return vec4(0.0);
-	}
-	
-	return vec4(1, 0, 0, 1);
-}
 
 float NDF(vec3 normal, vec3 halfway, float roughness) {
 	float r2 = roughness * roughness;
@@ -208,12 +157,11 @@ void main(void) {
 	vec3 irradiance = texture(t_irradiance, normal).rgb;
 	vec3 diffuse    = irradiance * albedo.rgb;
 	
-	float lod = 0.0;
-	vec3 prefilteredColour = textureLod(t_environment, reflect(-viewDirection, normal), roughness * 4).rgb;
+	vec3 prefilteredColour = textureLod(t_specular, reflect(-viewDirection, normal), roughness * 4).rgb;
 	vec2 envBRDF = texture(t_brdf, vec2(dot(normal, viewDirection), roughness)).xy;
 	vec3 specular = prefilteredColour * (kS * envBRDF.x + envBRDF.y);
 	
-	vec3 ambient = (kD * diffuse + specular) * ao; 
+	vec3 ambient = (kD * diffuse + specular) * ao;
 	 
 	out_colour = vec4(ambient + totalLight + u_emission.rgb, 1.0);
 }

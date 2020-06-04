@@ -36,7 +36,9 @@ void main(void) {
 		discard;
 
 	vec3 envColour = textureLod(t_skybox, pass_pos, 0).rgb;
-	envColour = envColour / (envColour + vec3(1.0)); // hdr
+	if(envColour.r < 0.0)
+	out_colour = vec4(1, 0, 0, 1);
+	else
 	//envColour = pow(envColour, vec3(1.0 / 2.2)); // gamma
 	out_colour = vec4(envColour, 1.0);
 }

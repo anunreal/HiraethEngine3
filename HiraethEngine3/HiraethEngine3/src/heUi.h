@@ -11,19 +11,19 @@ struct HeRenderEngine; // avoid include
 struct HeWindow;
 
 struct HeTextInput {
-	b8           active         = false; // whether the user should be able to type into this input right now
+    b8           active         = false; // whether the user should be able to type into this input right now
     b8           entered        = false; // gets set to true if this text input is active and the enter key was pressed
     uint32_t     cursorPosition = 0; // in chars, as offset
-	std::string  string;
+    std::string  string;
     std::string  description; // if this is set and the input string is empty, this string will be displayed in a grayish tone. This can describe what should go in that text input
-	HeScaledFont font;
-	float        timeSinceLastInput = 0.f;
+    HeScaledFont font;
+    float        timeSinceLastInput = 0.f;
 
     
     // history feature
 
     std::vector<std::string> history;
-	int32_t historyIndex = -1; // when this is -1, we type a new text. Else this is the index of the history that we are currently seeing
+    int32_t historyIndex = -1; // when this is -1, we type a new text. Else this is the index of the history that we are currently seeing
 
     
     // auto complete feature

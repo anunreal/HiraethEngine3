@@ -43,7 +43,7 @@ extern HE_API void heD3InstanceLoadBinary(std::string const& fileName, HeD3Insta
 //   colour are 3 fixed width ints and one fixed width float (see hm::colour)
 //   data are up to 8 fixed width floats (see HeD3LightSource#data)
 //   because we are only parsing numbers here, the parser does not expect any border character between the values
-extern HE_API void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadPhysics);
+extern HE_API void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadPhysics, b8 const binary);
 // loads a binary file level
 extern HE_API void heD3LevelLoadBinary(std::string const& fileName, HeD3Level* level, b8 const loadPhysics);
 

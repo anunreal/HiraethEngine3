@@ -54,9 +54,9 @@ b8 heStringStartsWith(const std::string& base, const std::string& check) {
 };
 
 void heStringEatSpacesLeft(std::string& string) {
-	string.erase(0, string.find_first_not_of(SPACE_CHARS));
+    string.erase(0, string.find_first_not_of(SPACE_CHARS));
 };
 
 void heStringEatSpacesRight(std::string& string) {
-	string.erase(string.find_last_not_of(SPACE_CHARS) + 1);
+    string.erase(string.find_last_not_of(SPACE_CHARS) + 1);
 };

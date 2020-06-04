@@ -9,7 +9,7 @@
 namespace hm {
     
     template<typename T>
-        struct mat<4, 4, T> {
+    struct mat<4, 4, T> {
         typedef vec4<T> col;
         
         col columns[4];
@@ -17,11 +17,11 @@ namespace hm {
         mat() { mat(1.f); }
         
         mat(const T v) :
-        columns {
-            col(v, 0.f, 0.f, 0.f),
-            col(0.f, v, 0.f, 0.f),
-            col(0.f, 0.f, v, 0.f),
-            col(0.f, 0.f, 0.f, v)
+            columns {
+                     col(v, 0.f, 0.f, 0.f),
+                     col(0.f, v, 0.f, 0.f),
+                     col(0.f, 0.f, v, 0.f),
+                     col(0.f, 0.f, 0.f, v)
         }
         {};
         
@@ -29,29 +29,29 @@ namespace hm {
             const T x1, const T y1, const T z1, const T w1,
             const T x2, const T y2, const T z2, const T w2,
             const T x3, const T y3, const T z3, const T w3) :
-        columns {
-            col(x0, y0, z0, w0),
-            col(x1, y1, z1, w1),
-            col(x2, y2, z2, w2),
-            col(x3, y3, z3, w3)
+            columns {
+                     col(x0, y0, z0, w0),
+                     col(x1, y1, z1, w1),
+                     col(x2, y2, z2, w2),
+                     col(x3, y3, z3, w3)
         }
         {};
         
         mat(const col& v0, const col& v1, const col& v2, const col& v3) :
-        columns {
-            (v0),
-            (v1),
-            (v2),
-            (v3)
+            columns {
+                     (v0),
+                     (v1),
+                     (v2),
+                     (v3)
         }
         {};
         
         mat(const T* ptr) :
-        columns {
-            col(ptr[0], ptr[1], ptr[2], ptr[3]),
-            col(ptr[4], ptr[5], ptr[6], ptr[7]),
-            col(ptr[8], ptr[9], ptr[10], ptr[11]),
-            col(ptr[12], ptr[13], ptr[14], ptr[15]),
+            columns {
+                     col(ptr[0], ptr[1], ptr[2], ptr[3]),
+                     col(ptr[4], ptr[5], ptr[6], ptr[7]),
+                     col(ptr[8], ptr[9], ptr[10], ptr[11]),
+                     col(ptr[12], ptr[13], ptr[14], ptr[15]),
         }
         {};
         
@@ -99,7 +99,7 @@ namespace hm {
         };
         
         template<typename T>
-            vec4<T> operator*(const vec4<T>& vector) const {
+        vec4<T> operator*(const vec4<T>& vector) const {
             
             vec4<T> result;
             result.x = vector.x * columns[0][0] + vector.y * columns[1][0] + vector.z * columns[2][0] + vector.w * columns[3][0];
@@ -116,19 +116,19 @@ namespace hm {
     typedef mat<4, 4, int32_t> mat4i;
     
     template<typename T>
-        static inline mat<4, 4, T> translate(const mat<4, 4, T>& matrix, const vec3<T>& position) {
+    static inline mat<4, 4, T> translate(const mat<4, 4, T>& matrix, const vec3<T>& position) {
         mat<4, 4, T> m = matrix;
         m[3] = matrix.columns[0] * position.x + matrix.columns[1] * position.y + matrix.columns[2] * position.z + matrix.columns[3];
         return m;
     };
     
     template<typename T>
-        static inline mat<4, 4, T> translate(const mat<4, 4, T>& matrix, const vec2<T>& position) {
+    static inline mat<4, 4, T> translate(const mat<4, 4, T>& matrix, const vec2<T>& position) {
         return translate(matrix, vec3<T>(position.x, position.y, 0));
     };
     
     template<typename T>
-        static inline mat<4, 4, T> scale(const mat<4, 4, T>& matrix, const vec3<T>& factor) {
+    static inline mat<4, 4, T> scale(const mat<4, 4, T>& matrix, const vec3<T>& factor) {
         mat<4, 4, T>  mr = matrix;
         mr[0] = mr[0] * factor.x;
         mr[1] = mr[1] * factor.y;
@@ -137,12 +137,12 @@ namespace hm {
     };
     
     template<typename T>
-        static inline mat<4, 4, T> scale(const mat<4, 4, T>& matrix, const vec2<T>& factor) {
+    static inline mat<4, 4, T> scale(const mat<4, 4, T>& matrix, const vec2<T>& factor) {
         return scale(matrix, vec3<T>(factor.x, factor.y, 1));
     };
     
     template<typename T>
-        static mat<4, 4, T> rotate(const mat<4, 4, T>& matrix, const T angle, const vec3<T>& axisVector) {
+    static mat<4, 4, T> rotate(const mat<4, 4, T>& matrix, const T angle, const vec3<T>& axisVector) {
         const float c = (float) std::cos(to_radians(angle));
         const float s = (float) std::sin(to_radians(angle));
         const float c1 = 1.0f - c;
@@ -165,7 +165,7 @@ namespace hm {
     };
     
     template<typename T>
-        static inline mat<4, 4, T> rotate(const mat<4, 4, T>& matrix, const vec3<T>& vector) {
+    static inline mat<4, 4, T> rotate(const mat<4, 4, T>& matrix, const vec3<T>& vector) {
         
         mat<4, 4, T> m = matrix;
         m = rotate(m, vector.x, hm::vec3f(1, 0, 0));

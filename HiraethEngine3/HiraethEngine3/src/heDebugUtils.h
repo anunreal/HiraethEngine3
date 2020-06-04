@@ -19,21 +19,21 @@ struct HeDebugInfo {
 };
 
 struct HeProfiler {
-	struct HeProfilerEntry {
-		double      duration;
-		hm::colour  colour;
-		std::string name;
+    struct HeProfilerEntry {
+        double      duration;
+        hm::colour  colour;
+        std::string name;
 
-		HeProfilerEntry() : name(""), duration(-1.), colour(0) {}; 
-		HeProfilerEntry(std::string const& name, double const duration, hm::colour const& colour) :
-			name(name), duration(duration), colour(colour) {};
-	};
-	
-	__int64 currentMark = 0; // marks a time stamp
-	uint32_t entryOffset = 0;
-	b8 displayed = false;
-	HeProfilerEntry entries[20];
-	HeScaledFont font;
+        HeProfilerEntry() : name(""), duration(-1.), colour(0) {}; 
+        HeProfilerEntry(std::string const& name, double const duration, hm::colour const& colour) :
+            name(name), duration(duration), colour(colour) {};
+    };
+    
+    __int64 currentMark = 0; // marks a time stamp
+    uint32_t entryOffset = 0;
+    b8 displayed = false;
+    HeProfilerEntry entries[20];
+    HeScaledFont font;
 };
 
 extern HeProfiler heProfiler;
@@ -119,6 +119,9 @@ extern HE_API inline void heProfilerAddEntry(std::string const& name, double dur
 extern HE_API inline void heProfilerFrameStart();
 // marks a new profiler. This should be called after the frame step was completed
 extern HE_API inline void heProfilerFrameMark(std::string const& name, hm::colour const& colour);
+// marks a new profiler. This should be called after the frame step was completed. Assigns a random colour to that
+// frame mark.
+extern HE_API inline void heProfilerFrameMark(std::string const& name);
 // renders the profiler (if its opened)
 extern HE_API void heProfilerRender(HeRenderEngine* engine);
 // toggles whether the profiler is visible

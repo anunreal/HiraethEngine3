@@ -49,11 +49,11 @@ void parseObjTangents(const hm::vec3f (&vertices)[3], const hm::vec2f (&uvs)[3],
 };
 
 void heMeshLoad(std::string const& fileName, HeVao* vao) {
-	HeTextFile file;
-	heTextFileOpen(&file, fileName, 0, false);
-	if(!file.open)
-		return;
-	
+    HeTextFile file;
+    heTextFileOpen(&file, fileName, 0, false);
+    if(!file.open)
+        return;
+    
     std::string string;
     HeD3MeshBuilder mesh;
     
@@ -100,8 +100,8 @@ void heMeshLoad(std::string const& fileName, HeVao* vao) {
         }
     }
 
-	heTextFileClose(&file);
-	
+    heTextFileClose(&file);
+    
     b8 isMainThread = heIsMainThread();
     
     if(isMainThread) {
@@ -120,53 +120,48 @@ void heMeshLoad(std::string const& fileName, HeVao* vao) {
 
 
 void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
-	HeTextFile file;
-	file.skipEmptyLines = false;
-	heTextFileOpen(&file, fileName, 0, false);
-	if(!file.open)
-		return;
-	
-    HE_LOG("Loading instance " + fileName);
+    HeTextFile file;
+    file.skipEmptyLines = false;
+    heTextFileOpen(&file, fileName, 0, false);
+    if(!file.open)
+        return;
+    
+    HE_LOG("Loading instance [" + fileName + "]");
     
     std::string line;
-	heTextFileGetLine(&file, &line);
-	
-    //std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
-	std::string assetName = file.name;
-	
-	auto it = heAssetPool.meshPool.find(assetName);
-	if(it != heAssetPool.meshPool.end()) {
-		heTextFileClose(&file);
-		instance->mesh = &it->second;
-		instance->material = &heAssetPool.materialPool[assetName];
-		return;
-	}
+    heTextFileGetLine(&file, &line);
+    
+    std::string assetName = file.name;
+    
+    auto it = heAssetPool.meshPool.find(assetName);
+    if(it != heAssetPool.meshPool.end()) {
+        heTextFileClose(&file);
+        instance->mesh = &it->second;
+        instance->material = &heAssetPool.materialPool[assetName];
+        return;
+    }
     
 #ifdef HE_ENABLE_NAMES
     instance->name = assetName;
 #endif
-    
     
     // MATERIAL
     instance->material         = heAssetPoolGetNewMaterial(assetName);
     instance->material->shader = heAssetPoolGetShader(line);
     instance->material->type   = heMaterialGetType(line);
     
-	heTextFileGetLine(&file, &line);
-	while(!line.empty()) {
+    heTextFileGetLine(&file, &line);
+    while(!line.empty()) {
         // parse texture to material
         size_t pos = line.find('=');
         std::string name = line.substr(0, pos);
         std::string tex = line.substr(pos + 1);
-        //heTimerStart();
-		HeTexture* texture = heAssetPoolGetTexture("res/textures/assets/" + tex, HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_FILTER_ANISOTROPIC | HE_TEXTURE_CLAMP_REPEAT);
-		instance->material->textures[name] = texture;
+        HeTexture* texture = heAssetPoolGetImageTexture("res/textures/instances/" + tex, HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_FILTER_ANISOTROPIC | HE_TEXTURE_CLAMP_REPEAT);
+        instance->material->textures[name] = texture;
+        heTextFileGetLine(&file, &line);
+    }
 
-		//heTimerPrint(tex);
-		heTextFileGetLine(&file, &line);
-	}
-
-	heTextureUnbind(0);
+    heTextureUnbind(0);
     
     
     // MESH
@@ -258,30 +253,29 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
         }
     }
     
-	heTextFileClose(&file);
+    heTextFileClose(&file);
 };
 
 void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance, HePhysicsShapeInfo* physics) {
-	HeBinaryBuffer buffer;
+    HeBinaryBuffer buffer;
     
     if(!heBinaryBufferOpenFile(&buffer, fileName, 4096, HE_ACCESS_READ_ONLY)) {
         HE_ERROR("Could not find asset file [" + fileName + "]");
         return;
     }
     
-    HE_LOG("Loading instance " + fileName);
+    HE_LOG("Loading instance [" + fileName + "]");
     
-    //std::string assetName = fileName.substr(fileName.find_last_of('/'), fileName.find('.'));
-	std::string assetName = buffer.name;
+    std::string assetName = buffer.name;
 
-	auto it = heAssetPool.meshPool.find(assetName);
-	if(it != heAssetPool.meshPool.end()) {
-		heBinaryBufferCloseFile(&buffer);
-		instance->mesh = &it->second;
-		instance->material = &heAssetPool.materialPool[assetName];
-		return;
-	}
-	
+    auto it = heAssetPool.meshPool.find(assetName);
+    if(it != heAssetPool.meshPool.end()) {
+        heBinaryBufferCloseFile(&buffer);
+        instance->mesh = &it->second;
+        instance->material = &heAssetPool.materialPool[assetName];
+        return;
+    }
+    
 #ifdef HE_ENABLE_NAMES
     instance->name = assetName;
 #endif
@@ -291,8 +285,8 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     
     instance->material = heAssetPoolGetNewMaterial(assetName);
     instance->material->type = heMaterialGetType(line);
-	instance->material->shader = heAssetPoolGetShader(line);
-	
+    instance->material->shader = heAssetPoolGetShader(line);
+    
     // -- material
     
     while(heBinaryBufferPeek(&buffer) != '\n') {
@@ -302,13 +296,11 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
         std::string name = line.substr(0, pos);
         std::string tex = line.substr(pos + 1);
 
-        //heTimerStart();
-		HeTexture* texture = heAssetPoolGetTexture("res/textures/assets/bin/" + tex, HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_FILTER_ANISOTROPIC | HE_TEXTURE_CLAMP_REPEAT);
+        HeTexture* texture = heAssetPoolGetCompressedTexture("binres/textures/instances/" + tex, HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_FILTER_ANISOTROPIC | HE_TEXTURE_CLAMP_REPEAT);
         instance->material->textures[name] = texture;
-		//heTimerPrint(tex + " (" + std::to_string(instance->material->textures[name]->size.x) + "x" + std::to_string(instance->material->textures[name]->size.y) + ")");
-	}
-	
-	heTextureUnbind(0);    
+    }
+    
+    heTextureUnbind(0);    
     
     // -- mesh
     
@@ -384,34 +376,38 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
     heBinaryBufferCloseFile(&buffer);
 };
 
-void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadPhysics) {
-	HeTextFile file;
-	heTextFileOpen(&file, fileName, 2048);
-	
-    // some kind of physics info
-    if(loadPhysics && !hePhysicsLevelIsSetup(&level->physics))
-        hePhysicsLevelCreate(&level->physics, HePhysicsLevelInfo(hm::vec3f(0, -10, 0)));
+void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadPhysics, b8 const binary) {
+    HeTextFile file;
+    heTextFileOpen(&file, fileName, 0, true);
+    level->name = file.name;
     
-    const b8 BINARY = true;
+    // some kind of physics info
+    if(loadPhysics && !level->physics.setup)
+        hePhysicsLevelCreate(&level->physics, HePhysicsLevelInfo(hm::vec3f(0, -10, 0)));
     
     struct HeD3InstancePrefab {
         std::string        name;
-        HeVao*             vao;
-        HeMaterial*        material;
+        HeVao*             vao      = nullptr;
+        HeMaterial*        material = nullptr;
         HePhysicsShapeInfo physics;
     } prefab;
 
     char type;
     char c;
     while(heTextFileGetChar(&file, &type)) {
-        //stream.get(c); // skip colon
-		heTextFileGetChar(&file, &c);
-		if(type == 'i') {
+        if(type == ';') {
+            // skip line
+            heTextFileSkipLine(&file);
+            continue;
+        }
+            
+
+        heTextFileGetChar(&file, &c);
+        if(type == 'i') {
             // instance
             std::string name = "";
-            //stream.get(c);
             heTextFileGetChar(&file, &c);
-			while(c != ',') {
+            while(c != ',') {
                 name += c;
                 heTextFileGetChar(&file, &c);
             }
@@ -423,25 +419,19 @@ void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadP
             heTextFileGetFloats(&file, 3, &instance->transformation.scale);
             
             HePhysicsShapeInfo physics;
-            // for debugging purposes
-            if(name.compare(name.size() - 4, 4, ".obj") == 0) {
-                instance->mesh = &heAssetPool.meshPool[name];
-                heMeshLoad("res/assets/" + name, instance->mesh);
+            if(name == prefab.name) {
+                instance->mesh = prefab.vao;
+                instance->material = prefab.material;
+                physics = prefab.physics;
             } else {
-                if(name == prefab.name) {
-                    instance->mesh = prefab.vao;
-                    instance->material = prefab.material;
-                    physics = prefab.physics;
-                } else {
-                    if(BINARY)
-                        heD3InstanceLoadBinary("res/assets/bin/" + name, instance, &physics);
-                    else
-                        heD3InstanceLoad("res/assets/" + name, instance, &physics);
-                    prefab.material = instance->material;
-                    prefab.physics  = physics;
-                    prefab.vao      = instance->mesh;
-                    prefab.name     = name;
-                }
+                if(binary)
+                    heD3InstanceLoadBinary("binres/instances/" + name, instance, &physics);
+                else
+                    heD3InstanceLoad("res/instances/" + name, instance, &physics);
+                prefab.material = instance->material;
+                prefab.physics  = physics;
+                prefab.vao      = instance->mesh;
+                prefab.name     = name;
             }
             
             if(loadPhysics && physics.type != HE_PHYSICS_SHAPE_NONE) {
@@ -465,6 +455,11 @@ void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadP
             heTextFileGetFloats(&file, 8, &light->data);
         }
     }
+
+	HeD3Camera* camera = &level->camera;
+	camera->position = hm::vec3f(0, 1, 0);
+	camera->rotation = hm::vec3f(0);
+	camera->viewMatrix = hm::createViewMatrix(camera->position, camera->rotation);
     
     heTextFileClose(&file);
 };

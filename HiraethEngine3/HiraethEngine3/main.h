@@ -12,13 +12,14 @@
 
 enum GameState {
     GAME_STATE_MAIN_MENU,
-    GAME_STATE_INGAME
+    GAME_STATE_INGAME,
+    GAME_STATE_PAUSED
 };
 
 struct Player {
     HnLocalClient* client = nullptr;
     HeD3Instance*  model  = nullptr;
-    char name[200];
+    char name[200] = { 0 };
     hm::vec3f velocity;
 };
 
@@ -31,8 +32,8 @@ struct App {
     std::map<unsigned int, Player> players;
 
     GameState state = GAME_STATE_MAIN_MENU;
-    
-    char ownName[200];
+
+    char ownName[200] = { 0 };
 };
 
 extern App app;

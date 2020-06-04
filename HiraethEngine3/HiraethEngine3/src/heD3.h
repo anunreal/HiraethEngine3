@@ -42,8 +42,8 @@ struct HeD3Camera {
     // the projection matrix of this camera created when the camera is set up
     hm::mat4f projectionMatrix;
 
-	float exposure = 1.f; // default exposure (brightness of the scene)
-	float gamma    = 1.f; // disable gamma correction
+    float exposure = 1.f; // default exposure (brightness of the scene)
+    float gamma    = 1.f; // disable gamma correction
 };
 
 struct HeD3LightSource {
@@ -79,13 +79,35 @@ struct HeD3Skybox {
     HeTexture* irradiance = nullptr;
 };
 
+struct HeParticle {
+    HeD3Transformation transformation; // xy rotation is ignored for particles, only z works (axis into the display). The position is relative to the particle source
+    hm::colour colour; // hdr colour
+    float remaining = 0.f; // as long as this value is above 0, this particle is alive
+    hm::vec3f velocity; // velocity of this particle, set at spawn
+};
+
+struct HeParticleSource {
+    HeSpriteAtlas* atlas         = nullptr;
+    uint32_t       atlasIndex    = 0;
+    uint32_t       particleCount = 0;
+    HeD3Transformation transformation;
+
+    HeParticle* particles; // a pointer to an array of particles, the size of which is specified in the particles create function
+};
+
 struct HeD3Level {
     HeD3Camera camera;
     HeD3Skybox skybox;
     HePhysicsLevel physics;
+
     std::list<HeD3Instance> instances;
     std::list<HeD3LightSource> lights;
-    double time = 0.0;
+    std::list<HeParticleSource> particles;
+    
+    double time   = 0.0;   // time of the level, increased everytime the frame is rendered. 
+    b8 freeCamera = false; // only important when physics are used. If this is true (with physics), the cameras position will not be updated from the physics actor but can be moved around freely by simply modifying its position
+
+    std::string name;
 };
 
 // the current active d3 level. Can be set and (then) used at any time
@@ -110,9 +132,11 @@ extern HE_API HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, hm::
 // removes the HeD3Instance that instance points to from the level, if it does exist there and instance is a
 // valid pointer.
 extern HE_API void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance);
-// updates all instances in given level (components). This should be called after the physics update (positions will be updated)
-// but before rendering
-extern HE_API void heD3LevelUpdate(HeD3Level* level);
+// updates all instances in given level (components). This should be called after the physics update (positions
+// will be updated) but before rendering
+extern HE_API void heD3LevelUpdate(HeD3Level* level, float const delta);
+// cleans up all instances and (if used) the physics of this level
+extern HE_API void heD3LevelDestroy(HeD3Level* level);
 // returns the instance with given index from the list of instances in the level
 extern HE_API inline HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16_t const index);
 // returns the light source with given index from the list of lights in the level
@@ -120,12 +144,22 @@ extern HE_API inline HeD3LightSource* heD3LevelGetLightSource(HeD3Level* level, 
 
 // updates all components of this instance
 extern HE_API void heD3InstanceUpdate(HeD3Instance* instance);
-// sets the new position of the entity. This should always be used over directly setting the instances position as this will
-// also update the components
+// sets the new position of the entity. This should always be used over directly setting the instances position
+// as this will also update the components
 extern HE_API void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position);
 
-// loads a skybox from given hdr image. This will unmap the equirectangular image onto a cube map and also create a blurred
-// irradiance map. This will load, run and destroy a compute shader and also create the cube maps
+// loads a skybox from given hdr image. This will unmap the equirectangular image onto a cube map and also create
+// a blurred irradiance map. This will load, run and destroy a compute shader and also create the cube maps
 extern HE_API void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile);
+
+// sets up a new particle source. The transformation is the sources location, the particles will be relative around
+// that. The atlasIndex is the index of the sprite in the given atlas. particleCount is the size of the array
+// storing all current particles.
+extern HE_API void heParticleSourceCreate(HeParticleSource* source, HeD3Transformation const& transformation, HeSpriteAtlas* atlas, uint32_t const atlasIndex, uint32_t const particleCount);
+// destroys the given particle source and frees all associated data
+extern HE_API void heParticleSourceDestroy(HeParticleSource* source);
+// spawns a random particle in given source and assigns attributes to it. Index is the index to the array which will
+// hold the new particle
+extern HE_API void heParticleSourceSpawnParticle(HeParticleSource* source, uint32_t const index);
 
 #endif

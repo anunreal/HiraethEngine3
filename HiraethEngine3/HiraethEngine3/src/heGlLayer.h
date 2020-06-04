@@ -8,160 +8,167 @@
 #include "heTypes.h"
 
 struct HeShaderData {
-	HeDataType type;
-	
-	union {
-		float _float;
-		int32_t _int;
-		hm::vec2f _vec2;
-		hm::vec3f _vec3;
-		hm::colour _colour;
-	};
+    HeDataType type;
+    
+    union {
+        float _float;
+        int32_t _int;
+        hm::vec2f _vec2;
+        hm::vec3f _vec3;
+        hm::colour _colour;
+    };
 };
 
 struct HeUbo {
-	// the gl id
-	uint32_t uboId = 0;
-	// in bytes
-	uint32_t totalSize = 0;
-	// maps variables in this ubo to their offet in bytes
-	std::unordered_map<std::string, uint32_t> variableOffset;
-	std::unordered_map<std::string, uint32_t> variableSize;
-	// the buffer containing the data of this ubo
-	unsigned char* buffer = nullptr;
+    // the gl id
+    uint32_t uboId = 0;
+    // in bytes
+    uint32_t totalSize = 0;
+    // maps variables in this ubo to their offet in bytes
+    std::unordered_map<std::string, uint32_t> variableOffset;
+    std::unordered_map<std::string, uint32_t> variableSize;
+    // the buffer containing the data of this ubo
+    unsigned char* buffer = nullptr;
 };
 
 struct HeShaderProgram {
-	uint32_t programId = 0;
-	// a list of all files loaded for this shader. Everytime the shader is bound and hotswapping is enabled,
-	// all shader files will be checked for modification and then the shader might be reloaded
-	std::vector<std::string> files;
-	// maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
-	// be stored in the map for faster lookup.
-	std::unordered_map<std::string, int32_t> uniforms;
-	// maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the
-	// texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This
-	// slot is saved here so that we dont have to remember it
-	std::unordered_map<std::string, int32_t> samplers;
-	// maps ubos to their slot. The slot is shader dependant. This location is saved in the map for faster lookup
-	std::unordered_map<std::string, int32_t> ubos;
-	// whether this is a compute shader or a normal pipeline shader
-	b8 computeShader = false;
-	// the memory used by this shader, in bytes
-	uint32_t memory = 0;
-	
+    uint32_t programId = 0;
+    // a list of all files loaded for this shader. Everytime the shader is bound and hotswapping is enabled,
+    // all shader files will be checked for modification and then the shader might be reloaded
+    std::vector<std::string> files;
+    // work just like the normal files, except they get cleared everytime the shader gets loaded and filled at load
+    // time by parsing all the #include statements in the shader source
+    std::vector<std::string> includeFiles;
+    // maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
+    // be stored in the map for faster lookup.
+    std::unordered_map<std::string, int32_t> uniforms;
+    // maps samplers to the texture slots, i.e. a sampler2D in a shader has a uniform location, but that is not the
+    // texture slot. When loading a sampler uniform, the wanted texture slot can be given as a parameter. This
+    // slot is saved here so that we dont have to remember it
+    std::unordered_map<std::string, int32_t> samplers;
+    // maps ubos to their slot. The slot is shader dependant. This location is saved in the map for faster lookup
+    std::unordered_map<std::string, int32_t> ubos;
+    // whether this is a compute shader or a normal pipeline shader
+    b8 computeShader = false;
+    // the memory used by this shader, in bytes
+    uint32_t memory = 0;
+    
 #ifdef HE_ENABLE_NAMES
-	std::string name = "";
+    std::string name = "";
 #endif
 };
 
 struct HeVbo {
-	// the gl id
-	uint32_t			  vboId			= 0;
-	// the amount of vertices (independant of dimensions) in this buffer
-	uint32_t			  verticesCount = 0;
-	// the dimensions of this vbo (2 for vec2, 3 for vec3...)
-	uint8_t				  dimensions	= 0;
-	// the usage of this vbo. Usually static (uploaded once, used many times)
-	HeVboUsage			  usage			= HE_VBO_USAGE_STATIC;
-	// the type of this vbo. For vectors this should be float.
-	// the only other accepted type is int
-	HeDataType	          type          = HE_DATA_TYPE_FLOAT;
-
-	// the memory used by this texture, in bytes
-	uint32_t memory = 0;
-	
-	// filled if the vbo was loaded from a different thread and type is FLOAT
-	std::vector<float>	  dataf;
-	// filled if the vbo was loaded from a different thread and type is INT
-	std::vector<int32_t>  datai;
-	// filled if the vbo was loaded from a different thread and type is UNSIGNED INT
-	std::vector<uint32_t> dataui;
+    // the gl id
+    uint32_t   vboId         = 0;
+    // the amount of vertices (independant of dimensions) in this buffer
+    uint32_t   verticesCount = 0;
+    // the dimensions of this vbo (2 for vec2, 3 for vec3...)
+    uint8_t    dimensions    = 0;
+    // the usage of this vbo. Usually static (uploaded once, used many times)
+    HeVboUsage usage         = HE_VBO_USAGE_STATIC;
+    // the type of this vbo. For vectors this should be float.
+    // the only other accepted type is int
+    HeDataType type          = HE_DATA_TYPE_FLOAT;
+    // whether this is an instanced vbo
+    b8         instanced     = false;
+    
+    // the memory used by this texture, in bytes
+    uint32_t memory = 0;
+    
+    // filled if the vbo was loaded from a different thread and type is FLOAT
+    std::vector<float>    dataf;
+    // filled if the vbo was loaded from a different thread and type is INT
+    std::vector<int32_t>  datai;
+    // filled if the vbo was loaded from a different thread and type is UNSIGNED INT
+    std::vector<uint32_t> dataui;
 };
 
 struct HeVao {
-	HeVaoType type = HE_VAO_TYPE_NONE;
-	uint32_t vaoId = 0;
-	uint32_t verticesCount = 0;
-	std::vector<HeVbo> vbos;
-	
+    HeVaoType type = HE_VAO_TYPE_NONE;
+    uint32_t vaoId = 0;
+    uint32_t verticesCount = 0;
+    std::vector<HeVbo> vbos;
+    
 #ifdef HE_ENABLE_NAMES
-	std::string name = "";
+    std::string name = "";
 #endif
 };
 
 
 struct HeFboAttachment {
-	// texture or buffer?
-	b8			   texture  = true;
-	// if true this attachment is resized (relative to the fbo size change). If false this attachment does not get resized
-	b8			   resize   = true;
-	// the number of samples for multisampling. Only works if this is a buffer
-	uint8_t		   samples  = 1;
-	// the gl id of the texture or buffer of this attachment
-	uint32_t	   id	    = 0;
-	// the amount of mipmaps to generate for this fbo. If this is zero, no mipmaps are generated
-	uint16_t       mipCount = 0;
-	// the colour format of this attachment
-	HeColourFormat format   = HE_COLOUR_FORMAT_RGBA8;
-	// the size of this attachment in pixels
-	hm::vec2i	   size;
+    // texture or buffer?
+    b8             texture  = true;
+    // if true this attachment is resized (relative to the fbo size change). If false this attachment does not get resized
+    b8             resize   = true;
+    // the number of samples for multisampling. Only works if this is a buffer
+    uint8_t        samples  = 1;
+    // the gl id of the texture or buffer of this attachment
+    uint32_t       id       = 0;
+    // the amount of mipmaps to generate for this fbo. If this is zero, no mipmaps are generated
+    uint16_t       mipCount = 0;
+    // the colour format of this attachment
+    HeColourFormat format   = HE_COLOUR_FORMAT_RGBA8;
+    // the size of this attachment in pixels
+    hm::vec2i      size;
 
-	// the memory used by this texture, in bytes
-	uint32_t memory = 0;
+    // the memory used by this texture, in bytes
+    uint32_t memory = 0;
 };
 
 struct HeFbo {
-	// the gl id of this fbo, used by the engine
-	uint32_t fboId = 0;
-	// the default size of this fbo
-	hm::vec2i size;
-	// set to true if a multisampled colour attachment or depth attachment was created for this fbo.
-	b8 useMultisampling = false;
-	// the depth attachment of this fbo
-	HeFboAttachment depthAttachment;
-	// a list of colour attachments on this fbo
-	std::vector<HeFboAttachment> colourAttachments;
-	
+    // the gl id of this fbo, used by the engine
+    uint32_t fboId = 0;
+    // the default size of this fbo
+    hm::vec2i size;
+    // set to true if a multisampled colour attachment or depth attachment was created for this fbo.
+    b8 useMultisampling = false;
+    // the depth attachment of this fbo
+    HeFboAttachment depthAttachment;
+    // a list of colour attachments on this fbo
+    std::vector<HeFboAttachment> colourAttachments;
+    
 #ifdef HE_ENABLE_NAMES
-	std::string name = "";
+    std::string name = "";
 #endif
 };
 
 struct HeTexture {
-	// for every time this texture is requested from the asset pool, this reference count goes up.
-	// If this texture is destroyed with heDestroyTexture, referenceCount will go down.
-	// Only if the referenceCount is 0, the texture will actually be deleted
-	uint32_t referenceCount = 0;
-	// the opengl texture id
-	uint32_t textureId = 0;
-	// the internal format used for storing the pixels. Can be:
-	// 0: RGBA (8bit / channel) (unsigned chars)
-	// 1: RGBA (16bit / channel) (floats)
-	HeColourFormat format = HE_COLOUR_FORMAT_NONE;
-	// the parameters of this texture (filtering and clamping)
-	HeTextureParameter parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_REPEAT;
-	// dimensions of the texture
-	hm::vec2i size;
-	// the number of channels in this texture. Can be 3 (rgb) or 4 (rgba)
-	int32_t channels = 0;
-	// if the FILTER_TRILINEAR flag is set, this is the number of mipmaps to create
-	uint16_t mipMapCount = 1000;
-	// whether this is a cube map or a normal 2d texture
-	b8 cubeMap = false;
-	
-	// one of the following buffers is set if the texture was loaded from a different thread. The float buffer is only used if
-	// this is an hdr texture, else the char buffer is set. This pointer is freed and set to nullptr when the texture is loaded
-	// in the thread loader
-	
-	float*		   bufferf = nullptr;
-	unsigned char* bufferc = nullptr;
+    // for every time this texture is requested from the asset pool, this reference count goes up.
+    // If this texture is destroyed with heDestroyTexture, referenceCount will go down.
+    // Only if the referenceCount is 0, the texture will actually be deleted
+    uint32_t referenceCount = 0;
+    // the opengl texture id
+    uint32_t textureId = 0;
+    // the internal format used for storing the pixels. Can be:
+    // 0: RGBA (8bit / channel) (unsigned chars)
+    // 1: RGBA (16bit / channel) (floats)
+    HeColourFormat format = HE_COLOUR_FORMAT_NONE;
+    // the parameters of this texture (filtering and clamping)
+    HeTextureParameter parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_REPEAT;
+    // dimensions of the texture
+    hm::vec2i size;
+    // the number of channels in this texture. Can be 3 (rgb) or 4 (rgba)
+    int32_t channels = 0;
+    // if the FILTER_TRILINEAR flag is set, this is the number of mipmaps to create
+    uint16_t mipmapCount = 1000;
+    b8 cubeMap = false;
+    
+    // one of the following buffers is set if the texture was loaded from a different thread. The float buffer is
+    // only used if this is an hdr texture, else the char buffer is set. This pointer is freed and set to nullptr
+    // when the texture is loaded in the thread loader. If compressedBufferSize is bigger than 0, this buffer was
+    // loaded from a compressed file (only works for rgb(a)8). If this texture is compressed, compressionFormat
+    // is the format that was used when compressing that texture by opengl
+    
+    int32_t        compressionFormat = 0;
+    float*         bufferf = nullptr;
+    unsigned char* bufferc = nullptr;
 
-	// the memory used by this texture, in bytes
-	uint32_t memory = 0;
-	
+    // the memory used by this texture, in bytes
+    uint32_t memory = 0;
+    
 #ifdef HE_ENABLE_NAMES
-	std::string name = "";
+    std::string name = "";
 #endif
 };
 
@@ -273,19 +280,30 @@ extern HE_API void heVboAllocate(HeVbo* vbo, uint32_t const size, uint8_t const 
 extern HE_API void heVboDestroy(HeVbo* vbo);
 // creates a new empty vao
 extern HE_API void heVaoCreate(HeVao* vao, HeVaoType const type = HE_VAO_TYPE_TRIANGLES);
-// simply uploads the data stored in the vbo onto the currently bound vao. This will clear the data stored in the vbo
-// attributeIndex is the index of this vbo in the vao. The vbo must have already set all attributes (data buffer, dimensions, usage)
+// simply uploads the data stored in the vbo onto the currently bound vao. This will clear the data stored in the
+// vbo attributeIndex is the index of this vbo in the vao. The vbo must have already set all attributes (data
+// buffer, dimensions, usage)
 extern HE_API void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex);
 // adds an existing vbo to given vao. Both vao and vbo need to be created beforehand, and the vao needs
 // to be bound before this call. If this is the first vbo for the given vao, the verticesCount
 // of the vao is calculated
 extern HE_API void heVaoAddVbo(HeVao* vao, HeVbo* vbo);
+// adds an instanced vbo to given vao. Same conditions as the normal heVaoAddVbo process
+extern HE_API void heVaoAddInstancedVbo(HeVao* vao, HeVbo* vbo);
 // adds new data to given vao. The vao needs to be created and bound before this.
 extern HE_API void heVaoAddData(HeVao* vao, std::vector<float> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
 // adds new data to given vao. The vao needs to be created and bound before this
 extern HE_API void heVaoAddDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
 // adds new data to given vao. The vao needs to be created and bound before this
 extern HE_API void heVaoAddDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
+// adds instanced data to this vao. This is the same as adding "normal" data, except this data will be the same for one instance
+extern HE_API void heVaoAddInstancedData(HeVao* vao, std::vector<float> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
+// allocates a new vbo in this vao and. Size is the amount of bytes to allocate, can be zero if we dont know the
+// actual size yet (or it changes)
+extern HE_API void heVaoAllocate(HeVao* vao, uint32_t const size, uint32_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC, HeDataType const type = HE_DATA_TYPE_FLOAT);  
+// allocates a new instanced vbo in this vao and. Size is the amount of bytes to allocate, can be zero if we dont know the
+// actual size yet (or it changes)
+extern HE_API void heVaoAllocateInstanced(HeVao* vao, uint32_t const size, uint32_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC, HeDataType const type = HE_DATA_TYPE_FLOAT);  
 // updates the data of given vbo (vboIndex). Make sure the vao is bound before this call.
 extern HE_API void heVaoUpdateData(HeVao* vao, std::vector<float> const& data, uint8_t const vboIndex);
 // updates the data of given vbo (vboIndex). Make sure the vao is bound before this call.
@@ -300,6 +318,8 @@ extern HE_API void heVaoUnbind(HeVao const* vao);
 extern HE_API void heVaoDestroy(HeVao* vao);
 // renders given vao. This assumes the vao to be in GL_TRIANGLES mode
 extern HE_API void heVaoRender(HeVao const* vao);
+// renders count instances of that vao. This assumes the vao to be in GL_TRIANGLES mode
+extern HE_API void heVaoRenderInstanced(HeVao const* vao, uint32_t const count);
 
 // creates a new fbo. All parameters of the fbo must already be set (see parameter description). This will add
 // a (multisampled, if samples is bigger than 1) colour attachment and either a depth texture or a depth buffer
@@ -326,8 +346,8 @@ extern HE_API void heFboUnbind();
 extern HE_API void heFboDestroy(HeFbo* fbo);
 // resizes given fbo by destroying it and creating a new version with new size
 extern HE_API void heFboResize(HeFbo* fbo, hm::vec2i const& newSize);
-// draws the source fbo onto the target fbo. If the source should be drawn directly onto the screen, then a "fake" fbo
-// must be created with an id of 0 and the size of the window
+// draws the source fbo onto the target fbo. If the source should be drawn directly onto the screen, then a "fake"
+// fbo must be created with an id of 0 and the size of the window
 extern HE_API void heFboRender(HeFbo* sourceFbo, HeFbo* targetFbo);
 // renders the source fbo directly onto the window with given size
 extern HE_API void heFboRender(HeFbo* sourceFbo, hm::vec2i const& windowSize);
@@ -340,22 +360,36 @@ extern HE_API HeTexture heFboCreateColourTextureWrapper(HeFboAttachment const* a
 
 // -- Textures
 
-// creates a new empty cube map texture. The details of the texture (width, height, format, channels) must already be set
+// creates a new empty cube map texture. The details of the texture (width, height, format, channels) must
+// already be set
 extern HE_API void heTextureCreateEmptyCubeMap(HeTexture* texture);
-// creates an empty texture. The details of the texture (width, height, format, channels) must already be set
-extern inline HE_API void heTextureCreateEmpty(HeTexture* texture);
-// loads a new texture from given file. If given file does not exist, an error is printed and no gl texture
-// will be generated.
-extern HE_API void heTextureLoadFromFile(HeTexture* texture, std::string const& fileName);
-// loads a new hdr texture from given file. If given file does not exist, an error is printed and no gl texture will be
-// generated. This must be a .hdr file to work correctly
-extern HE_API void heTextureLoadHdrFromFile(HeTexture* texture, std::string const& fileName);
-// loads a new texture from given stream. If the stream is invalid, an error is printed and no gl texture
-// will be generated
-extern HE_API void heTextureLoadFromFile(HeTexture* texture, FILE* stream);
-// creates the opengl texture for given texture. This HeTexture must already have either the char or the float buffer and all its
-// information (width, height, format, channels) set. This will free the buffer used and (if enabled) set the gl objects name
+// loads a new texture from given file. Valid texture formats are png, jpg.... If given file does not exist, an
+// error is printed and no gl texture will be generated. . If the compressed parameter is set, this will compress
+// the texture on load
+extern HE_API void heTextureLoadFromImageFile(HeTexture* texture, std::string const& fileName, b8 const compress = false);
+// loads a new hdr texture from given file. If given file does not exist, an error is printed and no gl texture
+// will be generated. This must be a .hdr file to work correctly
+extern HE_API void heTextureLoadFromHdrImageFile(HeTexture* texture, std::string const& fileName);
+// loads a new texture from given cube map file which must be a valid h3asset file (custom format). If given file
+// does not exist, an error is printed and no gl texture will be generated. If the compressed parameter is set,
+// this will compress the texture on load
+extern HE_API void heTextureLoadFromCubemapFile(HeTexture* texture, std::string const& fileName, b8 const compress = false);
+// loads a new texture from given cube map file which must be a valid h3asset file (custom format). If given file
+// does not exist, an error is printed and no gl texture will be generated. If the compressed parameter is set,
+// this will compress the texture on load
+extern HE_API void heTextureLoadFromHdrCubemapFile(HeTexture* texture, std::string const& fileName);
+// loads a compressed texture from given file. The file must already have a compressed buffer in it (binary).
+// This will add the compressed flag to the textures parameters
+extern HE_API void heTextureLoadFromCompressedFile(HeTexture* texture, std::string const& fileName);
+// creates the opengl texture for given texture. This HeTexture must already have either the char or the float
+// buffer and all its information (width, height, format, channels) set. This will free the buffer used and (if
+// enabled) set the gl objects name
 extern HE_API void heTextureCreateFromBuffer(HeTexture* texture);
+// creates the opengl texture for given texture. This HeTexture must already have either the char or the float
+// buffer and all its information (width, height, format, channels) set. This will free the buffer used and (if
+// enabled) set the gl objects name
+extern HE_API void heTextureCreateFromCompressedBuffer(HeTexture* texture, std::vector<int32_t> const& mipmapSizes);
+
 // binds given texture to given gl slot
 extern HE_API void heTextureBind(HeTexture const* texture, int8_t const slot);
 // binds given texture id to given gl slot
@@ -365,34 +399,64 @@ extern HE_API void heTextureBind(uint32_t const texture, int8_t const slot, b8 c
 // level is the mipmap level which to bind
 // if layer is -1, a new layered texture binding is established, else the given layer is used (layer >= 0)
 // access is the permissions required for this image, can be one of the following:
-//	0: read only
-//	1: write only
-//	2: read and write
+//  0: read only
+//  1: write only
+//  2: read and write
 extern HE_API void heImageTextureBind(HeTexture const* texture, int8_t const slot, int8_t const level, int8_t const layer, HeAccessType const access);
 // unbinds the currently bound texture from given gl slot
 extern HE_API void heTextureUnbind(int8_t const slot, b8 const cubeMap = false);
 // deletes given texture if its reference count is currently 1
 extern HE_API void heTextureDestroy(HeTexture* texture);
-// auto-generates mipmaps for given texture (needs to be bound)
-extern HE_API void heTextureCreateMipmaps(uint32_t const textureId, uint32_t const count = 1000, b8 const cubeMap = false);
+// calculates the amount of mipmaps generated. This is the min of the mipMapCount set in texture or the log of the texture size
+extern HE_API uint32_t heTextureCalculateMipmapCount(HeTexture* texture);
+// returns the compression format that was used to compress this texture
+extern HE_API int32_t heTextureGetCompressionFormat(HeTexture* texture);
+// calculates the mip size for that texture and level. If level is zero, the size of the texture is returned.
+// Levels over 0 will be the next lower power of two
+extern HE_API inline hm::vec2i heTextureCalculateMipmapSize(HeTexture* texture, uint32_t const level);
+extern HE_API inline uint32_t heTextureCalculateMemorySize(HeTexture* texture, uint8_t const unpackAlign = 1); 
 
-// before calling any of the following functions, a texture must be bound
+// returns the memory buffer of this texture as stored by the opengl driver. The returned buffer is allocated in
+// this function and must be freed after use by the user. The size of the buffer in bytes is stored in size.
+// Level is the mipmap level of the texture to read, default is 0. This will check the type and parameters
+// of this texture, and if applicable call any of the following functions for cube maps, compressed textures
+// or hdr textures. If this is a simple 2d, non-hdr, uncompressed texture, this will simply retrieve the buffer
+// and store it
+extern HE_API void* heTextureGetData(HeTexture* texture, int32_t* size, uint8_t const level = 0);
+// returns the memory buffer of this texture as stored by the opengl driver. The returned buffer is allocated in
+// this function and must be freed after use by the user. The size of the buffer in bytes is stored in size.
+// Level is the mipmap level of the texture to read, default is 0
+extern HE_API void* heTextureGetCompressedData(HeTexture* texture, int32_t* size, uint8_t const level = 0);
+// returns the memory buffer of this texture as stored by the opengl driver. The returned buffer is allocated in
+// this function and must be freed after use by the user. The size of the buffer in bytes is stored in size.
+// Level is the mipmap level of the texture to read, default is 0. This is for hdr textures
+extern HE_API void* heTextureGetHdrData(HeTexture* texture, int32_t* size, uint8_t const level = 0);
+// returns the memory buffer of the side of the cube map as stored by the opengl driver. The returned buffer is
+// allocated in this function and must be freed after use by the user. The size of the buffer in bytes is stored
+// in size. Level is the mipmap level of the texture to read, default is 0. This will simply put the faces back to
+// back in the buffer. This is for hdr textures.
+extern HE_API void* heTextureGetCubemapHdrData(HeTexture* texture, int32_t* size, uint8_t const level = 0);
 
+// calls the filter and clamp functions according to the parameters set for the given texture 
+extern HE_API void heTextureApplyParameters(HeTexture* texture);
 // pixelated filter
-extern HE_API void heTextureFilterLinear(HeTexture const* texture);
+extern HE_API void heTextureFilterLinear(HeTexture* texture);
 // smooth filter
-extern HE_API void heTextureFilterBilinear(HeTexture const* texture);
+extern HE_API void heTextureFilterBilinear(HeTexture* texture);
 // uses mipmaps (creates a max of count mipmaps for the current texture)
-extern HE_API void heTextureFilterTrilinear(HeTexture const* texture, uint16_t const count = 1000);
+extern HE_API void heTextureFilterTrilinear(HeTexture* texture);
+// wrapper for the gl generate mimap call. The texture for which to generate mipmaps must already be bound before
+// this call
+extern HE_API void heTextureGenerateMipmaps(b8 const cubeMap = false);
 // anisotropic filtering
-extern HE_API void heTextureFilterAnisotropic(HeTexture const* texture);
+extern HE_API void heTextureFilterAnisotropic(HeTexture* texture);
 
 // clamps to the edge (border pixels will be stretched)
-extern HE_API void heTextureClampEdge(HeTexture const* texture);
+extern HE_API void heTextureClampEdge(HeTexture* texture);
 // clamps to a black border around the image
-extern HE_API void heTextureClampBorder(HeTexture const* texture);
+extern HE_API void heTextureClampBorder(HeTexture* texture);
 // tiles the image
-extern HE_API void heTextureClampRepeat(HeTexture const* texture);
+extern HE_API void heTextureClampRepeat(HeTexture* texture);
 
 
 // -- Utils
@@ -401,9 +465,9 @@ extern HE_API void heTextureClampRepeat(HeTexture const* texture);
 extern HE_API void heFrameClear(hm::colour const& colour, HeFrameBufferBits const type);
 // sets the gl blend mode to given mode. Possible modes:
 // -1 = disable gl blending
-//	0 = normal blending (one minus source alpha)
-//	1 = additive blending (add two colours)
-//	2 = disable blending by completely overwriting previous colour with new one
+//  0 = normal blending (one minus source alpha)
+//  1 = additive blending (add two colours)
+//  2 = disable blending by completely overwriting previous colour with new one
 extern HE_API void heBlendMode(int8_t const mode);
 // applies a gl blend mode to only given colour attachment of a fbo. Same modes as above apply
 extern HE_API void heBufferBlendMode(int8_t const attachmentIndex, int8_t const mode);
@@ -424,6 +488,8 @@ extern HE_API void heStencilFunc(HeFragmentTestFunction const function, uint32_t
 extern HE_API void heViewport(hm::vec2i const& lowerleft, hm::vec2i const& size);
 // returns the memory usage as queried from opengl. CURRENTLY DOESNT WORK
 extern HE_API int32_t heMemoryGetUsage();
+// returns the number of bytes that one pixel needs
+extern HE_API uint32_t heColourFormatGetBytesPerPixel(HeColourFormat const format);
 // prints information about the graphics card and renderer version this engine is running on
 extern HE_API void heGlPrintInfo();
 
@@ -434,8 +500,8 @@ extern HE_API void heGlPrintInfo();
 extern HE_API void heGlErrorClear();
 // saves all errors that occured during the last frame in a vector that can be read from using heGlErrorGetLast()
 extern HE_API void heGlErrorSaveAll();
-// returns the oldest error saved (newest after last error clear). If this returns 0, no more gl error was found. Loop through this
-// to get all errors that happened during the last frame.
+// returns the oldest error saved (newest after last error clear). If this returns 0, no more gl error was found.
+// Loop through this to get all errors that happened during the last frame.
 extern HE_API uint32_t heGlErrorGet();
 // checks if an error has occured just now (since the last check)
 extern HE_API uint32_t heGlErrorCheck();
@@ -445,3 +511,4 @@ extern HE_API void heGlErrorPrint(std::string const& location = "");
 #define GL_CALL(func) func; heGlErrorPrint(__FILE__ ":" + std::to_string(__LINE__) + " in " + __func__)
 
 #endif
+

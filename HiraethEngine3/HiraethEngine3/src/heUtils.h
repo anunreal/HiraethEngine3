@@ -3,6 +3,7 @@
 #include "heTypes.h"
 #include <vector>
 #include <string>
+#include <random>
 
 // splits given string by delimn and returns the different parts of the string as vector
 extern HE_API std::vector<std::string> heStringSplit(std::string const& string, char const delimn);
@@ -16,5 +17,6 @@ extern inline HE_API b8 heStringStartsWith(const std::string& base, const std::s
 extern inline HE_API void heStringEatSpacesLeft(std::string& string);
 // removes all whitespace from the right of the string
 extern inline HE_API void heStringEatSpacesRight(std::string& string);
+
 
 #endif

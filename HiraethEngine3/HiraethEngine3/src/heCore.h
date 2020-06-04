@@ -44,9 +44,9 @@ extern HE_API void heLogCout(std::string const& message, std::string const& pref
 #endif
 
 #ifdef HE_ENABLE_CRASH_LOG_MSG
-#define HE_CRASH_LOG(msg) heLogCout(msg, "[CRASH]:");
+#define HE_CRASH_LOG() heLogCout(__FILE__ + ": " + __LINE__ + "(" + __function__, "[CRASH]:");
 #else
-#define HE_CRASH_LOG(ms)
+#define HE_CRASH_LOG()
 #endif
 
 #endif
