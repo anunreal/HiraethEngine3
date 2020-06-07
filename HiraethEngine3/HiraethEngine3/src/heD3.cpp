@@ -87,6 +87,10 @@ void heD3LevelUpdate(HeD3Level* level, float const delta) {
     // update all instances
     for(auto& all : level->instances)
         heD3InstanceUpdate(&all);
+
+    // update all particle sources
+    for(auto& all : level->particles)
+        heParticleSourceUpdate(&all, delta);
 };
 
 void heD3LevelDestroy(HeD3Level* level) {
@@ -164,25 +168,74 @@ void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile) {
     heTextureDestroy(&hdr);
 };
 
+void heD3SkyboxLoad(HeD3Skybox* skybox, std::string const& fileName) {    
+    skybox->specular = &heAssetPool.texturePool["binres/textures/skybox/" + fileName + "_specular.h3asset"];
+    skybox->specular->parameters = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    heTextureLoadFromHdrCubemapFile(skybox->specular, "binres/textures/skybox/" + fileName + "_specular.h3asset");
+
+    skybox->irradiance = &heAssetPool.texturePool["binres/textures/skybox/" + fileName + "_irradiance.h3asset"];
+    skybox->irradiance->parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE;
+    heTextureLoadFromHdrCubemapFile(skybox->irradiance, "binres/textures/skybox/" + fileName + "_irradiance.h3asset");
+};
+
 
 void heParticleSourceCreate(HeParticleSource* source, HeD3Transformation const& transformation, HeSpriteAtlas* atlas, uint32_t const atlasIndex, uint32_t const particleCount) {
-    source->transformation = transformation;
-    source->atlas          = atlas;
-    source->particleCount  = particleCount;
-    source->atlasIndex     = atlasIndex;
-    source->particles      = (HeParticle*) malloc(particleCount * sizeof(HeParticle));
+    source->atlas         = atlas;
+    source->particleCount = particleCount;
+    source->atlasIndex    = atlasIndex;
+    source->particles     = (HeParticle*) malloc(particleCount * sizeof(HeParticle));
+    source->dataBuffer    = (float*) malloc(particleCount * source->FLOATS_PER_PARTICLE * sizeof(float));
+    source->emitter.transformation = transformation;
+    heRandomCreate(&source->emitter.random, 0);
+    memset(source->particles,  0, sizeof(source->particles));
+    memset(source->dataBuffer, 0, sizeof(source->dataBuffer));
 };
 
 void heParticleSourceDestroy(HeParticleSource* source) {
     heTextureDestroy(source->atlas->texture);
     free(source->particles);
+    free(source->dataBuffer);
 };
+
+void heParticleSourceSpawnParticle(HeParticleEmitter* source, HeParticle* particle) {
+    particle->transformation.scale    = hm::vec3f(heRandomFloat(&source->random, source->minSize, source->maxSize));
+
+    hm::vec3f position = source->transformation.position; // point emitter
+    // find random position in the emitter
+    if(source->type == HE_PARTICLE_EMITTER_TYPE_BOX) {
+        position.x += heRandomFloat(&source->random, -source->box.x, source->box.x);
+        position.y += heRandomFloat(&source->random, -source->box.y, source->box.y);
+        position.z += heRandomFloat(&source->random, -source->box.z, source->box.z);
+    } else if(source->type == HE_PARTICLE_EMITTER_TYPE_SPHERE) {
+        // find random direction into the sphere, and then scale to be maximum the radius
+        hm::vec3f velocity;
+        velocity.x = heRandomFloat(&source->random, -1, 1);
+        velocity.y = heRandomFloat(&source->random, -1, 1);
+        velocity.z = heRandomFloat(&source->random, -1, 1);
+        position += velocity * heRandomFloat(&source->random, 0, source->sphere); 
+    }
     
-void heParticleSourceSpawnParticle(HeParticleSource* source, uint32_t const index) {
-    HeParticle* particle = &source->particles[index];
-    
-    particle->velocity.x = std::rand() / (float) RAND_MAX;
-    particle->velocity.y = std::rand() / (float) RAND_MAX;
-    particle->velocity.z = std::rand() / (float) RAND_MAX;
-    particle->colour = hm::colour(255);
+    particle->transformation.position = position;
+    particle->transformation.rotation = hm::quatf();
+    particle->velocity = hm::vec3f(heRandomFloat(&source->random, -1, 1), heRandomFloat(&source->random, -1, 1), heRandomFloat(&source->random, -1, 1)) * heRandomFloat(&source->random, source->minSpeed, source->maxSpeed);
+    particle->colour                  = hm::interpolateColour(source->minColour, source->maxColour, heRandomFloat(&source->random, 0.f, 1.f));
+    particle->remaining               = heRandomFloat(&source->random, source->minTime, source->maxTime);
+};
+
+void heParticleSourceUpdate(HeParticleSource* source, float const delta) {
+    uint32_t created = 0;
+
+    for(uint32_t i = 0; i < source->particleCount; ++i) {
+        HeParticle* particle = &source->particles[i];
+        particle->remaining -= delta;
+
+        if(particle->remaining > 0.f) {
+            // update velocity and position
+            particle->velocity.y -= source->gravity * delta;
+            particle->transformation.position += particle->velocity * delta;
+        } else if(created < source->maxNewParticlesPerUpdate) {
+            heParticleSourceSpawnParticle(&source->emitter, particle);
+            created++;
+        }
+    }
 };

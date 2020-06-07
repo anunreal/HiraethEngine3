@@ -26,11 +26,13 @@ struct HeWindowInfo {
     hm::vec2i    size;
     // the name of the window
     std::wstring title   = L"";
-    // maximum fps allowed. If this is set to 0, vsync will be enabled
+    // maximum fps allowed. If this is set to 0, the framerate is not limited (high cpu usage!)
     uint16_t fpsCap  = 0;
     // samples used for one pixel. If this is left at 1, no multisampling will be used. The higher this value,
     // the smoother the result will be at a higher performance and memory cost
     uint8_t samples = 1;
+    // if this is true, vsync is enabled and the fps cap is ignored
+    b8 vsync = false;
 };
 
 struct HeMouseInfo {
@@ -77,6 +79,7 @@ struct HeWindow {
     b8             resized     = false; // did the window get resized in the last frame
 
     // timing stuff
+    uint32_t fps      = 0; // the fps rate is measured every half second, so that we have a general (and readable) overview of the current fps rate, since it changes every frame we cant really read it on screen. Use this for displaying it to the user, but it can be very inaccurate at times (dropped frames...) 
     double lastFrame  = 0.; // the last frame time (time_since_epoch)
     double frameTime  = 0.; // the duration of the last frame (in seconds)
     double currentFps = 0.; // current fps count, on good enough systems should be close to the requested fps count
@@ -98,7 +101,7 @@ extern HE_API void heWindowEnableVsync(const int8_t timestamp);
 // swaps the buffers of the given window. Should be called after rendering the frame
 extern HE_API void heWindowSwapBuffers(const HeWindow* window);
 // switches the state of the cursor between visible and hidden
-extern HE_API void heWindowToggleCursor(const b8 hidden);
+extern HE_API void heWindowToggleCursor(const b8 visible);
 // sets the mouse to the given position relative to the window.
 // The position can either be in pixels (positive), or as a percentage (negative) meaning
 // that -0.5 will be have the current window size

@@ -702,7 +702,7 @@ void heVaoCreate(HeVao* vao, HeVaoType const type) {
     HE_CRASH_LOG();
     glGenVertexArrays(1, &vao->vaoId);
     vao->type = type;
-
+    vao->attributeCount = 0;
     
 #ifdef HE_ENABLE_NAMES
     glBindVertexArray(vao->vaoId); // we have to bind it so that its valid for naming
@@ -712,7 +712,7 @@ void heVaoCreate(HeVao* vao, HeVaoType const type) {
 #endif
 };
 
-void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
+void heVaoAddVboData(HeVao* vao, HeVbo* vbo, int8_t const attributeIndex) {
     HE_CRASH_LOG();
     if(vbo->type == HE_DATA_TYPE_FLOAT) {
         heVboCreate(vbo, vbo->dataf, vbo->dimensions, vbo->usage);
@@ -728,9 +728,8 @@ void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex) {
         vbo->dataui.clear();
     }
 
-    if(vbo->instanced)
-        glVertexAttribDivisor(attributeIndex, 1);
-        
+    ++vao->attributeCount;
+    
 #ifdef HE_ENABLE_NAMES
     int32_t currentVao;
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVao);
@@ -753,22 +752,7 @@ void heVaoAddVbo(HeVao* vao, HeVbo* vbo) {
     if (vao->vbos.size() == 1)
         vao->verticesCount = vbo->verticesCount;
 
-#ifdef HE_ENABLE_NAMES
-    std::string name = vao->name + "[" + std::to_string(vao->vbos.size()) + "]";
-    glObjectLabel(GL_BUFFER, vbo->vboId, (uint32_t) name.size(), name.c_str());
-#endif
-};
-
-void heVaoAddInstancedVbo(HeVao* vao, HeVbo* vbo) {
-    uint32_t attributeIndex = (uint32_t) vao->vbos.size();
-
-    if(vbo->type == HE_DATA_TYPE_FLOAT)
-        glVertexAttribPointer(attributeIndex, vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-    else
-        glVertexAttribIPointer(attributeIndex, vbo->dimensions, vbo->type, 0, (GLvoid*)0);
-
-    vao->vbos.emplace_back(*vbo);
-    glVertexAttribDivisor(attributeIndex, 1);
+    ++vao->attributeCount;
     
 #ifdef HE_ENABLE_NAMES
     std::string name = vao->name + "[" + std::to_string(vao->vbos.size()) + "]";
@@ -818,31 +802,27 @@ void heVaoAddDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t con
     }
 };
 
-void heVaoAddInstancedData(HeVao* vao, std::vector<float> const& data, uint8_t const dimensions, HeVboUsage const usage) {
-    if(heIsMainThread()) {
-        HeVbo vbo;
-        heVboCreate(&vbo, data, dimensions, usage);
-        heVaoAddInstancedVbo(vao, &vbo);
-    } else {
-        HeVbo* vbo = &vao->vbos.emplace_back();
-        vbo->dataf      = data;
-        vbo->dimensions = dimensions;
-        vbo->usage      = usage;
-        vbo->type       = HE_DATA_TYPE_FLOAT;
-        vbo->instanced  = true;
-    }
-};
-
 void heVaoAllocate(HeVao* vao, uint32_t const size, uint32_t const dimensions, HeVboUsage const usage, HeDataType const type) {
     HeVbo vbo;
     heVboAllocate(&vbo, size, dimensions, usage, type);
     heVaoAddVbo(vao, &vbo);
 };
 
-void heVaoAllocateInstanced(HeVao* vao, uint32_t const size, uint32_t const dimensions, HeVboUsage const usage, HeDataType const type) {
-    HeVbo vbo;
-    heVboAllocate(&vbo, size, dimensions, usage, type);
-    heVaoAddInstancedVbo(vao, &vbo);
+void heVaoAllocateInstanced(HeVao* vao) {
+    HeVbo* vbo = &vao->vbos.emplace_back(); // id 1
+    heVboAllocate(vbo, 0, 1, HE_VBO_USAGE_DYNAMIC, HE_DATA_TYPE_FLOAT); // we dont know size yet and dimensions are not important for instanced vbos because only the attributes need to know the dimensions
+
+#ifdef HE_ENABLE_NAMES
+    std::string name = vao->name + "[" + std::to_string(vao->vbos.size()) + "]";
+    glObjectLabel(GL_BUFFER, vbo->vboId, (uint32_t) name.size(), name.c_str());
+#endif
+};
+
+void heVaoAllocateInstancedAttribute(HeVao* vao, uint32_t const attributeIndex, uint32_t const dimensions, uint32_t const stride, uint32_t const offset, HeDataType const type) {
+    glVertexAttribPointer(attributeIndex, dimensions, type, GL_FALSE, stride * sizeof(float), (GLvoid*) (offset * sizeof(float)));   
+    glVertexAttribDivisor(attributeIndex, 1);
+    if(attributeIndex + 1 > vao->attributeCount)
+        vao->attributeCount = attributeIndex + 1;
 };
 
 void heVaoUpdateData(HeVao* vao, std::vector<float> const& data, uint8_t const vboIndex) {
@@ -852,11 +832,30 @@ void heVaoUpdateData(HeVao* vao, std::vector<float> const& data, uint8_t const v
     HeVbo* vbo = &vao->vbos[vboIndex];
     glBindBuffer(GL_ARRAY_BUFFER, vbo->vboId);
     
-    if(data.size() > vbo->verticesCount) {
+    if(size > vbo->verticesCount) {
         glBufferData(GL_ARRAY_BUFFER, bytes, data.data(), vbo->usage);
     } else {
-        glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, vbo->usage);
+        glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, vbo->usage); // clear the data so uploading new data is easier for the driver, can forget about previous data
         glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, data.data());
+    }
+    
+    vbo->verticesCount = (uint32_t)size / vbo->dimensions;
+    
+    if(vboIndex == 0)
+        vao->verticesCount = vbo->verticesCount;
+};
+
+void heVaoUpdateData(HeVao* vao, float const* data, uint8_t const vboIndex, uint32_t const size) {
+    HE_CRASH_LOG();
+    size_t bytes = size * sizeof(float);
+    HeVbo* vbo = &vao->vbos[vboIndex];
+    glBindBuffer(GL_ARRAY_BUFFER, vbo->vboId);
+    
+    if(size > vbo->verticesCount) {
+        glBufferData(GL_ARRAY_BUFFER, bytes, data, vbo->usage);
+    } else {
+        glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, vbo->usage);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, data);
     }
     
     vbo->verticesCount = (uint32_t)size / vbo->dimensions;
@@ -912,7 +911,7 @@ void heVaoUpdateDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t 
 void heVaoBind(HeVao const* vao) {
     HE_CRASH_LOG();
     glBindVertexArray(vao->vaoId);
-    for (uint32_t i = 0; i < (uint32_t)vao->vbos.size(); ++i)
+    for (uint32_t i = 0; i < (uint32_t)vao->attributeCount; ++i)
         glEnableVertexAttribArray(i);
 };
 
@@ -960,8 +959,8 @@ void heFboCreate(HeFbo* fbo) {
 };
 
 void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format, hm::vec2i const& size, uint16_t const mipCount) {
-    uint32_t f = GL_RGBA;
     uint8_t index = (uint8_t) fbo->colourAttachments.size();
+    uint32_t f = GL_RGBA;
     if(format == HE_COLOUR_FORMAT_RGB8 || format == HE_COLOUR_FORMAT_RGB16)
         f = GL_RGB;
     
@@ -987,6 +986,7 @@ void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format,
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glGenerateMipmap(GL_TEXTURE_2D);
     }
         
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -997,7 +997,6 @@ void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format,
     // memory tracker
     uint32_t perPixel = heColourFormatGetBytesPerPixel(format);
     uint32_t bytes = hm::ceilPowerOfTwo(attachment->size.x * attachment->size.y * perPixel);
-    //uint32_t bytes = attachment->size.x * attachment->size.y * perPixel;
     attachment->memory = bytes;
     heMemoryTracker[HE_MEMORY_TYPE_FBO] += bytes;
     

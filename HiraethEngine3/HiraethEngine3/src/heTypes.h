@@ -242,6 +242,13 @@ typedef enum HeUiInteractionStatus {
     HE_UI_INTERACTION_STATUS_UNPRESSED, // mouse just pressed somewhere else on the screen, but this widget was clicked before
 } HeUiInteractionStatus;
 
+typedef enum HeParticleEmitterType {
+    HE_PARTICLE_EMITTER_TYPE_NONE,
+    HE_PARTICLE_EMITTER_TYPE_BOX,
+    HE_PARTICLE_EMITTER_TYPE_SPHERE,
+    HE_PARTICLE_EMITTER_TYPE_POINT,
+} HeParticleEmitterType;
+
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) { return (T)((int) a | (int) b); }; \
     inline T operator& (T a, T b) { return (T)((int) a & (int) b); };   \

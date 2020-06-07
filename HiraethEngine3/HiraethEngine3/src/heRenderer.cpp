@@ -22,8 +22,8 @@ void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window) {
     hm::vec2i bloomSize(hm::floorPowerOfTwo(window->windowInfo.size.x), hm::floorPowerOfTwo(window->windowInfo.size.y));
     engine->bloomFbo.size = bloomSize;
     heFboCreate(&engine->bloomFbo);
-    heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGB16); // the bright pass, blur input
-    heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGBA16, bloomSize, 4); // blur output -> actual bloom
+    heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGB16, bloomSize, 5); // the bright pass, blur input
+    heFboCreateColourTextureAttachment(&engine->bloomFbo, HE_COLOUR_FORMAT_RGBA16, bloomSize, 5); // blur output -> actual bloom
     heFboUnbind(window->windowInfo.size);
 
     engine->brightPassShader = heAssetPoolGetShader("bright_pass", "res/shaders/quad_v.glsl", "res/shaders/brightPassFilter.glsl");
@@ -81,8 +81,8 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
             -1.0f, 1.0f,-1.0f, // triangle 2 : end
              1.0f,-1.0f, 1.0f,
             -1.0f,-1.0f,-1.0f,
-             1.0f,-1.0f,-1.0f,
-             1.0f, 1.0f,-1.0f,
+     1.0f,-1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,
              1.0f,-1.0f,-1.0f,
             -1.0f,-1.0f,-1.0f,
             -1.0f,-1.0f,-1.0f,
@@ -113,15 +113,18 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     
     heVaoUnbind(engine->shapes.cubeVao);
 
-    // particles vao
+    // particles vao    
     heVaoCreate(engine->shapes.particleVao);
     heVaoBind(engine->shapes.particleVao);
-    //heVaoAllocate(engine->shapes.particleVao, 0, 2, HE_VBO_USAGE_STATIC); // position, two triangles
     heVaoAddData(engine->shapes.particleVao, { -1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, -1 }, 2);
-    heVaoAllocateInstanced(engine->shapes.particleVao, 0, 4, HE_VBO_USAGE_DYNAMIC); // transformation matrix
-    heVaoAllocateInstanced(engine->shapes.particleVao, 0, 4, HE_VBO_USAGE_DYNAMIC); // of this particle
-    heVaoAllocateInstanced(engine->shapes.particleVao, 0, 4, HE_VBO_USAGE_DYNAMIC); // 4x4
-    heVaoAllocateInstanced(engine->shapes.particleVao, 0, 4, HE_VBO_USAGE_DYNAMIC); // 
+    // transformation matrix
+    heVaoAllocateInstanced(engine->shapes.particleVao);
+    heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 1, 4, HeParticleSource::FLOATS_PER_PARTICLE, 0);  // 4x4 transMat
+    heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 2, 4, HeParticleSource::FLOATS_PER_PARTICLE, 4);
+    heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 3, 4, HeParticleSource::FLOATS_PER_PARTICLE, 8);
+    heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 4, 4, HeParticleSource::FLOATS_PER_PARTICLE, 12); 
+    heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 5, 4, HeParticleSource::FLOATS_PER_PARTICLE, 16); // colour
+    heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 6, 4, HeParticleSource::FLOATS_PER_PARTICLE, 20); // uvs
     engine->particleShader = heAssetPoolGetShader("3d_particles");
     
     // ui
@@ -163,6 +166,7 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
 void heRenderEngineResize(HeRenderEngine* engine) {
     // resize only if the size has changed and its not 0 (minimized window)
     if(engine->window->resized && engine->window->windowInfo.size != hm::vec2i(0)) {
+        HE_DEBUG("Resizing...");
         heFboResize(&engine->hdrFbo, engine->window->windowInfo.size);
 
         if(engine->renderMode == HE_RENDER_MODE_DEFERRED)
@@ -323,18 +327,13 @@ void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level) {
 };
 
 void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource const* source, HeD3Camera const* camera) {
-    heVaoBind(engine->shapes.particleVao);
-    std::vector<float> transMatArray;
-    std::vector<float> uvs;
-
-    transMatArray.resize(source->particleCount * 16);
-    uvs.resize(source->particleCount * 2);
-
     for(uint32_t i = 0; i < source->particleCount; ++i) {
         HeParticle* particle = &source->particles[i];
+        uint32_t offset = i * source->FLOATS_PER_PARTICLE;
         if(particle->remaining > 0.f) {
             // build trans mat and add to vbo
-            hm::mat4f transMat = hm::createTransformationMatrix(source->transformation.position + particle->transformation.position, hm::vec3f(), particle->transformation.scale);
+            hm::mat4f transMat = hm::translate(hm::mat4f(1.0f), particle->transformation.position);
+
             // transpose view matrix into trans matrix so that we cancel the rotation
             transMat[0][0] = camera->viewMatrix[0][0];
             transMat[1][0] = camera->viewMatrix[0][1];
@@ -345,10 +344,21 @@ void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource cons
             transMat[0][2] = camera->viewMatrix[2][0];
             transMat[1][2] = camera->viewMatrix[2][1];
             transMat[2][2] = camera->viewMatrix[2][2];
-            transMat = hm::rotate(transMat, hm::to_radians(particle->transformation.rotation.z), hm::vec3f(0, 0, 1));
-            for(uint8_t x = 0; x < 4; ++x)
-                for(uint8_t y = 0; y < 4; ++y)
-                    transMatArray.emplace_back(transMat[x][y]);                
+            transMat = hm::scale(transMat, particle->transformation.scale);
+
+            float colour[4];
+            colour[0] = hm::getR(&particle->colour);
+            colour[1] = hm::getG(&particle->colour);
+            colour[2] = hm::getB(&particle->colour);
+            colour[3] = hm::getA(&particle->colour);
+
+            hm::vec4f uvs = heSpriteAtlasGetUvs(source->atlas, source->atlasIndex);
+            
+            memcpy(&source->dataBuffer[offset], &transMat[0][0], 16 * sizeof(float));
+            memcpy(&source->dataBuffer[offset + 16], &colour[0], 4 * sizeof(float));
+            memcpy(&source->dataBuffer[offset + 20], &uvs.x, 4 * sizeof(float));
+        } else {
+            memset(&source->dataBuffer[offset], 0, source->FLOATS_PER_PARTICLE * sizeof(float));
         }
     }
 
@@ -356,9 +366,8 @@ void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource cons
     heShaderBind(engine->particleShader);
     heShaderLoadUniform(engine->particleShader, "u_projMat", camera->projectionMatrix);
     heShaderLoadUniform(engine->particleShader, "u_viewMat", camera->viewMatrix);
-    heVaoUpdateData(engine->shapes.particleVao, transMatArray, 1);
-    heVaoUpdateData(engine->shapes.particleVao, uvs, 2);
-    heVaoRenderInstanced(engine->shapes.particleVao, source->particleCount);    
+    heVaoUpdateData(engine->shapes.particleVao, source->dataBuffer, 1, source->particleCount * source->FLOATS_PER_PARTICLE);
+    heVaoRenderInstanced(engine->shapes.particleVao, source->particleCount);
 };
 
 void heD3InstanceRenderForward(HeRenderEngine* engine, HeD3Instance* instance) {
@@ -373,7 +382,23 @@ void heD3InstanceRenderForward(HeRenderEngine* engine, HeD3Instance* instance) {
 void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level) {
     heFboBind(&engine->forward.forwardFbo);
     heFrameClear(hm::colour(0, 0, 0, 0), HE_FRAME_BUFFER_BIT_COLOUR | HE_FRAME_BUFFER_BIT_DEPTH);
+
+    // render skybox
+    heBlendMode(-1);
+    if (level->skybox.specular) {
+        heDepthFunc(HE_FRAGMENT_TEST_LEQUAL);
+        heCullEnable(false);
+        heVaoBind(engine->shapes.cubeVao);
+        heShaderBind(engine->skyboxShader);
+        heShaderLoadUniform(engine->skyboxShader, "u_projMat", level->camera.projectionMatrix);
+        heShaderLoadUniform(engine->skyboxShader, "u_viewMat", level->camera.viewMatrix);
+        heShaderLoadUniform(engine->skyboxShader, "u_realDepthTest", true);
+        heTextureBind(level->skybox.specular, heShaderGetSamplerLocation(engine->skyboxShader, "t_skybox", 0));
+        heTextureBind(nullptr, heShaderGetSamplerLocation(engine->skyboxShader, "t_alphaTest", 1));
+        heVaoRender(engine->shapes.cubeVao);
+    }
     
+    heDepthFunc(HE_FRAGMENT_TEST_LESS);
     // update lights ubo
     uint32_t index   = 0;
     uint32_t offset  = 0;
@@ -411,6 +436,7 @@ void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level) {
             shaderMap[it->material->shader].emplace_back(&(*it));
     }
 
+    heBlendMode(0);
     // loop through shaders, load data and then render all instances
     for (auto const& all : shaderMap) {
         heShaderBind(all.first);
@@ -430,29 +456,18 @@ void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level) {
         for (HeD3Instance* instances : all.second)      
             heD3InstanceRenderForward(engine, instances);
     }
-        
-    // render particles
-    for (auto const& all : level->particles) {
-        heParticleSourceRenderForward(engine, &all, &level->camera);
-    }
-    
-    // render skybox
-    if (level->skybox.specular) {
-        heDepthFunc(HE_FRAGMENT_TEST_LEQUAL);
-        heCullEnable(false);
-        heVaoBind(engine->shapes.cubeVao);
-        heShaderBind(engine->skyboxShader);
-        heShaderLoadUniform(engine->skyboxShader, "u_projMat", level->camera.projectionMatrix);
-        heShaderLoadUniform(engine->skyboxShader, "u_viewMat", level->camera.viewMatrix);
-        heShaderLoadUniform(engine->skyboxShader, "u_realDepthTest", true);
-        heTextureBind(level->skybox.specular, heShaderGetSamplerLocation(engine->skyboxShader, "t_skybox", 0));
-        heTextureBind(nullptr, heShaderGetSamplerLocation(engine->skyboxShader, "t_alphaTest", 1));
-        heVaoRender(engine->shapes.cubeVao);
-    }
 
+    // render particles
+    heCullEnable(false);
+    heBlendMode(1);
+    heVaoBind(engine->shapes.particleVao);    
+    for (auto const& all : level->particles)
+        heParticleSourceRenderForward(engine, &all, &level->camera);
+    
+    heBlendMode(-1);    
+    heFboRender(&engine->forward.forwardFbo, &engine->hdrFbo);
     heD3RenderInfo.exposure = level->camera.exposure;
     heD3RenderInfo.gamma    = level->camera.gamma;
-    heFboRender(&engine->forward.forwardFbo, &engine->hdrFbo);
 
     if(level->physics.setup)
         hePhysicsLevelDebugDraw(&level->physics);
@@ -510,7 +525,7 @@ void hePostProcessBloomPass(HeRenderEngine* engine) {
     // bright pass filter
     heFboBind(&engine->postProcess.bloomFbo);
     heShaderBind(engine->postProcess.brightPassShader);
-    heShaderLoadUniform(engine->postProcess.brightPassShader, "u_threshold", hm::vec3f(0.2126f, 0.7152f, 0.0722f));
+    heShaderLoadUniform(engine->postProcess.brightPassShader, "u_threshold", hm::vec3f(0.2126f, 0.7152f, 0.0722f) * 0.5f);
     heTextureBind(engine->hdrFbo.colourAttachments[0].id, heShaderGetSamplerLocation(engine->postProcess.brightPassShader, "t_in", 0));
     heUiSetQuadVao(engine->shapes.quadVao);
     heVaoRender(engine->shapes.quadVao);
@@ -519,6 +534,7 @@ void hePostProcessBloomPass(HeRenderEngine* engine) {
     heTextureBind(engine->postProcess.bloomFbo.colourAttachments[0].id, 0);
     heTextureGenerateMipmaps(); // downscale
 
+    // blur
     heShaderBind(engine->postProcess.gaussianBlurShader);
     heTextureBind(engine->postProcess.bloomFbo.colourAttachments[1].id, heShaderGetSamplerLocation(engine->postProcess.gaussianBlurShader, "t_lowerTexture", 2));
     

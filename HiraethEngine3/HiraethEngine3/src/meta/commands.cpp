@@ -248,6 +248,49 @@ void front_command_print_textures(std::vector<std::string> const& args) {
 };
 
 
+void command_print_instances() {
+    HE_LOG("=== INSTANCES ===");
+    uint16_t counter = 0;
+    for(const auto& all : heD3Level->instances) {
+        std::string string;
+        he_to_string(&all, string);
+        HE_LOG('[' + std::to_string(counter++) + "] = " + string);
+    }
+
+    HE_LOG("=== INSTANCES ===");
+};
+
+void front_command_print_instances(std::vector<std::string> const& args) {
+	if(args.size() != 0) {
+		heConsolePrint("Error: print_instances requires 0 arguments");
+		return;
+	};
+	command_print_instances();
+};
+
+
+void command_print_instance(std::string const& name) {
+    uint16_t counter = 0;
+    for(const auto& all : heD3Level->instances) {
+        if(all.name == name) {
+            std::string string;
+            he_to_string(&all, string);
+            HE_LOG('[' + std::to_string(counter++) + "] = " + string);
+        } else
+            counter++;
+    }
+};
+
+void front_command_print_instance(std::vector<std::string> const& args) {
+	if(args.size() != 1) {
+		heConsolePrint("Error: print_instance requires 1 arguments");
+		return;
+	};
+	std::string i0 = args[0];
+	command_print_instance(i0);
+};
+
+
 void command_help() {
 	heConsolePrint("=== HELP ===");
 	heConsolePrint("> set_position int: index, vec3: position");
@@ -264,6 +307,8 @@ void command_help() {
 	heConsolePrint("> export_skybox ");
 	heConsolePrint("> print_memory ");
 	heConsolePrint("> print_textures ");
+	heConsolePrint("> print_instances ");
+	heConsolePrint("> print_instance string: name");
 	heConsolePrint("=== HELP ===");
 
 };
@@ -292,6 +337,8 @@ void heRegisterCommands() {
 	heConsoleRegisterCommand("export_skybox", &front_command_export_skybox);
 	heConsoleRegisterCommand("print_memory", &front_command_print_memory);
 	heConsoleRegisterCommand("print_textures", &front_command_print_textures);
+	heConsoleRegisterCommand("print_instances", &front_command_print_instances);
+	heConsoleRegisterCommand("print_instance", &front_command_print_instance);
 	heConsoleRegisterCommand("help", &front_command_help);
 };
 

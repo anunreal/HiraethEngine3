@@ -4,6 +4,26 @@
 std::string SPACE_CHARS = "\t\n\v\f\r";
 
 
+void heRandomCreate(HeRandom* random, uint32_t const seed) {
+    if(seed > 0)
+        random->gen = std::mt19937(seed);
+    else {
+        std::random_device device;
+        random->gen = std::mt19937(device());    
+    }
+};
+
+int32_t heRandomInt(HeRandom* random, int32_t const low, int32_t const high) {
+    random->idis = std::uniform_int_distribution<>(low, high);
+    return random->idis(random->gen);
+};
+
+float heRandomFloat(HeRandom* random, float const low, float const high) {
+    random->fdis = std::uniform_real_distribution<float>(low, high);
+    return random->fdis(random->gen);
+};
+
+
 std::vector<std::string> heStringSplit(const std::string& string, const char delimn) {
     std::vector<std::string> result;
     std::string::const_iterator start = string.begin();

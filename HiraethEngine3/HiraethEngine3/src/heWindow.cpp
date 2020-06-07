@@ -51,7 +51,7 @@ void heWindowSyncToFps(HeWindow* window) {
         window->lastFrame = nowTime;
     
     // make sure that vsync is not enabled
-    if (window->windowInfo.fpsCap > 0) {
+    if (!window->windowInfo.vsync) {
         double deltaTime = nowTime - window->lastFrame; // in ms
         
         double requestedTime = (1000. / window->windowInfo.fpsCap); // in ms
@@ -63,10 +63,13 @@ void heWindowSyncToFps(HeWindow* window) {
         };
     }
 
-    nowTime = heWin32TimeCalculateMs(heWin32TimeGet());
-    window->frameTime = (nowTime - window->lastFrame) / 1000.f;
-    window->lastFrame = nowTime;
+    nowTime = heWin32TimeCalculateMs(heWin32TimeGet());   
+    window->frameTime  = (nowTime - window->lastFrame) / 1000.f;
     window->currentFps = 1. / window->frameTime;
+    if((nowTime / 1000.) - std::floor(nowTime / 1000.) >= 0.5 && (window->lastFrame / 1000) - std::floor(window->lastFrame / 1000) < 0.5) // check if we are in the later half of the second for the first time
+        window->fps = (uint32_t) window->currentFps;
+
+    window->lastFrame  = nowTime;
 };
 
 void heWindowEnableVsync(const int8_t timestamp) {
@@ -87,9 +90,9 @@ hm::vec2i heWindowCalculateBorderSize(const HeWindow* window) {
 #endif
 };
 
-void heWindowToggleCursor(const b8 hidden) {
+void heWindowToggleCursor(const b8 visible) {
 #ifdef HE_USE_WIN32
-    heWin32WindowToggleCursor(hidden);
+    heWin32WindowToggleCursor(visible);
 #endif
 };
 

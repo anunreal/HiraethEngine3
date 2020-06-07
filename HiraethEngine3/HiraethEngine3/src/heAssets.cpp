@@ -263,6 +263,18 @@ void heSpriteAtlasLoad(HeSpriteAtlas* atlas, std::string const& textureFile, uin
     atlas->count   = totalCount;
 };
 
+hm::vec4f heSpriteAtlasGetUvs(HeSpriteAtlas* atlas, uint32_t const index) {
+    uint32_t row = index / atlas->columns;
+    uint32_t col = index % atlas->columns;
+    float pixelsPerCol = atlas->texture->size.x / (float) atlas->columns;
+    float pixelsPerRow = atlas->texture->size.y / (float) atlas->rows;
+    // convert from pixels to texture space
+    float colSize = pixelsPerCol / atlas->texture->size.x;
+    float rowSize = pixelsPerCol / atlas->texture->size.y;
+    float x = col * colSize; 
+    float y = (row * rowSize);
+    return hm::vec4f(x, y, colSize, rowSize);
+};
 
 // -- Materials
 
@@ -605,33 +617,12 @@ HeSpriteAtlas* heAssetPoolGetSpriteAtlas(std::string const& name, uint32_t const
     return atlas;
 };
 
+HeSpriteAtlas* heAssetPoolGetSpriteAtlas(std::string const& name) {
+    auto it = heAssetPool.spriteAtlasPool.find(name);
+    if(it != heAssetPool.spriteAtlasPool.end())
+        return &it->second;
 
-// -- memory tracker
-
-uint8_t heMemoryGetBytesPerPixel(HeColourFormat const format) {
-    uint8_t bytes = 0;
-    switch(format) {
-    case HE_COLOUR_FORMAT_RGB8:
-        bytes = 3;
-        break;
-    
-    case HE_COLOUR_FORMAT_RGBA8:
-        bytes = 4;
-        break;
-    
-    case HE_COLOUR_FORMAT_RGB16:
-        bytes = 3 * 4;
-        break;
-    
-    case HE_COLOUR_FORMAT_RGBA16:
-        bytes = 4 * 4;
-        break;
-    }
-    return bytes;
-};
-
-uint32_t heMemoryRoundUsage(uint32_t const usage) {
-    return hm::ceilPowerOfTwo(usage);
+    return nullptr;
 };
 
 
@@ -684,7 +675,7 @@ void heThreadLoaderUpdate() {
         
         uint32_t counter = 0;
         for(auto& vbos : all->vbos)
-            heVaoAddVboData(&vbos, counter++);
+            heVaoAddVboData(all, &vbos, counter++);
         
         heVaoUnbind(all);
     }

@@ -3,6 +3,7 @@
 
 #include "heAssets.h"
 #include "hePhysics.h"
+#include "heUtils.h"
 #include <list>
 
 struct HeD3Transformation {
@@ -11,6 +12,7 @@ struct HeD3Transformation {
     hm::quatf rotation;
     
     HeD3Transformation() : position(0.f), scale(1.f), rotation(0.f, 0.f, 0.f, 1.f) {};
+    HeD3Transformation(hm::vec3f const& pos) : position(pos), scale(1.f), rotation(0.f, 0.f, 0.f, 1.f) {};
 };
 
 struct HeD3Instance {
@@ -86,13 +88,40 @@ struct HeParticle {
     hm::vec3f velocity; // velocity of this particle, set at spawn
 };
 
+struct HeParticleEmitter {
+    HeParticleEmitterType type;
+    HeD3Transformation    transformation;
+    HeRandom              random;
+    
+    float minSize  = 0.01f, maxSize  = 0.1f;
+    float minTime  = 0.00f, maxTime  = 1.0f;
+    float minSpeed = 0.50f, maxSpeed = 1.5f;
+    hm::colour minColour = hm::colour(0), maxColour = hm::colour(255);
+    
+    union {
+        float     sphere; // radius of the sphere 
+        hm::vec3f box;   // half dimensions of the box in each xyz direction
+    };
+
+HeParticleEmitter() : box(0.f) {};
+};
+
 struct HeParticleSource {
     HeSpriteAtlas* atlas         = nullptr;
     uint32_t       atlasIndex    = 0;
     uint32_t       particleCount = 0;
-    HeD3Transformation transformation;
 
-    HeParticle* particles; // a pointer to an array of particles, the size of which is specified in the particles create function
+    HeParticleEmitter emitter;
+    HeParticle*       particles  = nullptr; // a pointer to an array of particles, the size of which is specified in the particles create function
+    float*            dataBuffer = nullptr; // a float pointer that contains all necessary instanced data for the particles, that is the transformation matrix, uvs and colours
+
+    float    gravity                  = 9.81f;
+    uint32_t maxNewParticlesPerUpdate = 1;
+
+    // 4x4 transMat = 16
+    // hdr colour   =  4
+    // uvs          =  4
+    static const uint32_t FLOATS_PER_PARTICLE = 24; // constant so its easier to change
 };
 
 struct HeD3Level {
@@ -151,6 +180,9 @@ extern HE_API void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f con
 // loads a skybox from given hdr image. This will unmap the equirectangular image onto a cube map and also create
 // a blurred irradiance map. This will load, run and destroy a compute shader and also create the cube maps
 extern HE_API void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile);
+// loads the precomputed specular and diffuse textures for that skybox. The files must be in binres/textures/skybox
+// and be named fileName_specular and fileName_irradiance respectively. 
+extern HE_API void heD3SkyboxLoad(HeD3Skybox* skybox, std::string const& fileName);
 
 // sets up a new particle source. The transformation is the sources location, the particles will be relative around
 // that. The atlasIndex is the index of the sprite in the given atlas. particleCount is the size of the array
@@ -158,8 +190,11 @@ extern HE_API void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFi
 extern HE_API void heParticleSourceCreate(HeParticleSource* source, HeD3Transformation const& transformation, HeSpriteAtlas* atlas, uint32_t const atlasIndex, uint32_t const particleCount);
 // destroys the given particle source and frees all associated data
 extern HE_API void heParticleSourceDestroy(HeParticleSource* source);
-// spawns a random particle in given source and assigns attributes to it. Index is the index to the array which will
-// hold the new particle
-extern HE_API void heParticleSourceSpawnParticle(HeParticleSource* source, uint32_t const index);
+// assigns new data to the particle. The position will be in the emitter (bounding box dependant of type), the
+// velocity will be set and a random colour is generated
+extern HE_API void heParticleSourceSpawnParticle(HeParticleEmitter* source, HeParticle* particle);
+// updates the particle source by updating the position of the particles (velocity, gravity) and spawning new
+// particles for the dead ones
+extern HE_API void heParticleSourceUpdate(HeParticleSource* source, float const delta);
 
 #endif

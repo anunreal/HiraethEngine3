@@ -107,3 +107,27 @@ void command_print_textures() {
     HE_LOG(string);   
     HE_LOG("=== TEXTURES ===");
 };
+
+void command_print_instances() {
+    HE_LOG("=== INSTANCES ===");
+    uint16_t counter = 0;
+    for(const auto& all : heD3Level->instances) {
+        std::string string;
+        he_to_string(&all, string);
+        HE_LOG('[' + std::to_string(counter++) + "] = " + string);
+    }
+
+    HE_LOG("=== INSTANCES ===");
+};
+
+void command_print_instance(std::string const& name) {
+    uint16_t counter = 0;
+    for(const auto& all : heD3Level->instances) {
+        if(all.name == name) {
+            std::string string;
+            he_to_string(&all, string);
+            HE_LOG('[' + std::to_string(counter++) + "] = " + string);
+        } else
+            counter++;
+    }
+};

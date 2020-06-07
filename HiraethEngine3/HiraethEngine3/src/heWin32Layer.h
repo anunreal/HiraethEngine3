@@ -44,7 +44,7 @@ extern HE_API void heWin32WindowUpdate(HeWindow* window);
 extern HE_API void heWin32WindowDestroy(HeWindow* window);
 extern HE_API void heWin32WindowEnableVsync(int8_t const timestamp);
 extern HE_API void heWin32WindowSwapBuffers(HeWindow const* window);
-extern HE_API void heWin32WindowToggleCursor(b8 const hidden);
+extern HE_API void heWin32WindowToggleCursor(b8 const visible);
 extern HE_API void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position);
 extern HE_API hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window);
 

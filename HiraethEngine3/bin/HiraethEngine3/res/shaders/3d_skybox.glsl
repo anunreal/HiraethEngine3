@@ -29,6 +29,7 @@ in vec4 pass_uv;
 uniform samplerCube t_skybox;
 uniform sampler2D t_alphaTest;
 uniform bool u_realDepthTest;
+uniform float u_exposure = 1.0;
 
 void main(void) {
 	vec2 uv = (pass_uv.xy / pass_uv.w) * 0.5 + 0.5;
@@ -36,9 +37,6 @@ void main(void) {
 		discard;
 
 	vec3 envColour = textureLod(t_skybox, pass_pos, 0).rgb;
-	if(envColour.r < 0.0)
-	out_colour = vec4(1, 0, 0, 1);
-	else
-	//envColour = pow(envColour, vec3(1.0 / 2.2)); // gamma
+	envColour = vec3(1.0) - exp(-envColour * u_exposure);
 	out_colour = vec4(envColour, 1.0);
 }

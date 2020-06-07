@@ -516,7 +516,7 @@ b8 heWin32WindowCreate(HeWindow* window) {
     if (!heWin32WindowCreateContext(window, win32))
         return false;
     
-    if (window->windowInfo.fpsCap == 0)
+    if (window->windowInfo.vsync)
         heWindowEnableVsync(1);
     else
         heWindowEnableVsync(0);
@@ -608,11 +608,11 @@ void heWin32WindowSwapBuffers(HeWindow const* window) {
         SwapBuffers(win32->dc);
 };
 
-void heWin32WindowToggleCursor(b8 const hidden) {
-    if (hidden)
-        while (ShowCursor(false) >= 0);
-    else
+void heWin32WindowToggleCursor(b8 const visible) {
+    if (visible)
         ShowCursor(true);
+    else
+        while (ShowCursor(false) >= 0) {};
 };
 
 void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position) {

@@ -158,7 +158,9 @@ extern HE_API void heTextFileSkipLine(HeTextFile* file);
 
 // loads a texture from given file and stores the information in the atlas 
 extern HE_API void heSpriteAtlasLoad(HeSpriteAtlas* atlas, std::string const& textureFile, uint32_t const rows, uint32_t const columns, uint32_t const totalCount);
-
+// returns the uv coordinates (xy) and width and height (zw) for that index in the sprite atlas, in the range of
+// 0 to 1
+extern HE_API hm::vec4f heSpriteAtlasGetUvs(HeSpriteAtlas* atlas, uint32_t const index);
 
 // -- Materials
 
@@ -223,7 +225,8 @@ extern HE_API HeFont* heAssetPoolGetFont(std::string const& name);
 // returns a sprite atlas with given name. If a sprite atlas with that name wasnt already loaded, the texture with
 // given name will be requested from the asset pool and the data will be set 
 extern HE_API HeSpriteAtlas* heAssetPoolGetSpriteAtlas(std::string const& name, uint32_t const rows, uint32_t const columns, uint32_t const totalCount);
-
+// returns a sprite atlas with given name. If a sprite atlas with that name wasnt already loaded with the function above, nullptr is returned because we need data to be set 
+extern HE_API HeSpriteAtlas* heAssetPoolGetSpriteAtlas(std::string const& name);
 
 // -- ThreadLoader
 

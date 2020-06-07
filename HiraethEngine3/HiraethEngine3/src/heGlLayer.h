@@ -88,6 +88,7 @@ struct HeVao {
     HeVaoType type = HE_VAO_TYPE_NONE;
     uint32_t vaoId = 0;
     uint32_t verticesCount = 0;
+    uint32_t attributeCount = 0; // amount of normal vbos plus instanced attributes
     std::vector<HeVbo> vbos;
     
 #ifdef HE_ENABLE_NAMES
@@ -278,34 +279,38 @@ extern HE_API void heVboCreateUint(HeVbo* vbo, std::vector<uint32_t> const& data
 extern HE_API void heVboAllocate(HeVbo* vbo, uint32_t const size, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC, HeDataType const type = HE_DATA_TYPE_FLOAT);
 // deletes the given vbo and sets its id to 0
 extern HE_API void heVboDestroy(HeVbo* vbo);
+
 // creates a new empty vao
 extern HE_API void heVaoCreate(HeVao* vao, HeVaoType const type = HE_VAO_TYPE_TRIANGLES);
-// simply uploads the data stored in the vbo onto the currently bound vao. This will clear the data stored in the
-// vbo attributeIndex is the index of this vbo in the vao. The vbo must have already set all attributes (data
-// buffer, dimensions, usage)
-extern HE_API void heVaoAddVboData(HeVbo* vbo, int8_t const attributeIndex);
+// simply uploads the data stored in the vbo onto the vao. That vao must already be bound. This will clear the
+// data stored in the vbo attributeIndex is the index of this vbo in the vao. The vbo must have already set all
+// attributes (data buffer, dimensions, usage). This is used for thread loading (data was already read and stored
+// in the vbo, now upload that existing data into the vao)
+extern HE_API void heVaoAddVboData(HeVao* vao, HeVbo* vbo, int8_t const attributeIndex);
 // adds an existing vbo to given vao. Both vao and vbo need to be created beforehand, and the vao needs
 // to be bound before this call. If this is the first vbo for the given vao, the verticesCount
 // of the vao is calculated
 extern HE_API void heVaoAddVbo(HeVao* vao, HeVbo* vbo);
-// adds an instanced vbo to given vao. Same conditions as the normal heVaoAddVbo process
-extern HE_API void heVaoAddInstancedVbo(HeVao* vao, HeVbo* vbo);
 // adds new data to given vao. The vao needs to be created and bound before this.
 extern HE_API void heVaoAddData(HeVao* vao, std::vector<float> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
 // adds new data to given vao. The vao needs to be created and bound before this
 extern HE_API void heVaoAddDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
 // adds new data to given vao. The vao needs to be created and bound before this
 extern HE_API void heVaoAddDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
-// adds instanced data to this vao. This is the same as adding "normal" data, except this data will be the same for one instance
-extern HE_API void heVaoAddInstancedData(HeVao* vao, std::vector<float> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
 // allocates a new vbo in this vao and. Size is the amount of bytes to allocate, can be zero if we dont know the
 // actual size yet (or it changes)
 extern HE_API void heVaoAllocate(HeVao* vao, uint32_t const size, uint32_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC, HeDataType const type = HE_DATA_TYPE_FLOAT);  
-// allocates a new instanced vbo in this vao and. Size is the amount of bytes to allocate, can be zero if we dont know the
-// actual size yet (or it changes)
-extern HE_API void heVaoAllocateInstanced(HeVao* vao, uint32_t const size, uint32_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC, HeDataType const type = HE_DATA_TYPE_FLOAT);  
+// adds a new empty vbo to this vao. The instanced vbo(s) should always be the last vbos of that vao. This will
+// create a buffer, but not add it the vao. Adding attributes must be done via heVaoAllocateInstancedAttribute
+extern HE_API void heVaoAllocateInstanced(HeVao* vao);
+// allocates a new instanced vbo in this vao and. Size is the amount of bytes to allocate, can be zero if we dont
+// know the actual size yet (or it changes)
+extern HE_API void heVaoAllocateInstancedAttribute(HeVao* vao, uint32_t const attributeIndex, uint32_t const dimensions, uint32_t const stride, uint32_t const offset, HeDataType const type = HE_DATA_TYPE_FLOAT);
 // updates the data of given vbo (vboIndex). Make sure the vao is bound before this call.
 extern HE_API void heVaoUpdateData(HeVao* vao, std::vector<float> const& data, uint8_t const vboIndex);
+// updates the data of given vbo (vboIndex). Make sure the vao is bound before this call. Size is the length
+// of the buffer (in floats)
+extern HE_API void heVaoUpdateData(HeVao* vao, float const* data, uint8_t const vboIndex, uint32_t const size);
 // updates the data of given vbo (vboIndex). Make sure the vao is bound before this call.
 extern HE_API void heVaoUpdateDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t const vboIndex);
 // updates the data of given vbo (vboIndex). Make sure the vao is bound before this call.
@@ -414,6 +419,7 @@ extern HE_API int32_t heTextureGetCompressionFormat(HeTexture* texture);
 // calculates the mip size for that texture and level. If level is zero, the size of the texture is returned.
 // Levels over 0 will be the next lower power of two
 extern HE_API inline hm::vec2i heTextureCalculateMipmapSize(HeTexture* texture, uint32_t const level);
+// calculates the amount of bytes in memory used by this texture
 extern HE_API inline uint32_t heTextureCalculateMemorySize(HeTexture* texture, uint8_t const unpackAlign = 1); 
 
 // returns the memory buffer of this texture as stored by the opengl driver. The returned buffer is allocated in

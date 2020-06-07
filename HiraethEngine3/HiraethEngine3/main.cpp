@@ -17,6 +17,18 @@
 
 App app;
 
+void toggleMenuMode(b8 const menuOpen) {
+    if(menuOpen) {
+        heWindowToggleCursor(true);
+        app.window.mouseInfo.cursorLock = hm::vec2f(0.f);
+        app.state = GAME_STATE_PAUSED;
+    } else {
+        heWindowToggleCursor(false);
+        app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
+        app.state = GAME_STATE_INGAME;
+    }
+};
+
 void updateInput() {
     // key binds
     if(heWindowKeyWasPressed(&app.window, HE_KEY_F1)) {
@@ -24,7 +36,11 @@ void updateInput() {
             heConsoleToggleOpen(HE_CONSOLE_STATE_OPEN_FULL);    
         else
             heConsoleToggleOpen(HE_CONSOLE_STATE_OPEN);
-        //app.state = (heConsoleGetState() == HE_CONSOLE_STATE_CLOSED) ? GAME_STATE_INGAME : GAME_STATE_PAUSED;
+
+        if(heConsoleGetState() == HE_CONSOLE_STATE_CLOSED)
+            toggleMenuMode(false);
+        else
+            toggleMenuMode(true);
     }
 
     if(heWindowKeyWasPressed(&app.window, HE_KEY_F3)) {
@@ -32,14 +48,10 @@ void updateInput() {
     }
 
     if(heWindowKeyWasPressed(&app.window, HE_KEY_ESCAPE)) {
-        if(app.state == GAME_STATE_PAUSED) {
-            app.state = GAME_STATE_INGAME;
-            heWindowToggleCursor(true);
-            app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
+        if(app.state == GAME_STATE_PAUSED && heConsoleGetState() == HE_CONSOLE_STATE_CLOSED) {
+            toggleMenuMode(false);
         } else if(app.state == GAME_STATE_INGAME) {
-            app.state = GAME_STATE_PAUSED;
-            heWindowToggleCursor(false);
-            app.window.mouseInfo.cursorLock = hm::vec2f(0.f);
+            toggleMenuMode(true);
         }
     }
 
@@ -105,23 +117,33 @@ void enterGameState() {
 
     heWin32TimerStart();
     heD3LevelLoad("res/level/level0.h3level", &app.level, USE_PHYSICS, true);
-    heWin32TimerPrint("LEVEL LOAD");
-
-    heWin32TimerStart();
-    //heD3SkyboxCreate(&app.level.skybox, "res/textures/hdr/pink_sunrise.hdr");
-
+    heD3LevelGetInstance(&app.level, 13)->material->emission = hm::colour(255, 0, 0, 255, 10); // suzanne
+    heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png", 2, 2, 4); // load and set up once so we can use it later
     
-    app.level.skybox.specular = &heAssetPool.texturePool["binres/textures/skybox/pink_sunrise_specular.h3asset"];
-    app.level.skybox.specular->parameters = HE_TEXTURE_FILTER_TRILINEAR | HE_TEXTURE_CLAMP_EDGE;
-    heTextureLoadFromHdrCubemapFile(app.level.skybox.specular, "binres/textures/skybox/pink_sunrise_specular.h3asset");
+    HeParticleSource* lampParticles = &app.level.particles.emplace_back();
+    lampParticles->maxNewParticlesPerUpdate = 10;
+    lampParticles->gravity = 0.f;
+    lampParticles->emitter.type = HE_PARTICLE_EMITTER_TYPE_BOX;
+    lampParticles->emitter.box = hm::vec3f(0.6f);
+    lampParticles->emitter.maxSpeed = lampParticles->emitter.minSpeed = 0.f;
+    lampParticles->emitter.maxColour = lampParticles->emitter.minColour = hm::colour(255, 7.f);
+    heParticleSourceCreate(lampParticles, HeD3Transformation(hm::vec3f(-3.07f, 4.07f, -2.03f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 3, 100);
 
-    app.level.skybox.irradiance = &heAssetPool.texturePool["binres/textures/skybox/pink_sunrise_irradiance.h3asset"];
-    app.level.skybox.irradiance->parameters = HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE;
-    heTextureLoadFromHdrCubemapFile(app.level.skybox.irradiance, "binres/textures/skybox/pink_sunrise_irradiance.h3asset");
-    /**/
-    
-    heWin32TimerPrint("SKYBOX CREATION");
-    
+    HeParticleSource* dustParticles = &app.level.particles.emplace_back();
+    dustParticles->maxNewParticlesPerUpdate = 1;
+    dustParticles->gravity           = .05f;
+    dustParticles->emitter.type      = HE_PARTICLE_EMITTER_TYPE_BOX;
+    dustParticles->emitter.box       = hm::vec3f(10.f, 1.5f, 10.f);
+    dustParticles->emitter.minSpeed  = 0.1f;
+    dustParticles->emitter.maxSpeed  = 0.5f;
+    dustParticles->emitter.minTime   = 2.0f;
+    dustParticles->emitter.maxTime   = 10.f;
+    dustParticles->emitter.minSize   = 0.01f; 
+    dustParticles->emitter.maxSize   = 0.05f; 
+    dustParticles->emitter.minColour = hm::colour(20, 2.f);
+    dustParticles->emitter.maxColour = hm::colour(100, 2.f);
+    heParticleSourceCreate(dustParticles, HeD3Transformation(hm::vec3f(0.f, 1.5f, 0.f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 0, 100);
+
 #if USE_PHYSICS == 1
 	HePhysicsShapeInfo actorShape;
 	actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
@@ -135,11 +157,18 @@ void enterGameState() {
 	hePhysicsActorSetEyePosition(&app.actor, hm::vec3f(-5.f, 0.1f, 5.f));
 #endif
 
+    heWin32TimerPrint("LEVEL LOAD");
+
+    heWin32TimerStart();
+    //heD3SkyboxCreate(&app.level.skybox, "res/textures/hdr/pink_sunrise.hdr");
+    heD3SkyboxLoad(&app.level.skybox, "pink_sunrise");
+    heWin32TimerPrint("SKYBOX CREATION");
+
     app.state = GAME_STATE_INGAME;
     heD3Level = &app.level;
     if(app.window.active) {
         app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
-        heWindowToggleCursor(true);
+        heWindowToggleCursor(false);
     }
 };
 
@@ -155,7 +184,7 @@ int main() {
     HeWindowInfo windowInfo;
 	windowInfo.title			= L"He3 Test";
 	windowInfo.backgroundColour = hm::colour(135, 206, 235);
-	windowInfo.fpsCap			= 120;
+	windowInfo.fpsCap			= 300;
 	windowInfo.size				= hm::vec2i(1366, 768);
 	app.window.windowInfo		= windowInfo;	
     heWindowCreate(&app.window);
@@ -168,6 +197,8 @@ int main() {
 	heRenderEngine = &app.engine;
     
     // set shit up
+    HeScaledFont font;
+    heFontCreateScaled(heAssetPoolGetFont("inconsolata"), &font, 13);
     heConsoleCreate(heAssetPoolGetFont("inconsolata"));
 	heProfilerCreate(heAssetPoolGetFont("inconsolata"));
     heUiCreate();
@@ -198,7 +229,7 @@ int main() {
         {
             heRenderEnginePrepareD3(&app.engine);
             heD3LevelUpdate(&app.level, (float) app.window.frameTime);
-            heProfilerFrameMark("physics", hm::colour(255, 100, 100));
+            heProfilerFrameMark("update", hm::colour(255, 100, 100));
             heD3LevelRender(&app.engine, &app.level);
             heRenderEngineFinishD3(&app.engine);
         }
@@ -210,15 +241,18 @@ int main() {
         }
         heProfilerFrameMark("post process", hm::colour(0, 255, 255));
         
-
         // render ui
         {
             heRenderEnginePrepareUi(&app.engine);
+            heUiPushText(&app.engine, &font, "FPS: " + std::to_string(app.window.fps), hm::vec2f(10, 10), hm::colour(255));
+            heUiPushText(&app.engine, &font, "Camera: " + hm::to_string(app.level.camera.position), hm::vec2f(10, 25), hm::colour(255));
             heConsoleRender(&app.engine);
             heUiQueueRender(&app.engine);
             heRenderEngineFinishUi(&app.engine);
         }
         heProfilerFrameMark("ui render", hm::colour(0, 0, 255));
+        
+
         // render profiler
         {
             heWin32TimerStart();
@@ -232,8 +266,8 @@ int main() {
         {
             heWin32TimerStart();
             heRenderEngineFinish(&app.engine);
-            sleepTime = heWin32TimerGet();
             heWindowSyncToFps(&app.window);
+            sleepTime = heWin32TimerGet();
         }
     }    
 
