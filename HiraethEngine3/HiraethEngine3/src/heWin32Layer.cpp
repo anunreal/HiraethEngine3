@@ -202,6 +202,7 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
         case WM_SIZE: {
             window->windowInfo.size.x = LOWORD(lparam);
             window->windowInfo.size.y = HIWORD(lparam);
+            window->windowInfo.aspectRatio = window->windowInfo.size.x / (float) window->windowInfo.size.y;
             heViewport(hm::vec2i(0), window->windowInfo.size);
             window->resized = true;
             break;
@@ -438,6 +439,7 @@ b8 heWin32WindowCreateHandle(HeWindow* window, HeWin32Window* win32) {
     ShowWindow(win32->handle, SW_SHOW);
     UpdateWindow(win32->handle);
     window->shouldClose = false;
+    window->windowInfo.aspectRatio = window->windowInfo.size.x / (float) window->windowInfo.size.y;
     return true;
 };
 

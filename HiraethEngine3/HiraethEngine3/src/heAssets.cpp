@@ -329,7 +329,7 @@ void heFontLoad(HeFont* font, std::string const& name) {
     // parse basic info
     auto info     = getLineArguments(line); // info
     //font->size    = std::stoi(info["size"]);
-    font->padding = hm::vec4<uint8_t>(info["padding"][0] - '0',
+    font->padding = hm::vec<4, uint8_t>(info["padding"][0] - '0',
                                       info["padding"][2] - '0',
                                       info["padding"][4] - '0',
                                       info["padding"][6] - '0');
@@ -362,9 +362,9 @@ void heFontLoad(HeFont* font, std::string const& name) {
             uint32_t height = std::stoi(info["height"]);
             
             c->id       = id;
-            c->uv       = hm::vec4<float>((float)x / textureSize.x, 1.f - (float)(y) / textureSize.y, (float) (x + width) / textureSize.x, 1.f - (float) (y + height) / textureSize.y);
-            c->size         = hm::vec2<uint32_t>(width + font->padding[2], height + font->padding[3]);
-            c->offset   = hm::vec2<int32_t>(std::stoi(info["xoffset"]) - font->padding[0], std::stoi(info["yoffset"]) - font->padding[1]);
+            c->uv       = hm::vec4f((float)x / textureSize.x, 1.f - (float)(y) / textureSize.y, (float) (x + width) / textureSize.x, 1.f - (float) (y + height) / textureSize.y);
+            c->size     = hm::vec<2, uint32_t>(width + font->padding[2], height + font->padding[3]);
+            c->offset   = hm::vec<2, int32_t>(std::stoi(info["xoffset"]) - font->padding[0], std::stoi(info["yoffset"]) - font->padding[1]);
             c->xadvance = std::stoi(info["xadvance"]) - uint32_t(font->padding[0] * 1.5);
         } else if(id == 32) {
             // space

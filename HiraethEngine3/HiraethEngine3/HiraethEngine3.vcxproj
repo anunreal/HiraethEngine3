@@ -220,9 +220,11 @@
     <ClInclude Include="src\hm\quat.hpp" />
     <ClInclude Include="src\hm\setup.hpp" />
     <ClInclude Include="src\hm\to_string.hpp" />
+    <ClInclude Include="src\hm\vec.hpp" />
     <ClInclude Include="src\hm\vec2.hpp" />
     <ClInclude Include="src\hm\vec3.hpp" />
     <ClInclude Include="src\hm\vec4.hpp" />
+    <ClInclude Include="src\hm\vector.hpp" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>

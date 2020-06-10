@@ -61,6 +61,10 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     // common
     engine->window = window;
     engine->textureShader = heAssetPoolGetShader("gui_texture");
+    // load samplers
+    heShaderGetSamplerLocation(engine->textureShader, "t_d2Tex", 0);
+    heShaderGetSamplerLocation(engine->textureShader, "t_cubeTex", 1);
+
     engine->rgbaShader    = heAssetPoolGetShader("gui_rgba");
     
     // quad vao
@@ -81,8 +85,8 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
             -1.0f, 1.0f,-1.0f, // triangle 2 : end
              1.0f,-1.0f, 1.0f,
             -1.0f,-1.0f,-1.0f,
-     1.0f,-1.0f,-1.0f,
-     1.0f, 1.0f,-1.0f,
+             1.0f,-1.0f,-1.0f,
+             1.0f, 1.0f,-1.0f,
              1.0f,-1.0f,-1.0f,
             -1.0f,-1.0f,-1.0f,
             -1.0f,-1.0f,-1.0f,
@@ -131,11 +135,13 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     heUiQueueCreate(&engine->uiQueue);
     
     // d3       
+    engine->shadowShader    = heAssetPoolGetShader("3d_shadow");
     engine->skyboxShader    = heAssetPoolGetShader("3d_skybox");
     engine->brdfIntegration = heAssetPoolGetImageTexture("res/textures/utils/brdf.png", HE_TEXTURE_FILTER_BILINEAR | HE_TEXTURE_CLAMP_EDGE);
     engine->hdrFbo.size = window->windowInfo.size;
     heFboCreate(&engine->hdrFbo);
     heFboCreateColourTextureAttachment(&engine->hdrFbo, HE_COLOUR_FORMAT_RGBA16);
+    heFboCreateDepthBufferAttachment(&engine->hdrFbo);
     heFboValidate(&engine->hdrFbo);
         
     if(engine->renderMode == HE_RENDER_MODE_DEFERRED) {
@@ -251,6 +257,98 @@ void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource const* light, i
     heShaderLoadUniform(program, uniformName + ".data2", hm::vec4f(light->data[4], light->data[5], light->data[6], light->data[7]));
 };
 
+void heD3ShadowMapRenderDirectional(HeRenderEngine* engine, HeD3ShadowMap* shadowMap, HeD3LightSource* source, HeD3Level* level) {
+    { // create bounding box around the shadow map
+        shadowMap->frustum.viewInfo.nearPlane = 0.1f;
+        shadowMap->frustum.viewInfo.farPlane  = shadowMap->shadowDistance;
+        shadowMap->frustum.viewInfo.fov       = level->camera.frustum.viewInfo.fov;
+
+        heD3FrustumUpdateWithMatrix(&shadowMap->frustum, engine->window, level->camera.position, level->camera.rotation, shadowMap->viewMatrix);
+        shadowMap->frustum.bounds[1].z += shadowMap->offset; // make sure that objects behind us cast shadows as well
+    }
+
+    { // update projection matrix
+        shadowMap->projectionMatrix = hm::mat4f(1.0f);
+        hm::vec3f dimensions(shadowMap->frustum.bounds[1] - shadowMap->frustum.bounds[0]);
+
+        shadowMap->projectionMatrix[0][0] =  2.f / (dimensions.x); 
+        shadowMap->projectionMatrix[1][1] =  2.f / (dimensions.y);
+        shadowMap->projectionMatrix[2][2] = -2.f / (dimensions.z); 
+        shadowMap->projectionMatrix[3][3] =  1.f; 
+    }
+
+    { // update view matrix
+        hm::vec3f direction = hm::normalize(source->vector);
+        hm::vec4f center    = hm::vec4f((shadowMap->frustum.bounds[0] + shadowMap->frustum.bounds[1]) / 2.f, 1.f);
+        hm::mat4f invLight  = hm::inverse(shadowMap->viewMatrix);
+        center = invLight * center;
+        
+        float yaw = (float) hm::to_degrees(std::atan(direction.x / direction.z));
+        yaw = direction.z > 0 ? yaw - 180 : yaw;
+        float pitch = hm::to_degrees(std::acos(hm::length(hm::vec2f(direction.x, direction.z))));
+        shadowMap->viewMatrix = hm::mat4f(1.f);
+        shadowMap->viewMatrix = hm::rotate(shadowMap->viewMatrix, pitch, hm::vec3f(1, 0, 0));
+        shadowMap->viewMatrix = hm::rotate(shadowMap->viewMatrix, -yaw, hm::vec3f(0, 1, 0));
+        shadowMap->viewMatrix = hm::translate(shadowMap->viewMatrix, -hm::vec3f(center));    
+    }
+
+    { // update shadow space matrix
+        shadowMap->offsetMatrix = hm::translate(hm::mat4f(1.f), hm::vec3f(.5f));
+        shadowMap->offsetMatrix = hm::scale(shadowMap->offsetMatrix, hm::vec3f(.5f));
+        shadowMap->shadowSpaceMatrix = shadowMap->offsetMatrix * (shadowMap->projectionMatrix * shadowMap->viewMatrix);
+    }
+
+    { // render entities in shadow map
+        heShaderBind(engine->shadowShader);
+        heFboBind(&shadowMap->depthFbo);
+        heDepthEnable(true);
+        heCullEnable(true);
+        heDepthFunc();
+        heBlendMode();
+        heFrameClear(hm::colour(0), HE_FRAME_BUFFER_BIT_DEPTH);
+        heShaderLoadUniform(engine->shadowShader, "u_projMat", shadowMap->projectionMatrix);
+        heShaderLoadUniform(engine->shadowShader, "u_viewMat", shadowMap->viewMatrix);
+        for(auto const& all : level->instances) {
+            hm::mat4f transMat = hm::createTransformationMatrix(all.transformation.position, all.transformation.rotation, all.transformation.scale);
+            heShaderLoadUniform(engine->shadowShader, "u_transMat", transMat);
+            heTextureBind(all.material->textures["diffuse"], heShaderGetSamplerLocation(engine->shadowShader, "t_diffuse"));
+            heVaoBind(all.mesh);
+            heVaoRender(all.mesh);
+        }
+        
+        heCullEnable(false);
+        heShaderBind(engine->particleShader);
+        heShaderLoadUniform(engine->particleShader, "u_projMat", shadowMap->projectionMatrix);
+        heShaderLoadUniform(engine->particleShader, "u_viewMat", shadowMap->viewMatrix);
+        heVaoBind(engine->shapes.particleVao);
+        for(auto const& all : level->particles)
+            if(all.enableShadows)
+                heParticleSourceRenderForward(engine, &all, level);
+
+        heFboUnbind(engine->window->windowInfo.size);
+    }
+};
+
+void heD3FrustumRender(HeRenderEngine* engine, HeD3Frustum* frustum, hm::colour const& colour) {
+    // far
+    heUiPushLineD3(engine, frustum->corners[0], frustum->corners[1], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[1], frustum->corners[3], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[3], frustum->corners[2], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[2], frustum->corners[0], colour, 3.f);
+
+    // near
+    heUiPushLineD3(engine, frustum->corners[4], frustum->corners[5], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[5], frustum->corners[7], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[7], frustum->corners[6], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[6], frustum->corners[4], colour, 3.f);
+
+    // connection
+    heUiPushLineD3(engine, frustum->corners[4], frustum->corners[0], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[5], frustum->corners[1], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[6], frustum->corners[2], colour, 3.f); 
+    heUiPushLineD3(engine, frustum->corners[7], frustum->corners[3], colour, 3.f);
+};
+
 void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level) {
     // render all cts into the gbuffer
     heFboBind(&engine->deferred.gBufferFbo);
@@ -267,7 +365,7 @@ void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level) {
         // render instance into the gbuffer
         hm::mat4f transMat = hm::createTransformationMatrix(all.transformation.position, all.transformation.rotation, all.transformation.scale);
         heShaderLoadUniform(engine->deferred.gBufferShader, "u_transMat", transMat);
-        heShaderLoadUniform(engine->deferred.gBufferShader, "u_normMat",     hm::transpose(hm::inverse(hm::mat3f(transMat))));
+        heShaderLoadUniform(engine->deferred.gBufferShader, "u_normMat",  hm::transpose(hm::inverse(hm::mat3f(transMat))));
         heShaderLoadMaterial(engine, engine->deferred.gBufferShader, all.material);
         
         heVaoBind(all.mesh);
@@ -326,47 +424,11 @@ void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level) {
     heD3RenderInfo.gamma    = level->camera.gamma;
 };
 
-void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource const* source, HeD3Camera const* camera) {
-    for(uint32_t i = 0; i < source->particleCount; ++i) {
-        HeParticle* particle = &source->particles[i];
-        uint32_t offset = i * source->FLOATS_PER_PARTICLE;
-        if(particle->remaining > 0.f) {
-            // build trans mat and add to vbo
-            hm::mat4f transMat = hm::translate(hm::mat4f(1.0f), particle->transformation.position);
-
-            // transpose view matrix into trans matrix so that we cancel the rotation
-            transMat[0][0] = camera->viewMatrix[0][0];
-            transMat[1][0] = camera->viewMatrix[0][1];
-            transMat[2][0] = camera->viewMatrix[0][2];
-            transMat[0][1] = camera->viewMatrix[1][0];
-            transMat[1][1] = camera->viewMatrix[1][1];
-            transMat[2][1] = camera->viewMatrix[1][2];
-            transMat[0][2] = camera->viewMatrix[2][0];
-            transMat[1][2] = camera->viewMatrix[2][1];
-            transMat[2][2] = camera->viewMatrix[2][2];
-            transMat = hm::scale(transMat, particle->transformation.scale);
-
-            float colour[4];
-            colour[0] = hm::getR(&particle->colour);
-            colour[1] = hm::getG(&particle->colour);
-            colour[2] = hm::getB(&particle->colour);
-            colour[3] = hm::getA(&particle->colour);
-
-            hm::vec4f uvs = heSpriteAtlasGetUvs(source->atlas, source->atlasIndex);
-            
-            memcpy(&source->dataBuffer[offset], &transMat[0][0], 16 * sizeof(float));
-            memcpy(&source->dataBuffer[offset + 16], &colour[0], 4 * sizeof(float));
-            memcpy(&source->dataBuffer[offset + 20], &uvs.x, 4 * sizeof(float));
-        } else {
-            memset(&source->dataBuffer[offset], 0, source->FLOATS_PER_PARTICLE * sizeof(float));
-        }
-    }
-
-    heTextureBind(source->atlas->texture, 0);
-    heShaderBind(engine->particleShader);
-    heShaderLoadUniform(engine->particleShader, "u_projMat", camera->projectionMatrix);
-    heShaderLoadUniform(engine->particleShader, "u_viewMat", camera->viewMatrix);
+void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource const* source, HeD3Level* level) {
+    heBlendMode(source->additive);
+    heTextureBind(source->atlas->texture, heShaderGetSamplerLocation(engine->particleShader, "t_atlas"));
     heVaoUpdateData(engine->shapes.particleVao, source->dataBuffer, 1, source->particleCount * source->FLOATS_PER_PARTICLE);
+    heShaderLoadUniform(engine->particleShader, "u_receiveShadows", source->enableShadows);
     heVaoRenderInstanced(engine->shapes.particleVao, source->particleCount);
 };
 
@@ -380,102 +442,132 @@ void heD3InstanceRenderForward(HeRenderEngine* engine, HeD3Instance* instance) {
 };
 
 void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level) {
-    heFboBind(&engine->forward.forwardFbo);
-    heFrameClear(hm::colour(0, 0, 0, 0), HE_FRAME_BUFFER_BIT_COLOUR | HE_FRAME_BUFFER_BIT_DEPTH);
+    { // update and render lights
+        // update lights ubo
+        uint32_t index   = 0;
+        uint32_t offset  = 0;
+        b8 bufferChanged = false;
+        for (auto lights = level->lights.begin(); lights != level->lights.end(); ++lights) {
+            if(lights->update) {
+                // put data into buffer
+                hm::vec4f c(hm::getR(&lights->colour), hm::getG(&lights->colour), hm::getB(&lights->colour), hm::getA(&lights->colour));
+                float type = (float) lights->type;
 
-    // render skybox
-    heBlendMode(-1);
-    if (level->skybox.specular) {
-        heDepthFunc(HE_FRAGMENT_TEST_LEQUAL);
-        heCullEnable(false);
-        heVaoBind(engine->shapes.cubeVao);
-        heShaderBind(engine->skyboxShader);
-        heShaderLoadUniform(engine->skyboxShader, "u_projMat", level->camera.projectionMatrix);
-        heShaderLoadUniform(engine->skyboxShader, "u_viewMat", level->camera.viewMatrix);
-        heShaderLoadUniform(engine->skyboxShader, "u_realDepthTest", true);
-        heTextureBind(level->skybox.specular, heShaderGetSamplerLocation(engine->skyboxShader, "t_skybox", 0));
-        heTextureBind(nullptr, heShaderGetSamplerLocation(engine->skyboxShader, "t_alphaTest", 1));
-        heVaoRender(engine->shapes.cubeVao);
-    }
-    
-    heDepthFunc(HE_FRAGMENT_TEST_LESS);
-    // update lights ubo
-    uint32_t index   = 0;
-    uint32_t offset  = 0;
-    b8 bufferChanged = false;
+                heUboUpdateData(&engine->forward.lightsUbo, offset, sizeof(float), &type);
+                offset += sizeof(float);
+                heUboUpdateData(&engine->forward.lightsUbo, offset, 3 * sizeof(float), &lights->vector);
+                offset += 3 * sizeof(float);
+                heUboUpdateData(&engine->forward.lightsUbo, offset, 4 * sizeof(float), &c);
+                offset += 4 * sizeof(float);
+                heUboUpdateData(&engine->forward.lightsUbo, offset, 8 * sizeof(float), &lights->data);
+                offset += 8 * sizeof(float);
+                bufferChanged = true;
+                lights->update = false;
+            }
 
-    for (auto lights = level->lights.begin(); lights != level->lights.end(); ++lights) {
-        if(lights->update) {
-            //heUboUpdateData(&engine->forward.lightsUbo, index * lightSize, lightSize, &(*lights));
-            hm::vec4f c(hm::getR(&lights->colour), hm::getG(&lights->colour), hm::getB(&lights->colour), hm::getA(&lights->colour));
-            float type = (float) lights->type;
-
-            heUboUpdateData(&engine->forward.lightsUbo, offset, sizeof(float), &type);
-            offset += sizeof(float);
-            heUboUpdateData(&engine->forward.lightsUbo, offset, 3 * sizeof(float), &lights->vector);
-            offset += 3 * sizeof(float);
-            heUboUpdateData(&engine->forward.lightsUbo, offset, 4 * sizeof(float), &c);
-            offset += 4 * sizeof(float);
-            heUboUpdateData(&engine->forward.lightsUbo, offset, 8 * sizeof(float), &lights->data);
-            offset += 8 * sizeof(float);
-            bufferChanged = true;
-            lights->update = false;
-        }
-        
-        index++;
-    }
-
-    heUboUpdateVariable(&engine->forward.lightsUbo, "numLights", &index);
-    if (bufferChanged)
-        heUboUploadData(&engine->forward.lightsUbo);
-
-    // map all instances to their shader
-    std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
-    for (auto it = level->instances.begin(); it != level->instances.end(); ++it) {
-        if (it->material != nullptr && it->mesh != nullptr)
-            shaderMap[it->material->shader].emplace_back(&(*it));
-    }
-
-    heBlendMode(0);
-    // loop through shaders, load data and then render all instances
-    for (auto const& all : shaderMap) {
-        heShaderBind(all.first);
-        heShaderLoadUniform(all.first, "u_time", level->time);
-        heUboBind(&engine->forward.lightsUbo, heShaderGetUboLocation(all.first, "LightInformation"));
-        
-        // load camera
-        heShaderLoadUniform(all.first, "u_viewMat",   level->camera.viewMatrix);
-        heShaderLoadUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
-        heShaderLoadUniform(all.first, "u_cameraPos", level->camera.position);
-
-        // load pbr shit
-        heTextureBind(level->skybox.irradiance, heShaderGetSamplerLocation(all.first, "t_irradiance"));
-        heTextureBind(level->skybox.specular, heShaderGetSamplerLocation(all.first, "t_specular"));
-        heTextureBind(engine->brdfIntegration, heShaderGetSamplerLocation(all.first, "t_brdf"));
+            // render shadow map
+            if(lights->castShadows) {
+                if(lights->type == HE_LIGHT_SOURCE_TYPE_DIRECTIONAL)
+                    heD3ShadowMapRenderDirectional(engine, &lights->shadows, &(*lights), level);
+            }
                 
-        for (HeD3Instance* instances : all.second)      
-            heD3InstanceRenderForward(engine, instances);
+            index++;
+        }
+
+        heUboUpdateVariable(&engine->forward.lightsUbo, "numLights", &index);
+        if (bufferChanged)
+            heUboUploadData(&engine->forward.lightsUbo);
     }
-
-    // render particles
-    heCullEnable(false);
-    heBlendMode(1);
-    heVaoBind(engine->shapes.particleVao);    
-    for (auto const& all : level->particles)
-        heParticleSourceRenderForward(engine, &all, &level->camera);
     
-    heBlendMode(-1);    
-    heFboRender(&engine->forward.forwardFbo, &engine->hdrFbo);
-    heD3RenderInfo.exposure = level->camera.exposure;
-    heD3RenderInfo.gamma    = level->camera.gamma;
+    { // prepare rendering
+        heFboBind(&engine->forward.forwardFbo);
+        heFrameClear(hm::colour(0, 0, 0, 0), HE_FRAME_BUFFER_BIT_COLOUR | HE_FRAME_BUFFER_BIT_DEPTH);
+        heCullEnable(true);
+    }
+    
+    { // render skybox
+        heBlendMode(-1);
+        if (level->skybox.specular) {
+            heDepthFunc(HE_FRAGMENT_TEST_LEQUAL);
+            heCullEnable(false);
+            heVaoBind(engine->shapes.cubeVao);
+            heShaderBind(engine->skyboxShader);
+            heShaderLoadUniform(engine->skyboxShader, "u_projMat", level->camera.projectionMatrix);
+            heShaderLoadUniform(engine->skyboxShader, "u_viewMat", level->camera.viewMatrix);
+            heShaderLoadUniform(engine->skyboxShader, "u_realDepthTest", true);
+            heTextureBind(level->skybox.specular, heShaderGetSamplerLocation(engine->skyboxShader, "t_skybox", 0));
+            heTextureBind(nullptr, heShaderGetSamplerLocation(engine->skyboxShader, "t_alphaTest", 1));
+            heVaoRender(engine->shapes.cubeVao);
+        }
+    }
+    
+    { // render instances
+        // map all instances to their shader
+        std::map<HeShaderProgram*, std::vector<HeD3Instance*>> shaderMap;
+        for (auto it = level->instances.begin(); it != level->instances.end(); ++it) {
+            if (it->material != nullptr && it->mesh != nullptr) {
+                shaderMap[it->material->shader].emplace_back(&(*it));
+            }
+        }
 
-    if(level->physics.setup)
-        hePhysicsLevelDebugDraw(&level->physics);
+        heBlendMode(0);
+        heDepthFunc(HE_FRAGMENT_TEST_LESS);
+        heCullEnable(true);
+        
+        // loop through shaders, load data and then render all instances
+        for (auto const& all : shaderMap) {
+            heShaderBind(all.first);
+            heShaderLoadUniform(all.first, "u_time", level->time);
+            heUboBind(&engine->forward.lightsUbo, heShaderGetUboLocation(all.first, "LightInformation"));
+
+            // load camera
+            heShaderLoadUniform(all.first, "u_viewMat",   level->camera.viewMatrix);
+            heShaderLoadUniform(all.first, "u_projMat",   level->camera.projectionMatrix);
+            heShaderLoadUniform(all.first, "u_cameraPos", level->camera.position);
+
+            // shadow shit
+            heTextureBind(level->lights.begin()->shadows.depthFbo.depthAttachment.id, heShaderGetSamplerLocation(all.first, "t_shadowMap"));
+            heShaderLoadUniform(all.first, "u_shadowSpace", level->lights.begin()->shadows.shadowSpaceMatrix);
+
+            // load pbr shit
+            heTextureBind(level->skybox.irradiance, heShaderGetSamplerLocation(all.first, "t_irradiance"));
+            heTextureBind(level->skybox.specular, heShaderGetSamplerLocation(all.first, "t_specular"));
+            heTextureBind(engine->brdfIntegration, heShaderGetSamplerLocation(all.first, "t_brdf"));
+            
+            for (HeD3Instance* instances : all.second)      
+                heD3InstanceRenderForward(engine, instances);
+        }
+    }
+    
+    { // render particles
+        heCullEnable(false);
+        heVaoBind(engine->shapes.particleVao);    
+        heShaderBind(engine->particleShader);
+        heShaderLoadUniform(engine->particleShader, "u_projMat", level->camera.projectionMatrix);
+        heShaderLoadUniform(engine->particleShader, "u_viewMat", level->camera.viewMatrix);
+        heShaderLoadUniform(engine->particleShader, "u_shadowSpace", level->lights.begin()->shadows.shadowSpaceMatrix);
+        heTextureBind(level->lights.begin()->shadows.depthFbo.depthAttachment.id, heShaderGetSamplerLocation(engine->particleShader, "t_shadowMap"));
+        for (auto const& all : level->particles)
+            heParticleSourceRenderForward(engine, &all, level);    
+    }
+    
+    { // finalize
+        heBlendMode(-1);    
+        heFboRender(&engine->forward.forwardFbo, &engine->hdrFbo);
+        heD3RenderInfo.exposure = level->camera.exposure;
+        heD3RenderInfo.gamma    = level->camera.gamma;
+        
+        if(level->physics.setup)
+            hePhysicsLevelDebugDraw(&level->physics);
+    }
 };
 
 void heD3LevelRender(HeRenderEngine* engine, HeD3Level* level) {
-	level->camera.projectionMatrix = hm::createPerspectiveProjectionMatrix(90.f, engine->window->windowInfo.size.x / (float)engine->window->windowInfo.size.y, 0.1f, 1000.0f);
-
+    heD3CameraClampRotation(&level->camera);
+    level->camera.projectionMatrix = hm::createPerspectiveProjectionMatrix(level->camera.frustum.viewInfo.fov, engine->window->windowInfo.aspectRatio, level->camera.frustum.viewInfo.nearPlane, level->camera.frustum.viewInfo.farPlane);
+    level->camera.viewMatrix = hm::createViewMatrix(level->camera.position, level->camera.rotation);
+    heD3FrustumUpdate(&level->camera.frustum, engine->window, level->camera.position, level->camera.rotation);
+    
     if(engine->renderMode == HE_RENDER_MODE_DEFERRED)
         heD3LevelRenderDeferred(engine, level);
     else if(engine->renderMode == HE_RENDER_MODE_FORWARD)
@@ -489,7 +581,6 @@ void heRenderEnginePrepareD3(HeRenderEngine* engine) {
 };
 
 void heRenderEngineFinishD3(HeRenderEngine* engine) {
-    heFboUnbind(engine->window->windowInfo.size);
     heCullEnable(false);
     heDepthEnable(false);
 };
@@ -620,7 +711,7 @@ void heUiSetQuadVao(HeVao* vao, hm::vec2f const& p0, hm::vec2f const& p1, hm::ve
 
 
 void heUiTextCreateMesh(HeRenderEngine* engine, HeUiTextMesh* mesh, HeScaledFont const* font, std::string const& text, hm::colour const& colour) {
-    uint32_t vertexCount = (uint32_t) text.size() * 6;
+    size_t vertexCount = text.size() * 6;
     hm::vec2f windowSize(engine->window->windowInfo.size);
     mesh->vertices.reserve(vertexCount * 4);
     mesh->colours.reserve(vertexCount);
@@ -742,7 +833,7 @@ void heUiRenderTexture(HeRenderEngine* engine, HeTexture const* texture, hm::vec
 };
 
 void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size, HeTextureRenderMode const mode) {
-    hm::vec2f realPosition = position; // in gl coordinate system
+    hm::vec2f realPosition = position; // in window space system
     hm::vec2f realSize = size; // in window space system
     if (realPosition.x >= 0)
         realPosition.x /= engine->window->windowInfo.size.x;
@@ -770,8 +861,14 @@ void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f
     heShaderBind(engine->textureShader);
     heShaderLoadUniform(engine->textureShader, "u_transMat", hm::createTransformationMatrix(realPosition, realSize));
 
+    int32_t type = 0; // tex2d
+    if(mode & HE_TEXTURE_RENDER_CUBE_MAP)
+        type = 1;
+    else if(mode & HE_TEXTURE_RENDER_DEPTH)
+        type = 2;
+    
     b8 isCubeMap = mode & HE_TEXTURE_RENDER_CUBE_MAP;
-    heShaderLoadUniform(engine->textureShader, "u_isCubeMap", isCubeMap);
+    heShaderLoadUniform(engine->textureShader, "u_type", type);
     heShaderLoadUniform(engine->textureShader, "u_isHdr", mode & HE_TEXTURE_RENDER_HDR);
     std::string textureName = (isCubeMap) ? "t_cubeTex" : "t_d2Tex";
     heTextureBind(texture, heShaderGetSamplerLocation(engine->textureShader, textureName, isCubeMap), isCubeMap);
@@ -867,6 +964,8 @@ void heUiQueueRenderLines(HeRenderEngine* engine) {
     heVaoUpdateDataUint(&engine->uiQueue.linesVao, colour, 1);
     heVaoUpdateData(&engine->uiQueue.linesVao, width, 2);
     heVaoRender(&engine->uiQueue.linesVao);
+
+    engine->uiQueue.lines.clear();
 };
 
 void heUiQueueRenderTexts(HeRenderEngine* engine) {
@@ -893,6 +992,8 @@ void heUiQueueRenderTexts(HeRenderEngine* engine) {
             heVaoRender(&engine->uiQueue.textVao);
         }
     }
+
+    engine->uiQueue.texts.clear();
 };
 
 void heUiQueueRenderQuads(HeRenderEngine* engine) {
@@ -943,25 +1044,21 @@ void heUiQueueRenderQuads(HeRenderEngine* engine) {
     heVaoUpdateData(&engine->uiQueue.quadsVao, vertices, 0);
     heVaoUpdateDataUint(&engine->uiQueue.quadsVao, colours, 1);
     heVaoRender(&engine->uiQueue.quadsVao);
+
+    engine->uiQueue.quads.clear();
 };
 
 void heUiQueueRender(HeRenderEngine* engine) {
     heBlendMode(0);
     heDepthEnable(false);
-    if(engine->uiQueue.lines.size()) {
+    if(engine->uiQueue.lines.size())
         heUiQueueRenderLines(engine);
-        engine->uiQueue.lines.clear();
-    }
     
-    if(engine->uiQueue.quads.size()) {
+    if(engine->uiQueue.quads.size())
         heUiQueueRenderQuads(engine);
-        engine->uiQueue.quads.clear();
-        }
-    
-    if(engine->uiQueue.texts.size()) {
+        
+    if(engine->uiQueue.texts.size())
         heUiQueueRenderTexts(engine);
-        engine->uiQueue.texts.clear();
-    }
 
     heTextManager.currentFrame++;
     

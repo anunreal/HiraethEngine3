@@ -36,16 +36,16 @@ struct HeMaterial {
 
 struct HeFont {
     struct Character {
-        int32_t id  ;             // ascii id
-        hm::vec4f uv ;            // in texture space
-        hm::vec2<uint32_t> size;  // in pixel space
-        hm::vec2<int32_t> offset; // in pixel space
+        int32_t id = 0;             // ascii id
+        hm::vec4f uv;            // in texture space
+        hm::vec<2, uint32_t> size;  // in pixel space
+        hm::vec<2, int32_t> offset; // in pixel space
         uint8_t xadvance;         // in pixel space
     };
 
     //  std::unordered_map<uint32_t, Character> characters;
     std::unordered_map<int32_t, Character> characters;
-    hm::vec4<uint8_t> padding;
+    hm::vec<4, uint8_t> padding;
     uint8_t size = 0, lineHeight = 0, baseLine = 0, spaceWidth = 0;
     
     HeTexture* atlas = nullptr;

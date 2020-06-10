@@ -453,6 +453,8 @@ void heD3LevelLoad(std::string const& fileName, HeD3Level* level, b8 const loadP
             heTextFileGetInts<uint8_t>(&file, 3, &light->colour);
             heTextFileGetFloat(&file, &light->colour.i);
             heTextFileGetFloats(&file, 8, &light->data);
+
+            heD3ShadowMapCreate(&light->shadows, light);
         }
     }
 

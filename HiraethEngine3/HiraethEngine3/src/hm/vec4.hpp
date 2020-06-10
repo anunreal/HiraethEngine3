@@ -1,24 +1,21 @@
 #pragma once
 #include <assert.h>
 
-#include "vec3.hpp"
+#include "vector.hpp"
 
 namespace hm {
     
     template<typename T>
-    struct vec4 {
+    struct vec<4, T> {
         T x, y, z, w;
         
-        vec4() : x(0), y(0), z(0), w(0) {};
-        vec4(T const v) : x(v), y(v), z(v), w(v) {};
-        vec4(T const x, T const y, T const z, T const w) : x(x), y(y), z(z), w(w) {};
-        
-        // conversions
-        
+        vec() : x(0), y(0), z(0), w(0) {};
+        vec(T const v) : x(v), y(v), z(v), w(v) {};
+        vec(T const x, T const y, T const z, T const w) : x(x), y(y), z(z), w(w) {};
         template<typename T1>
-        vec4(vec3<T1> const& vec, float const w = 1.0f) : x((T) vec.x), y((T) vec.y), z((T) vec.z), w(w) {};
+        vec(vec<3, T1> const& vec, T1 const w = 1.0f) : x((T) vec.x), y((T) vec.y), z((T) vec.z), w(w) {};
         template<typename T1>
-        vec4(vec4<T1> const& vec) : x((T) vec.x), y((T) vec.y), z((T) vec.z), w((T) vec.w) {};
+        vec(vec<4, T1> const& vec) : x(vec.x), y(vec.y), z(vec.z), w(vec.w) {};
         
         // accessors
         
@@ -65,17 +62,24 @@ namespace hm {
         
         // operators
         
-        vec4 operator*(float const value) const {
-            return vec4(x * value, y * value, z * value, w * value);
+        vec operator*(float const value) const {
+            return vec(x * value, y * value, z * value, w * value);
+        };
+
+        vec operator*(vec const& v) const {
+            return vec(x * v.x, y * v.y, z * v.z, w * v.w);
         };
         
-        vec4 operator+(vec4 const& vec) const {
-            return vec4(x + vec.x, y + vec.y, z + vec.z, w + vec.w);
+        vec operator+(vec const& v) const {
+            return vec(x + v.x, y + v.y, z + v.z, w + v.w);
+        };        
+
+        vec operator-(vec const& v) const {
+            return vec(x - v.x, y - v.y, z - v.z, w - v.w);
         };
-        
     };
     
-    typedef vec4<float> vec4f;
-    typedef vec4<double> vec4d;
-    typedef vec4<int32_t> vec4i;
+    typedef vec<4, float> vec4f;
+    typedef vec<4, double> vec4d;
+    typedef vec<4, int32_t> vec4i;
 };

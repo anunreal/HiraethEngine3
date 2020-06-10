@@ -419,9 +419,14 @@ void heShaderReload(HeShaderProgram* program) {
     heShaderBind(program);
     
     // upload data to it
+    b8 print = program->printUniformNotFoundMessage;
+    program->printUniformNotFoundMessage = false;
+    
     for(auto const& all : uniforms)
         heShaderLoadUniform(program, all.first, all.second.isInt ? (const void*) &all.second.idata[0] : (const void*) &all.second.fdata[0], all.second.type);
-    
+
+    program->printUniformNotFoundMessage = print;
+        
     std::string names;
     for(std::string const& all : program->files)
         names += all + ", ";
@@ -463,7 +468,7 @@ int32_t heShaderGetUniformLocation(HeShaderProgram* program, std::string const& 
         location = glGetUniformLocation(program->programId, uniform.c_str());
         program->uniforms[uniform] = location;
         
-        if(location == -1) {
+        if(program->printUniformNotFoundMessage && location == -1) {
 #ifdef HE_ENABLE_NAMES
             HE_DEBUG("Could not find shader uniform [" + uniform + "] in shader [" + program->name + "]");
 #else
@@ -1037,6 +1042,11 @@ void heFboCreateColourBufferAttachment(HeFbo* fbo, HeColourFormat const format, 
     std::string name = fbo->name + "[" + std::to_string(index) + "]";
     glObjectLabel(GL_RENDERBUFFER, attachment->id, (uint32_t) name.size(), name.c_str());
 #endif
+};
+
+void heFboDisableColourAttachment(HeFbo* fbo) {
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
 };
 
 void heFboCreateDepthBufferAttachment(HeFbo* fbo, uint8_t const samples) {
@@ -1788,10 +1798,10 @@ void heDepthFunc(HeFragmentTestFunction const function) {
     glDepthFunc(function);
 };
 
-void heCullEnable(b8 const culling) {
+void heCullEnable(b8 const culling, b8 const backFace) {
     if(culling) {
         glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
+        glCullFace((backFace) ? GL_BACK : GL_FRONT);
     } else
         glDisable(GL_CULL_FACE);
 };

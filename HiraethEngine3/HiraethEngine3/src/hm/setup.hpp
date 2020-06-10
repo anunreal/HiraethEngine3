@@ -14,6 +14,12 @@ namespace hm {
         return (T) (value / 180. * PI);
     };
 
+    // radians to degrees
+    template<typename T>
+    inline T to_degrees(const T value) {
+        return (T) (value / PI * 180);
+    };
+
     // returns -1, 0 or 1, depending on the sign of value
     template<typename T>
     inline int sign(const T value) {

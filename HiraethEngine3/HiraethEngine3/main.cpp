@@ -118,31 +118,34 @@ void enterGameState() {
     heWin32TimerStart();
     heD3LevelLoad("res/level/level0.h3level", &app.level, USE_PHYSICS, true);
     heD3LevelGetInstance(&app.level, 13)->material->emission = hm::colour(255, 0, 0, 255, 10); // suzanne
+    app.level.camera.frustum.viewInfo.fov = 90;
     heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png", 2, 2, 4); // load and set up once so we can use it later
     
     HeParticleSource* lampParticles = &app.level.particles.emplace_back();
     lampParticles->maxNewParticlesPerUpdate = 10;
     lampParticles->gravity = 0.f;
+    lampParticles->additive = false;
     lampParticles->emitter.type = HE_PARTICLE_EMITTER_TYPE_BOX;
     lampParticles->emitter.box = hm::vec3f(0.6f);
     lampParticles->emitter.maxSpeed = lampParticles->emitter.minSpeed = 0.f;
     lampParticles->emitter.maxColour = lampParticles->emitter.minColour = hm::colour(255, 7.f);
-    heParticleSourceCreate(lampParticles, HeD3Transformation(hm::vec3f(-3.07f, 4.07f, -2.03f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 3, 100);
+    lampParticles->enableShadows = false;
+    heParticleSourceCreate(lampParticles, HeD3Transformation(hm::vec3f(-3.07f, 4.07f, -2.03f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 3, 200);
 
     HeParticleSource* dustParticles = &app.level.particles.emplace_back();
-    dustParticles->maxNewParticlesPerUpdate = 1;
+    dustParticles->maxNewParticlesPerUpdate = 100;
     dustParticles->gravity           = .05f;
     dustParticles->emitter.type      = HE_PARTICLE_EMITTER_TYPE_BOX;
-    dustParticles->emitter.box       = hm::vec3f(10.f, 1.5f, 10.f);
-    dustParticles->emitter.minSpeed  = 0.1f;
-    dustParticles->emitter.maxSpeed  = 0.5f;
-    dustParticles->emitter.minTime   = 2.0f;
-    dustParticles->emitter.maxTime   = 10.f;
-    dustParticles->emitter.minSize   = 0.01f; 
-    dustParticles->emitter.maxSize   = 0.05f; 
-    dustParticles->emitter.minColour = hm::colour(20, 2.f);
-    dustParticles->emitter.maxColour = hm::colour(100, 2.f);
-    heParticleSourceCreate(dustParticles, HeD3Transformation(hm::vec3f(0.f, 1.5f, 0.f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 0, 100);
+    dustParticles->emitter.box       = hm::vec3f(10.f, .75f, 10.f);
+    dustParticles->emitter.minSpeed  = 0.3f;
+    dustParticles->emitter.maxSpeed  = 1.0f;
+    dustParticles->emitter.minTime   = 1.0f;
+    dustParticles->emitter.maxTime   = 4.f;
+    dustParticles->emitter.minSize   = 0.005f; 
+    dustParticles->emitter.maxSize   = 0.03f; 
+    dustParticles->emitter.minColour = hm::colour(20, 3.f);
+    dustParticles->emitter.maxColour = hm::colour(100, 3.f);
+    heParticleSourceCreate(dustParticles, HeD3Transformation(hm::vec3f(0.f, .75f, 0.f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 0, 200);
 
 #if USE_PHYSICS == 1
 	HePhysicsShapeInfo actorShape;
@@ -160,7 +163,6 @@ void enterGameState() {
     heWin32TimerPrint("LEVEL LOAD");
 
     heWin32TimerStart();
-    //heD3SkyboxCreate(&app.level.skybox, "res/textures/hdr/pink_sunrise.hdr");
     heD3SkyboxLoad(&app.level.skybox, "pink_sunrise");
     heWin32TimerPrint("SKYBOX CREATION");
 
@@ -184,11 +186,11 @@ int main() {
     HeWindowInfo windowInfo;
 	windowInfo.title			= L"He3 Test";
 	windowInfo.backgroundColour = hm::colour(135, 206, 235);
-	windowInfo.fpsCap			= 300;
+	windowInfo.fpsCap			= 62;
 	windowInfo.size				= hm::vec2i(1366, 768);
 	app.window.windowInfo		= windowInfo;	
     heWindowCreate(&app.window);
-        
+    
 	heGlPrintInfo();
 	
     app.engine.renderMode = HE_RENDER_MODE_FORWARD;
@@ -240,19 +242,19 @@ int main() {
             hePostProcessRender(&app.engine);
         }
         heProfilerFrameMark("post process", hm::colour(0, 255, 255));
-        
+
         // render ui
         {
             heRenderEnginePrepareUi(&app.engine);
             heUiPushText(&app.engine, &font, "FPS: " + std::to_string(app.window.fps), hm::vec2f(10, 10), hm::colour(255));
-            heUiPushText(&app.engine, &font, "Camera: " + hm::to_string(app.level.camera.position), hm::vec2f(10, 25), hm::colour(255));
+            heUiPushText(&app.engine, &font, "Position: " + hm::to_string(app.level.camera.position), hm::vec2f(10, 25), hm::colour(255));
+            heUiPushText(&app.engine, &font, "Rotation: " + hm::to_string(app.level.camera.rotation), hm::vec2f(10, 40), hm::colour(255));
             heConsoleRender(&app.engine);
             heUiQueueRender(&app.engine);
             heRenderEngineFinishUi(&app.engine);
         }
         heProfilerFrameMark("ui render", hm::colour(0, 0, 255));
-        
-
+                
         // render profiler
         {
             heWin32TimerStart();

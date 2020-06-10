@@ -4,7 +4,7 @@
 namespace hm {
     
     template<typename T>
-        struct quat {
+    struct quat {
         T x, y, z, w;
         
         quat() : x(0), y(0), z(0), w(0) {};
@@ -24,7 +24,7 @@ namespace hm {
     
     // turns this quaternion into a rotated transformation matrix
     template<typename T>
-        static mat<4, 4, T> toMat4(const quat<T>& q) {
+    static mat<4, 4, T> toMat4(const quat<T>& q) {
         mat<4, 4, T> result(1.0f);
         T qxx(q.x * q.x);
         T qyy(q.y * q.y);
@@ -52,8 +52,7 @@ namespace hm {
     
     // creates a quaternion from euler angles (in radians)
     template<typename T>
-        static quat<T> fromEulerRadians(const vec3<T>& radians) {
-        
+    static quat<T> fromEulerRadians(const vec<3, T>& radians) {        
         T cx = (T)std::cos(radians.x * 0.5);
         T cy = (T)std::cos(radians.y * 0.5);
         T cz = (T)std::cos(radians.z * 0.5);
@@ -69,34 +68,31 @@ namespace hm {
     
     // creates a quaternion from euler angles (in degrees)
     template<typename T>
-        static inline quat<T> fromEulerDegrees(const vec3<T>& euler) {
+    static inline quat<T> fromEulerDegrees(const vec<3, T>& euler) {
         return fromEulerRadians(to_radians(euler));
     }
     
     // calculates the euler angles from this quaternion (in degrees)
     template<typename T>
-        static vec3<T> toEuler(const quat<T>& quat) {
-        
-        vec3<T> euler;
+    static vec<3, T> toEulerDegrees(const quat<T>& quat) {
+        vec<3, T> euler;
         float sinr_cosp = 2.0f * (quat.w * quat.x + quat.y * quat.z);
         float cosr_cosp = 1.0f - 2.0f * (quat.x * quat.x + quat.y * quat.y);
-        euler.z = atan2(sinr_cosp, cosr_cosp);
+        euler.z = hm::to_degrees(atan2(sinr_cosp, cosr_cosp));
         
         float sinp = 2.0f * (quat.w * quat.y - quat.z * quat.x);
         if (fabs(sinp) >= 1.0f)
-            euler.x = (float)copysign(PI / 2, sinp);
+            euler.x = hm::to_degrees((float)copysign(PI / 2, sinp));
         else
-            euler.x = asin(sinp);
+            euler.x = hm::to_degrees(asin(sinp));
         
         float siny_cosp = 2.0f * (quat.w * quat.z + quat.x * quat.y);
         float cosy_cosp = 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z);
-        euler.y = atan2(siny_cosp, cosy_cosp);
-        return euler;
-        
+        euler.y = hm::to_degrees(atan2(siny_cosp, cosy_cosp));
+        return euler;        
     };
     
-    static quatf parseQuatf(const std::string& input) {
-        
+    static quatf parseQuatf(const std::string& input) {        
         std::string arguments[4];
         size_t index0 = input.find('/');
         arguments[0] = input.substr(0, index0);
@@ -109,8 +105,7 @@ namespace hm {
         arguments[2] = input.substr(index1 + 1, index2);
         arguments[3] = input.substr(index2 + 1);
         
-        return quatf(std::stof(arguments[0]), std::stof(arguments[1]), std::stof(arguments[2]), std::stof(arguments[3]));
-        
+        return quatf(std::stof(arguments[0]), std::stof(arguments[1]), std::stof(arguments[2]), std::stof(arguments[3]));        
     };
     
 };

@@ -220,7 +220,8 @@ typedef enum HeConsoleState {
 typedef enum HeTextureRenderMode {
     HE_TEXTURE_RENDER_2D       = 0b0001,
     HE_TEXTURE_RENDER_CUBE_MAP = 0b0010,
-    HE_TEXTURE_RENDER_HDR      = 0b0100,
+    HE_TEXTURE_RENDER_DEPTH    = 0b0100,
+    HE_TEXTURE_RENDER_HDR      = 0b1000,
 } HeTextureRenderMode;
 
 typedef enum HeRenderMode {

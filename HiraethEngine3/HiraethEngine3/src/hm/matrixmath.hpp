@@ -1,10 +1,13 @@
-#pragma once
+#ifndef HM_MATRIXMATH_HPP
+#define HM_MATRIXMATH_HPP
+
 #include "quat.hpp"
 #include "mat4.hpp"
+#include <iostream>
 
 namespace hm {
     template<typename T>
-    static mat<4, 4, T> createOrthographicProjectionMatrix(const vec2<T>& size, const vec2<T>& center, const T depth) {        
+    static mat<4, 4, T> createOrthographicProjectionMatrix(vec<2, T> const& size, vec<2, T> const& center, T const depth) {        
         T size2x = size.x / 2;
         T size2y = size.y / 2;
         
@@ -29,21 +32,25 @@ namespace hm {
     };
     
     template<typename T>
-    static mat<4, 4, T> createPerspectiveProjectionMatrix(const T fov, const T ratio, const T nearPlane, const T farPlane) {        
-        mat<4, 4, T> mat(static_cast<T>(0));
-        const T frustumLength = farPlane - nearPlane;
-        const T tanHalfAngle = (T)std::tan(to_radians(fov) / 2.0);
+    static mat<4, 4, T> createPerspectiveProjectionMatrix(T const fov, T const ratio, T const nearPlane, T const farPlane) {        
+        mat<4, 4, T> mat(static_cast<T>(1));
+        T const frustumLength = farPlane - nearPlane;
+        T const tanHalfAngle = (T)std::tan(to_radians(fov / static_cast<T>(2)));
+
+        T const y_scale = static_cast<T>(1) / tanHalfAngle;
+        T const x_scale = y_scale / ratio;
         
-        mat[0][0] = 1 / (ratio * tanHalfAngle);
-        mat[1][1] = 1 / tanHalfAngle;
+        mat[0][0] = x_scale;
+        mat[1][1] = y_scale;
+        mat[2][3] = static_cast<T>(-1);
         mat[2][2] = (T)-((farPlane + nearPlane) / frustumLength);
-        mat[2][3] = -1;
-        mat[3][2] = (T)-((2 * nearPlane * farPlane) / frustumLength);
+        mat[3][2] = (T)-((static_cast<T>(2) * nearPlane * farPlane) / frustumLength);
+        mat[3][3] = static_cast<T>(0);
         return mat;        
     };
     
     template<typename T>
-    static mat<4, 4, T> createViewMatrix(const vec3<T>& position, const vec3<T>& rotation) {        
+    static mat<4, 4, T> createViewMatrix(vec<3, T> const& position, vec<3, T> const& rotation) {        
         mat<4, 4, T> mat(static_cast<T>(1));
         mat = rotate(mat, rotation.x, hm::vec3f(1, 0, 0));
         mat = rotate(mat, rotation.y, hm::vec3f(0, 1, 0));
@@ -52,7 +59,7 @@ namespace hm {
     };
     
     template<typename T>
-    static mat<4, 4, T> createTransformationMatrix(const vec3<T>& position, const quat<T>& rotation, const vec3<T>& scale) {        
+    static mat<4, 4, T> createTransformationMatrix(vec<3, T> const& position, quat<T> const& rotation, vec<3, T> const& scale) {        
         mat<4, 4, T> p(static_cast<T>(1));
         p = hm::translate(p, position);
         mat<4, 4, T> s(static_cast<T>(1));
@@ -62,7 +69,7 @@ namespace hm {
     };
     
     template<typename T>
-    static mat<4, 4, T> createTransformationMatrix(const vec3<T>& position, const vec3<T>& rotation, const vec3<T>& scale) {        
+    static mat<4, 4, T> createTransformationMatrix(vec<3, T> const& position, vec<3, T> const& rotation, vec<3, T> const& scale) {        
         mat<4, 4, T> m(static_cast<T>(1));
         m = hm::scale(m, scale);
         m = hm::translate(m, position);
@@ -71,7 +78,7 @@ namespace hm {
     };
     
     template<typename T>
-    static mat<4, 4, T> createTransformationMatrix(const vec2<T>& position, const vec2<T>& scale) {        
+    static mat<4, 4, T> createTransformationMatrix(vec<2, T> const& position, vec<2, T> const& scale) {        
         mat<4, 4, T> mat(static_cast<T>(1));
         mat = hm::translate(mat, position);
         mat = hm::scale(mat, scale);
@@ -79,15 +86,16 @@ namespace hm {
     };
     
     template<typename T>
-    static vec3<T> getDirectionVectorFromRotation(const vec3<T>& eulerAngles) {        
+    static vec<3, T> getDirectionVectorFromRotation(vec<3, T> const& eulerAngles) {
         T rx = to_radians(eulerAngles.x);
         T ry = to_radians(eulerAngles.y);
         
-        vec3<T> direction;
+        vec<3, T> direction;
         direction.x = (T) (std::cos(ry) * std::cos(rx));
         direction.y = (T) std::sin(rx);
         direction.z = (T) (std::cos(ry) * std::cos(rx));
         return direction;        
-    };
-    
+    };    
 };
+
+#endif

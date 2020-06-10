@@ -60,7 +60,7 @@ void command_export_textures() {
     HE_LOG("Successfully converted textures");
 };
 
-void command_export_assets() {
+void command_export_instances() {
     std::string folder = "res/instances";
     std::vector<HeFileDescriptor> files; 
     heWin32FolderGetFiles(folder, files, true);
@@ -70,7 +70,7 @@ void command_export_assets() {
         heBinaryConvertD3InstanceFile(all.fullPath, out);
     }
     
-    HE_LOG("Successfully converted textures");
+    HE_LOG("Successfully converted instance");
 };
 
 void command_export_skybox() {

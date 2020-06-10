@@ -50,6 +50,8 @@ struct HeShaderProgram {
     std::unordered_map<std::string, int32_t> ubos;
     // whether this is a compute shader or a normal pipeline shader
     b8 computeShader = false;
+    // whether to print a debug message if we dont find a uniform.
+    b8 printUniformNotFoundMessage = true;
     // the memory used by this shader, in bytes
     uint32_t memory = 0;
     
@@ -269,11 +271,11 @@ extern HE_API void heShaderLoadUniform(HeShaderProgram* program, std::string con
 // (i.e. 3 for a normal, 2 for a uv). This does not add the buffer to any vao. A vbo can be used in
 // different vaos, though it is not recommended
 extern HE_API void heVboCreate(HeVbo* vbo, std::vector<float> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
-// creates a new vbo buffer from given data. See comments above for more info. This buffer exists for ints only. This should only be used if the buffer
-// explicitely uses ints
+// creates a new vbo buffer from given data. See comments above for more info. This buffer exists for ints only.
+// This should only be used if the buffer explicitely uses ints
 extern HE_API void heVboCreateInt(HeVbo* vbo, std::vector<int32_t> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
-// creates a new vbo buffer from given data. See comments above for more info. This buffer exists for ints only. This should only be used if the buffer
-// explicitely uses unsigned ints
+// creates a new vbo buffer from given data. See comments above for more info. This buffer exists for ints only.
+// This should only be used if the buffer explicitely uses unsigned ints
 extern HE_API void heVboCreateUint(HeVbo* vbo, std::vector<uint32_t> const& data, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC);
 // allocates a new empty vbo of given size.
 extern HE_API void heVboAllocate(HeVbo* vbo, uint32_t const size, uint8_t const dimensions, HeVboUsage const usage = HE_VBO_USAGE_STATIC, HeDataType const type = HE_DATA_TYPE_FLOAT);
@@ -335,11 +337,14 @@ extern HE_API void heFboCreate(HeFbo* fbo);
 extern HE_API void heFboCreateColourTextureAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8, hm::vec2i const& size = hm::vec2i(-1), uint16_t const mipCount = 0);
 // adds a new (multisampled) colour buffer attachment to given fbo
 extern HE_API void heFboCreateColourBufferAttachment(HeFbo* fbo, HeColourFormat const format = HE_COLOUR_FORMAT_RGBA8, uint8_t const samples = 1, hm::vec2i const& size = hm::vec2i(-1));
-// creates a new depth buffer attachment for given fbo. The buffer will be the size of the fbo. The fbo must already be bound
-// before this call.
+// When a fbo does not need a colour attachment (only a depth attachment, i.e. shadow maps), call this so that
+// opengl knows that we dont use a colour attachment (so that its still complete)
+extern HE_API void heFboDisableColourAttachment(HeFbo* fbo);
+// creates a new depth buffer attachment for given fbo. The buffer will be the size of the fbo. The fbo must
+// already be bound before this call.
 extern HE_API void heFboCreateDepthBufferAttachment(HeFbo* fbo, uint8_t const samples = 1);
-// creates a new depth texture attachment for given fbo. This texture will be the size of the fbo. The fbo must already be bound
-// before this call
+// creates a new depth texture attachment for given fbo. This texture will be the size of the fbo. The fbo must
+// already be bound before this call
 extern HE_API void heFboCreateDepthTextureAttachment(HeFbo* fbo);
 // binds given fbo and resizes the viewport
 extern HE_API void heFboBind(HeFbo* fbo);
@@ -474,15 +479,16 @@ extern HE_API void heFrameClear(hm::colour const& colour, HeFrameBufferBits cons
 //  0 = normal blending (one minus source alpha)
 //  1 = additive blending (add two colours)
 //  2 = disable blending by completely overwriting previous colour with new one
-extern HE_API void heBlendMode(int8_t const mode);
+extern HE_API void heBlendMode(int8_t const mode = 0);
 // applies a gl blend mode to only given colour attachment of a fbo. Same modes as above apply
 extern HE_API void heBufferBlendMode(int8_t const attachmentIndex, int8_t const mode);
 // en- or disables depth testing
 extern HE_API void heDepthEnable(b8 const depth);
 // sets the depth function. Only works when depth testing is enabled
-extern HE_API void heDepthFunc(HeFragmentTestFunction const function);
-// enables back face culling (good for performance)
-extern HE_API void heCullEnable(b8 const culling);
+extern HE_API void heDepthFunc(HeFragmentTestFunction const function = HE_FRAGMENT_TEST_LESS);
+// enables back face culling (good for performance). If culling is true, either back faces or front faces can be
+// culled, depending on the parameter. If culling is false, that parameter is ignored
+extern HE_API void heCullEnable(b8 const culling, b8 const backFace = true);
 // enables or disables the stencil buffer
 extern HE_API void heStencilEnable(b8 const enable);
 // sets the stencil mask

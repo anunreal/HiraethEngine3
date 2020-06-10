@@ -9,6 +9,8 @@ struct HeD3Level;
 struct HeD3Camera;
 struct HeD3Instance;
 struct HeD3LightSource;
+struct HeD3ShadowMap;
+struct HeD3Frustum;
 struct HeParticleSource;
 struct HeMaterial;
 struct HeScaledFont;
@@ -100,6 +102,8 @@ struct HeRenderEngine {
     HeShaderProgram* rgbaShader = nullptr; 
     // used for 2d texture rendering
     HeShaderProgram* textureShader = nullptr;
+    // a simple shader that simply renders into a depth buffer
+    HeShaderProgram* shadowShader = nullptr;
     // the ui render queue for batch rendering
     HeUiQueue uiQueue;
     
@@ -164,11 +168,14 @@ extern HE_API void heShaderLoadMaterial(HeRenderEngine* engine, HeShaderProgram*
 // called u_lights[]
 extern HE_API void heShaderLoadLight(HeShaderProgram* program, HeD3LightSource const* light, int8_t const index);
 
+extern HE_API void heD3ShadowMapRenderDirectional(HeRenderEngine* engine, HeD3ShadowMap* shadowMap, HeD3LightSource* light, HeD3Level* level);
+// renders the edges of the frustum using lines
+extern HE_API void heD3FrustumRender(HeRenderEngine* engine, HeD3Frustum* frustum, hm::colour const& colour);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
 // important data (camera, lights...) to these shaders
 extern HE_API void heD3LevelRenderDeferred(HeRenderEngine* engine, HeD3Level* level);
 // renders a particle source into the hdr fbo.
-extern HE_API void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource const* source, HeD3Camera const* camera);
+extern HE_API void heParticleSourceRenderForward(HeRenderEngine* engine, HeParticleSource const* source, HeD3Level* level);
 // forward-renders given instance. The shader should already be set up and bound
 extern HE_API void heD3InstanceRenderForward(HeRenderEngine* engine, HeD3Instance* instance);
 // renders a complete level with all its instances by mapping all instances to their shader and loading all
@@ -210,12 +217,12 @@ extern HE_API void heUiTextCreateMesh(HeRenderEngine* engine, HeUiTextMesh* mesh
 // tries to find given text in the text mesh manager. If that text mesh doesnt exist, create a new one and store it
 extern HE_API HeUiTextMesh* heUiTextFindOrCreateMesh(HeRenderEngine* engine, HeScaledFont const* font, std::string const& text, hm::colour const& colour);
 
-// renders given texture to the currently bound fbo. This can either be a cube or a 2d texture. The texture will be centered at
-// position. Position and scale can be relativ (negativ) or absolute (positiv). This will load the texture shader
-// if it wasnt already
+// renders given texture to the currently bound fbo. This can either be a cube or a 2d texture. The texture will
+// be centered at position. Position and scale can be relativ (negativ) or absolute (positiv). This will load the
+// texture shader if it wasnt already
 extern HE_API inline void heUiRenderTexture(HeRenderEngine* engine, HeTexture const* texture, hm::vec2f const& position, hm::vec2f const& size);
-// renders given 2d texture to the currently bound fbo. The texture will be centered at position. Position and scale can
-// be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
+// renders given 2d texture to the currently bound fbo. The texture will be centered at position. Position and
+// scale can be relativ (negativ) or absolute (positiv). This will load the texture shader if it wasnt already
 extern HE_API void heUiRenderTexture(HeRenderEngine* engine, uint32_t const texture, hm::vec2f const& position, hm::vec2f const& size, HeTextureRenderMode const options = HE_TEXTURE_RENDER_2D);
 // renders a quad with given vertices in window space with given colour
 extern HE_API void heUiRenderQuad(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::vec2f const& p2, hm::vec2f const& p3, hm::colour const& colour);

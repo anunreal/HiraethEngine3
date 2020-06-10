@@ -84,6 +84,7 @@ struct HePhysicsActor {
     hm::vec3f position;     // position of the shape (center)
     hm::vec3f feetPosition; // position of the feet (position - height / 2) 
     hm::vec3f velocity;     // the current velocity of the actor
+    hm::quatf rotation;     // the current rotation of the actor
 };
 
 struct HePhysicsLevel {
@@ -118,15 +119,16 @@ extern HE_API void hePhysicsLevelDestroy(HePhysicsLevel* level);
 extern HE_API void hePhysicsLevelAddComponent(HePhysicsLevel* level, HePhysicsComponent const* component);
 // removes given component from the given level
 extern HE_API void hePhysicsLevelRemoveComponent(HePhysicsLevel* level, HePhysicsComponent const* component);
-// sets the actor for given level. One level can only have one actor (for now?). If actor is a nullptr, the current actor will be
-// removed from the level
+// sets the actor for given level. One level can only have one actor (for now?). If actor is a nullptr, the
+// current actor will be removed from the level
 extern HE_API void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor* actor);
 // updates given level. Delta is the time passed since the last update in seconds
 extern HE_API void hePhysicsLevelUpdate(HePhysicsLevel* level, float const delta);
 // enables a debug drawer for the collision shapes
 extern HE_API void hePhysicsLevelEnableDebugDraw(HePhysicsLevel* level, HeRenderEngine* engine);
 extern HE_API void hePhysicsLevelDisableDebugDraw(HePhysicsLevel* level);
-// renders the debug information of this physics level if debug drawing is enabled. Should be called after the d3 render
+// renders the debug information of this physics level if debug drawing is enabled. Should be called after the d3
+// render
 extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel const* level);
 
 
@@ -151,22 +153,28 @@ extern HE_API hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* 
 
 // creates a new physics component from given shape
 extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shape, HePhysicsActorInfo const& actorInfo);
-// destroys given actor. The actor should be removed from all levels before this. This function simply deletes all pointers and
-// other data allocated
+// destroys given actor. The actor should be removed from all levels before this. This function simply deletes
+// all pointers and other data allocated
 extern HE_API void hePhysicsActorDestroy(HePhysicsActor* actor);
 // updates the position of given actor
 extern HE_API void hePhysicsActorSetPosition(HePhysicsActor* actor, hm::vec3f const& position);
-// sets the eye position of this actor. This will simply subtract the eye offset from the position and then set the new position
+// sets the eye position of this actor. This will simply subtract the eye offset from the position and then set
+// the new position
 extern HE_API inline void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm::vec3f const& eyePosition);
 // sets the velocity (walk direction) of this actor
 extern HE_API inline void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity);
-// makes the given actor jump. The more force, the higher the actor will jump. If force is -1, the default force will be used
+// sets the rotation of this actor
+extern HE_API inline void hePhysicsActorSetRotation(HePhysicsActor* actor, hm::quatf const& rotation);
+// makes the given actor jump. The more force, the higher the actor will jump. If force is -1, the default force
+// will be used
 extern HE_API inline void hePhysicsActorJump(HePhysicsActor* actor);
 // returns the current position of the actor
 extern HE_API inline hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* actor);
-// returns the position of the eyes of this actor. The eye position depends on the eye offset in the actor information. The eye
-// position is usually where the camera should be placed
+// returns the position of the eyes of this actor. The eye position depends on the eye offset in the actor
+// information. The eye position is usually where the camera should be placed
 extern HE_API inline hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor);
+// returns the rotation of that actor('s shape)1
+extern HE_API inline hm::quatf hePhysicsActorGetRotation(HePhysicsActor const* actor);
 // returns true if the actor currently stands on solid ground
 extern HE_API inline b8 hePhysicsActorOnGround(HePhysicsActor const* actor);
 

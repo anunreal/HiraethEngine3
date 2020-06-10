@@ -164,7 +164,7 @@ void front_command_export_textures(std::vector<std::string> const& args) {
 };
 
 
-void command_export_assets() {
+void command_export_instances() {
     std::string folder = "res/instances";
     std::vector<HeFileDescriptor> files; 
     heWin32FolderGetFiles(folder, files, true);
@@ -174,15 +174,15 @@ void command_export_assets() {
         heBinaryConvertD3InstanceFile(all.fullPath, out);
     }
     
-    HE_LOG("Successfully converted textures");
+    HE_LOG("Successfully converted instance");
 };
 
-void front_command_export_assets(std::vector<std::string> const& args) {
+void front_command_export_instances(std::vector<std::string> const& args) {
 	if(args.size() != 0) {
-		heConsolePrint("Error: export_assets requires 0 arguments");
+		heConsolePrint("Error: export_instances requires 0 arguments");
 		return;
 	};
-	command_export_assets();
+	command_export_instances();
 };
 
 
@@ -303,7 +303,7 @@ void command_help() {
 	heConsolePrint("> toggle_profiler ");
 	heConsolePrint("> export_texture string: in, string: out");
 	heConsolePrint("> export_textures ");
-	heConsolePrint("> export_assets ");
+	heConsolePrint("> export_instances ");
 	heConsolePrint("> export_skybox ");
 	heConsolePrint("> print_memory ");
 	heConsolePrint("> print_textures ");
@@ -333,7 +333,7 @@ void heRegisterCommands() {
 	heConsoleRegisterCommand("toggle_profiler", &front_command_toggle_profiler);
 	heConsoleRegisterCommand("export_texture", &front_command_export_texture);
 	heConsoleRegisterCommand("export_textures", &front_command_export_textures);
-	heConsoleRegisterCommand("export_assets", &front_command_export_assets);
+	heConsoleRegisterCommand("export_instances", &front_command_export_instances);
 	heConsoleRegisterCommand("export_skybox", &front_command_export_skybox);
 	heConsoleRegisterCommand("print_memory", &front_command_print_memory);
 	heConsoleRegisterCommand("print_textures", &front_command_print_textures);

@@ -33,6 +33,8 @@ struct HeWindowInfo {
     uint8_t samples = 1;
     // if this is true, vsync is enabled and the fps cap is ignored
     b8 vsync = false;
+    // width : height. Updated everytime the window gets resized
+    float aspectRatio = 0;
 };
 
 struct HeMouseInfo {

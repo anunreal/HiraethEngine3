@@ -5,15 +5,177 @@
 HeD3Level* heD3Level = nullptr;
 
 
+// -- instance
+
+void heD3InstanceUpdate(HeD3Instance* instance) {
+    // update physics
+    if(instance->physics) {
+        instance->transformation.position = hePhysicsComponentGetPosition(instance->physics);
+        instance->transformation.rotation = hePhysicsComponentGetRotation(instance->physics);
+    }
+};
+
+void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position) {
+    instance->transformation.position = position;
+    if(instance->physics)
+        hePhysicsComponentSetPosition(instance->physics, position);
+};
+
+
+// -- frustum
+
+void heD3FrustumUpdate(HeD3Frustum* frustum, HeWindow* window, hm::vec3f const& position, hm::vec3f const& rotation) {
+    { // calculate corners
+        hm::mat4f rotationMat(1.0f);
+        rotationMat = hm::rotate(rotationMat, (float) -rotation.y, hm::vec3f(0, 1, 0));
+        rotationMat = hm::rotate(rotationMat, (float) -rotation.x, hm::vec3f(1, 0, 0));
+
+        float fov        = (float) std::tanf(frustum->viewInfo.fov * (float) hm::PI / 360.f);
+        float farHeight  = frustum->viewInfo.farPlane * fov;
+        float farWidth   = farHeight * window->windowInfo.aspectRatio;
+        float nearHeight = frustum->viewInfo.nearPlane * fov;
+        float nearWidth  = nearHeight * window->windowInfo.aspectRatio;
+
+        hm::vec3f forward    (rotationMat * hm::vec4f(0, 0, -1, 0)); 
+        hm::vec3f toFar      (forward * frustum->viewInfo.farPlane);
+        hm::vec3f toNear     (forward * frustum->viewInfo.nearPlane);
+        hm::vec3f centerFar  (position + toFar);
+        hm::vec3f centerNear (position + toNear);
+
+        hm::vec3f up    = hm::vec3f(rotationMat * hm::vec4f(0, 1, 0, 0));
+        hm::vec3f right = hm::cross(forward, up);
+        
+        hm::vec3f farTop     = centerFar  + up * farHeight;
+        hm::vec3f farBottom  = centerFar  - up * farHeight;
+        hm::vec3f nearTop    = centerNear + up * nearHeight;
+        hm::vec3f nearBottom = centerNear - up * nearHeight;
+        
+        frustum->corners[0] = farTop + right * farWidth;
+        frustum->corners[1] = farTop - right * farWidth;
+        frustum->corners[2] = farBottom + right * farWidth;
+        frustum->corners[3] = farBottom - right * farWidth;
+        frustum->corners[4] = nearTop + right * nearWidth;
+        frustum->corners[5] = nearTop - right * nearWidth;
+        frustum->corners[6] = nearBottom + right * nearWidth;
+        frustum->corners[7] = nearBottom - right * nearWidth;        
+    }
+
+    { // calculate bounds
+        // set bounds to some value
+        frustum->bounds[0] = frustum->corners[0];
+        frustum->bounds[1] = frustum->corners[0];
+
+        // check for lowest and highest values
+        for(uint8_t i = 1; i < 8; ++i) {
+            hm::vec3f& p = frustum->corners[i];
+            if(p.x < frustum->bounds[0].x)
+                frustum->bounds[0].x = p.x;
+            else if(p.x > frustum->bounds[1].x)
+                frustum->bounds[1].x = p.x;
+
+            if(p.y < frustum->bounds[0].y)
+                frustum->bounds[0].y = p.y;
+            else if(p.y > frustum->bounds[1].y)
+                frustum->bounds[1].y = p.y;
+        
+            if(p.z < frustum->bounds[0].z)
+                frustum->bounds[0].z = p.z;
+            else if(p.z > frustum->bounds[1].z)
+                frustum->bounds[1].z = p.z;
+        }
+    }
+};
+
+void heD3FrustumUpdateWithMatrix(HeD3Frustum* frustum, HeWindow* window, hm::vec3f const& position, hm::vec3f const& rotation, hm::mat4f const& matrix) {
+    { // calculate corners
+        hm::mat4f rotationMat(1.0f);
+        rotationMat = hm::rotate(rotationMat, (float) -rotation.y, hm::vec3f(0, 1, 0));
+        rotationMat = hm::rotate(rotationMat, (float) -rotation.x, hm::vec3f(1, 0, 0));
+   
+        float fov        = (float) std::tanf(frustum->viewInfo.fov * (float) hm::PI / 360.f);
+        float farHeight  = frustum->viewInfo.farPlane * fov;
+        float farWidth   = farHeight * window->windowInfo.aspectRatio;
+        float nearHeight = frustum->viewInfo.nearPlane * fov;
+        float nearWidth  = nearHeight * window->windowInfo.aspectRatio;
+
+        hm::vec3f forward    (rotationMat * hm::vec4f(0, 0, -1, 0)); 
+        hm::vec3f toFar      (forward * frustum->viewInfo.farPlane);
+        hm::vec3f toNear     (forward * frustum->viewInfo.nearPlane);
+        hm::vec3f centerFar  (position + toFar);
+        hm::vec3f centerNear (position + toNear);
+
+        hm::vec3f up    = hm::vec3f(rotationMat * hm::vec4f(0, 1, 0, 0));
+        hm::vec3f right = hm::cross(forward, up);
+        
+        hm::vec3f farTop     = centerFar  + up * farHeight;
+        hm::vec3f farBottom  = centerFar  - up * farHeight;
+        hm::vec3f nearTop    = centerNear + up * nearHeight;
+        hm::vec3f nearBottom = centerNear - up * nearHeight;
+        
+        frustum->corners[0] = hm::vec3f(matrix * hm::vec4f(farTop + right * farWidth));
+        frustum->corners[1] = hm::vec3f(matrix * hm::vec4f(farTop - right * farWidth));
+        frustum->corners[2] = hm::vec3f(matrix * hm::vec4f(farBottom + right * farWidth));
+        frustum->corners[3] = hm::vec3f(matrix * hm::vec4f(farBottom - right * farWidth));
+        frustum->corners[4] = hm::vec3f(matrix * hm::vec4f(nearTop + right * nearWidth));
+        frustum->corners[5] = hm::vec3f(matrix * hm::vec4f(nearTop - right * nearWidth));
+        frustum->corners[6] = hm::vec3f(matrix * hm::vec4f(nearBottom + right * nearWidth));
+        frustum->corners[7] = hm::vec3f(matrix * hm::vec4f(nearBottom - right * nearWidth));        
+    }
+
+    { // calculate bounds
+        // set bounds to some value
+        frustum->bounds[0] = frustum->corners[0];
+        frustum->bounds[1] = frustum->corners[0];
+
+        // check for lowest and highest values
+        for(uint8_t i = 1; i < 8; ++i) {
+            hm::vec3f& p = frustum->corners[i];
+            if(p.x < frustum->bounds[0].x)
+                frustum->bounds[0].x = p.x;
+            else if(p.x > frustum->bounds[1].x)
+                frustum->bounds[1].x = p.x;
+
+            if(p.y < frustum->bounds[0].y)
+                frustum->bounds[0].y = p.y;
+            else if(p.y > frustum->bounds[1].y)
+                frustum->bounds[1].y = p.y;
+        
+            if(p.z < frustum->bounds[0].z)
+                frustum->bounds[0].z = p.z;
+            else if(p.z > frustum->bounds[1].z)
+                frustum->bounds[1].z = p.z;
+        }
+    }
+};
+
+
+// -- camera
+
+void heD3CameraClampRotation(HeD3Camera* camera) {
+    if(camera->rotation.x < -90)
+        camera->rotation.x = -90;
+    else if(camera->rotation.x > 90)
+        camera->rotation.x = 90;
+
+    if(camera->rotation.y < 0)
+        camera->rotation.y = 360 + camera->rotation.y;
+    else if(camera->rotation.y > 360)
+        camera->rotation.y = camera->rotation.y - 360;
+};
+
+
+// -- light
+
 HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, hm::vec3f const& direction, hm::colour const& colour) {
     HeD3LightSource* light = &level->lights.emplace_back();
     light->type            = HE_LIGHT_SOURCE_TYPE_DIRECTIONAL;
     light->vector          = direction;
     light->colour          = colour;
     light->update          = true;
+
+    heD3ShadowMapCreate(&light->shadows, light);
     return light;
 };
-
 
 HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, hm::vec3f const& position, hm::vec3f const& direction, float const inAngle, float const outAngle, float const constLightValue, float const linearLightValue, float const quadraticLightValue, hm::colour const& colour) {
     HeD3LightSource* light = &level->lights.emplace_back();
@@ -44,21 +206,19 @@ HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, hm::vec3f const& p
     return light;
 };
 
-
-void heD3InstanceUpdate(HeD3Instance* instance) {
-    // update physics
-    if(instance->physics) {
-        instance->transformation.position = hePhysicsComponentGetPosition(instance->physics);
-        instance->transformation.rotation = hePhysicsComponentGetRotation(instance->physics);
-    }
+void heD3ShadowMapCreate(HeD3ShadowMap* shadowMap, HeD3LightSource* source) {
+    source->castShadows      = true;
+    shadowMap->viewMatrix    = hm::mat4f(1.0f);
+    shadowMap->depthFbo.size = shadowMap->resolution;
+    heFboCreate(&shadowMap->depthFbo);
+    heFboCreateDepthTextureAttachment(&shadowMap->depthFbo);
+    heFboDisableColourAttachment(&shadowMap->depthFbo);
+    heFboValidate(&shadowMap->depthFbo);
+    heFboUnbind();
 };
 
-void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position) {
-    instance->transformation.position = position;
-    if(instance->physics)
-        hePhysicsComponentSetPosition(instance->physics, position);
-};
 
+// -- level
 
 void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance) {
     uint32_t index = 0;
@@ -81,16 +241,13 @@ void heD3LevelUpdate(HeD3Level* level, float const delta) {
             level->camera.position = hePhysicsActorGetEyePosition(level->physics.actor);
     }
         
-    // update camera
-    level->camera.viewMatrix = hm::createViewMatrix(level->camera.position, level->camera.rotation);
-    
     // update all instances
     for(auto& all : level->instances)
         heD3InstanceUpdate(&all);
 
     // update all particle sources
     for(auto& all : level->particles)
-        heParticleSourceUpdate(&all, delta);
+        heParticleSourceUpdate(&all, delta, level);
 };
 
 void heD3LevelDestroy(HeD3Level* level) {
@@ -108,6 +265,9 @@ HeD3LightSource* heD3LevelGetLightSource(HeD3Level* level, uint16_t const index)
     std::advance(begin, index);
     return &(*begin);
 };
+
+
+// -- skybox
 
 void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFile) {
     const hm::vec2i OUT_RES(512);
@@ -179,6 +339,8 @@ void heD3SkyboxLoad(HeD3Skybox* skybox, std::string const& fileName) {
 };
 
 
+// -- particles
+
 void heParticleSourceCreate(HeParticleSource* source, HeD3Transformation const& transformation, HeSpriteAtlas* atlas, uint32_t const atlasIndex, uint32_t const particleCount) {
     source->atlas         = atlas;
     source->particleCount = particleCount;
@@ -222,20 +384,47 @@ void heParticleSourceSpawnParticle(HeParticleEmitter* source, HeParticle* partic
     particle->remaining               = heRandomFloat(&source->random, source->minTime, source->maxTime);
 };
 
-void heParticleSourceUpdate(HeParticleSource* source, float const delta) {
+void heParticleSourceUpdate(HeParticleSource* source, float const delta, HeD3Level* level) {
     uint32_t created = 0;
 
     for(uint32_t i = 0; i < source->particleCount; ++i) {
         HeParticle* particle = &source->particles[i];
+        uint32_t offset = i * source->FLOATS_PER_PARTICLE;
         particle->remaining -= delta;
-
         if(particle->remaining > 0.f) {
-            // update velocity and position
             particle->velocity.y -= source->gravity * delta;
             particle->transformation.position += particle->velocity * delta;
-        } else if(created < source->maxNewParticlesPerUpdate) {
+
+        } else {
             heParticleSourceSpawnParticle(&source->emitter, particle);
             created++;
         }
+
+        // build trans mat and add to vbo
+        hm::mat4f transMat = hm::translate(hm::mat4f(1.0f), particle->transformation.position);
+
+        // transpose view matrix into trans matrix so that we cancel the rotation
+        transMat[0][0] = level->camera.viewMatrix[0][0];
+        transMat[1][0] = level->camera.viewMatrix[0][1];
+        transMat[2][0] = level->camera.viewMatrix[0][2];
+        transMat[0][1] = level->camera.viewMatrix[1][0];
+        transMat[1][1] = level->camera.viewMatrix[1][1];
+        transMat[2][1] = level->camera.viewMatrix[1][2];
+        transMat[0][2] = level->camera.viewMatrix[2][0];
+        transMat[1][2] = level->camera.viewMatrix[2][1];
+        transMat[2][2] = level->camera.viewMatrix[2][2];
+        transMat = hm::scale(transMat, particle->transformation.scale);
+
+        float colour[4];
+        colour[0] = hm::getR(&particle->colour);
+        colour[1] = hm::getG(&particle->colour);
+        colour[2] = hm::getB(&particle->colour);
+        colour[3] = hm::getA(&particle->colour);
+
+        hm::vec4f uvs = heSpriteAtlasGetUvs(source->atlas, source->atlasIndex);
+            
+        memcpy(&source->dataBuffer[offset], &transMat[0][0], 16 * sizeof(float));
+        memcpy(&source->dataBuffer[offset + 16], &colour[0], 4 * sizeof(float));
+        memcpy(&source->dataBuffer[offset + 20], &uvs.x, 4 * sizeof(float));
     }
 };

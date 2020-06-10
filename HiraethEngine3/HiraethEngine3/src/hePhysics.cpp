@@ -193,6 +193,7 @@ void hePhysicsLevelUpdate(HePhysicsLevel* level, float const delta) {
         level->actor->feetPosition    = level->actor->position;
         level->actor->feetPosition.y -= hePhysicsShapeGetHeight(&level->actor->shapeInfo) / 2.f;
         level->actor->velocity        = level->actor->position - prev;
+        level->actor->rotation        = hePhysicsActorGetRotation(level->actor);
     }
 };
 
@@ -324,6 +325,12 @@ void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity)
     actor->controller->setWalkDirection(btVector3(velocity.x, velocity.y, velocity.z));
 };
 
+void hePhysicsActorSetRotation(HePhysicsActor* actor, hm::quatf const& rotation) {
+    if(!actor->controller)
+        return;
+    actor->ghost->getWorldTransform().setRotation(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w));
+};
+
 void hePhysicsActorJump(HePhysicsActor* actor) {
     if(!actor->controller)
         return;
@@ -344,6 +351,13 @@ hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor) {
     hm::vec3f position = hePhysicsActorGetPosition(actor);
     position.y += (actor->actorInfo.eyeOffset - actor->shapeInfo.capsule.y / 2.f);
     return position;
+};
+
+hm::quatf hePhysicsActorGetRotation(HePhysicsActor const* actor) {
+    if(!actor)
+        return hm::quatf();
+    btQuaternion rot = actor->ghost->getWorldTransform().getRotation();
+    return hm::quatf(rot.getX(), rot.getY(), rot.getZ(), rot.getW());
 };
 
 b8 hePhysicsActorOnGround(HePhysicsActor const* actor) {

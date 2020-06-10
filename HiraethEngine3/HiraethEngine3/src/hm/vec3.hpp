@@ -1,27 +1,28 @@
-#pragma once
+#ifndef HM_VEC3_HPP
+#define HM_VEC3_HPP
+
 #include "setup.hpp"
-#include "vec2.hpp"
+#include "vector.hpp"
 #include <string>
 
-namespace hm {
-    
+namespace hm {    
     template<typename T>
-    struct vec3 {
+    struct vec<3, T> {
         T x, y, z;
         
-        vec3() : x(0), y(0), z(0) {};
-        vec3(T v) : x(v), y(v), z(v) {};
-        vec3(T x, T y, T z) : x(x), y(y), z(z) {};
-        vec3(vec3 const& v) : x(v.x), y(v.y), z(v.z) {};
-        
-        // conversions
-        
+        vec() : x(0), y(0), z(0) {};
+        vec(T v) : x(v), y(v), z(v) {};
+        vec(T x, T y, T z) : x(x), y(y), z(z) {};
         template<typename T1>
-        vec3(vec2<T1> const& vec, float const z = 1.f) : x(vec.x), y(vec.y), z(z) {};
+        vec(vec<2, T1> const& vec, T1 const z = 1) : x((T) vec.x), y((T) vec.y), z((T) z) {};
+        template<typename T1>
+        vec(vec<3, T1> const& v) : x((T) v.x), y((T) v.y), z((T) v.z) {};
+        template<typename T1>
+        vec(vec<4, T1> const& v) : x((T) v.x), y((T) v.y), z((T) v.z) {};
         
         // accessors
         
-        const T& operator[](const unsigned int index) const {
+        T const& operator[](uint8_t const index) const {
             switch (index) {
             case 0:
                 return x;
@@ -39,7 +40,7 @@ namespace hm {
         };
         
         
-        T& operator[](const unsigned int index) {
+        T& operator[](uint8_t const index) {
             switch (index) {
             case 0:
                 return x;
@@ -59,74 +60,74 @@ namespace hm {
         
         // operators
         
-        inline vec3 operator*(const vec3& v) const {
-            return vec3(x * v.x, y * v.y, z * v.z);
+        inline vec operator*(vec const& v) const {
+            return vec(x * v.x, y * v.y, z * v.z);
         };
         
-        inline vec3 operator+(const vec3& v) const {
-            return vec3(x + v.x, y + v.y, z - v.z);
+        inline vec operator+(vec const& v) const {
+            return vec(x + v.x, y + v.y, z + v.z);
         };
         
-        inline vec3 operator-(const vec3& v) const {
-            return vec3(x - v.x, y - v.y, z - v.z);
+        inline vec operator-(vec const& v) const {
+            return vec(x - v.x, y - v.y, z - v.z);
         };
         
-        inline vec3 operator/(const vec3& v) const {
-            return vec3(x / v.x, y / v.y, z / v.z);
+        inline vec operator/(vec const& v) const {
+            return vec(x / v.x, y / v.y, z / v.z);
         };
         
-        inline vec3 operator-() const {
-            return vec3(-x, -y, -z);
+        inline vec operator-() const {
+            return vec(-x, -y, -z);
         };
         
-        inline vec3& operator*=(float const f) {
+        inline vec& operator*=(float const f) {
             x *= f;
             y *= f;
             z *= f;
             return *this;
         };
 
-        inline void operator+=(const vec3& v) {
+        inline void operator+=(vec const& v) {
             x += v.x;
             y += v.y;
             z += v.z;
         };
         
-        inline void operator-=(const vec3& v) {
+        inline void operator-=(vec const& v) {
             x -= v.x;
             y -= v.y;
             z -= v.z;
         };
     };
     
-    typedef vec3<float> vec3f;
-    typedef vec3<double> vec3d;
-    typedef vec3<int32_t> vec3i;
+    typedef vec<3, float> vec3f;
+    typedef vec<3, double> vec3d;
+    typedef vec<3, int32_t> vec3i;
     
     template<typename T>
-    static inline vec3<T> length(const vec3<T>& vector) {
+    static inline vec<3, T> length(vec<3, T> const& vector) {
         return std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
     };
     
     template<typename T>
-    static inline vec3<T> to_radians(const vec3<T>& vector) {
-        return vec3<T>(to_radians(vector.x), to_radians(vector.y), to_radians(vector.z));
+    static inline vec<3, T> to_radians(vec<3, T> const& vector) {
+        return vec<3, T>(to_radians(vector.x), to_radians(vector.y), to_radians(vector.z));
     };
     
     template<typename T>
-    static inline vec3<T> normalize(const vec3<T>& vector) {
+    static inline vec<3, T> normalize(vec<3, T> const& vector) {
         return vector / length(vector);
     };
     
     template<typename T>
-    static inline vec3<T> cross(const vec3<T>& left, const vec3<T>& right) {
-        return vec3<T>(left.y * right.z - left.z * right.y,
+    static inline vec<3, T> cross(vec<3, T> const& left, vec<3, T> const& right) {
+        return vec<3, T>(left.y * right.z - left.z * right.y,
                        left.z * right.x - left.x * right.z,
                        left.x * right.y - left.y * right.x);
     };
     
     // parses a vec3 from a string. The coordinates should be split by a single '/' char
-    static inline vec3f parseVec3f(const std::string& input) {
+    static inline vec3f parseVec3f(std::string const& input) {
         std::string arguments[3];
         size_t index0 = input.find('/');
         arguments[0] = input.substr(0, index0);
@@ -136,7 +137,9 @@ namespace hm {
         arguments[1] = input.substr(index0 + 1, index1);
         arguments[2] = input.substr(index1 + 1);
         
-        return vec3(std::stof(arguments[0]), std::stof(arguments[1]), std::stof(arguments[2]));
+        return vec3f(std::stof(arguments[0]), std::stof(arguments[1]), std::stof(arguments[2]));
     };
     
 };
+
+#endif

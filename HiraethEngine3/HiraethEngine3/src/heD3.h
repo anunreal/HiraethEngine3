@@ -6,6 +6,8 @@
 #include "heUtils.h"
 #include <list>
 
+struct HeWindow; // forward declare to avoid include
+
 struct HeD3Transformation {
     hm::vec3f position;
     hm::vec3f scale;
@@ -34,6 +36,30 @@ struct HeD3Instance {
 #endif
 };
 
+struct HeD3ViewInformation {
+    float nearPlane = 0.1f;
+    float farPlane  = 1000.f;
+    float fov       = 70.f;
+};
+
+struct HeD3Frustum {
+    // the corners of this frustum, in the following order:
+    // 0: top far right
+    // 1: top far left
+    // 2: bottom far right
+    // 3: bottom far left
+    // 4: top near right
+    // 5: top near left
+    // 6: bottom near right
+    // 7: bottom near left
+    hm::vec3f corners[8];
+    // contains the two bounding points.
+    // index 0 are the lowest coordinates in each direction (of the corners)
+    // index 1 are the highest coordinates in each direction (of the corners)
+    hm::vec3f bounds[2];
+    HeD3ViewInformation viewInfo;
+};
+
 struct HeD3Camera {
     // world space position
     hm::vec3f position;
@@ -43,9 +69,24 @@ struct HeD3Camera {
     hm::mat4f viewMatrix;
     // the projection matrix of this camera created when the camera is set up
     hm::mat4f projectionMatrix;
+    // information about the view frustum
+    HeD3Frustum frustum;
 
-    float exposure = 1.f; // default exposure (brightness of the scene)
-    float gamma    = 1.f; // disable gamma correction
+    float exposure  = 1.f; // default exposure (brightness of the scene)
+    float gamma     = 1.f; // disable gamma correction
+};
+
+struct HeD3ShadowMap {
+    HeFbo depthFbo;
+    HeD3Frustum frustum; // frustum of the shadow map box
+    hm::mat4f projectionMatrix; // the orthographic projection matrix used for rendering the shadow map
+    hm::mat4f viewMatrix; // the view matrix used for rendering the shadow map
+    hm::mat4f offsetMatrix; // maps coordinates in range [-1:1] (transform output) to uv range
+    hm::mat4f shadowSpaceMatrix; // matrix to convert from world space to the texture map
+    
+    float     shadowDistance = 40.f; // the length of the shadow map. Objects farther away from the camera do not cast shadows
+    float     offset         = 10.f;
+    hm::vec2i resolution     = 4096;
 };
 
 struct HeD3LightSource {
@@ -74,6 +115,9 @@ struct HeD3LightSource {
     // whether this light is active at all. This should only be set to false if a light is off for a larger amount
     // of time
     b8 active = true;
+    
+    b8 castShadows = false;
+    HeD3ShadowMap shadows;
 };
 
 struct HeD3Skybox {
@@ -103,7 +147,7 @@ struct HeParticleEmitter {
         hm::vec3f box;   // half dimensions of the box in each xyz direction
     };
 
-HeParticleEmitter() : box(0.f) {};
+HeParticleEmitter() : box(0.f), type(HE_PARTICLE_EMITTER_TYPE_NONE) {};
 };
 
 struct HeParticleSource {
@@ -115,9 +159,15 @@ struct HeParticleSource {
     HeParticle*       particles  = nullptr; // a pointer to an array of particles, the size of which is specified in the particles create function
     float*            dataBuffer = nullptr; // a float pointer that contains all necessary instanced data for the particles, that is the transformation matrix, uvs and colours
 
+    // gravity that pulls down all particles per update
     float    gravity                  = 9.81f;
+    // how many new particles to spawn per update (or respawn dead ones). If weve already spawned that many particles in an update, the other dead ones remaing dead
     uint32_t maxNewParticlesPerUpdate = 1;
-
+    // whether to use additive blending. Useful for when many particles are overlapping and these parts should be brighter, for example fire
+    b8 additive = false;
+    // whether these particles cast and receive shadows
+    b8 enableShadows = true;
+    
     // 4x4 transMat = 16
     // hdr colour   =  4
     // uvs          =  4
@@ -142,6 +192,35 @@ struct HeD3Level {
 // the current active d3 level. Can be set and (then) used at any time
 extern HeD3Level* heD3Level;
 
+
+// -- instance
+
+// updates all components of this instance
+extern HE_API void heD3InstanceUpdate(HeD3Instance* instance);
+// sets the new position of the entity. This should always be used over directly setting the instances position
+// as this will also update the components
+extern HE_API void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position);
+
+
+// -- frustum
+
+// updates the corners of the view frustum from the given view matrix. nearPlane and farPlane should be the values
+// used when creating the projection matrix (clip / render distance)
+extern HE_API void heD3FrustumUpdate(HeD3Frustum* frustum, HeWindow* window, hm::vec3f const& position, hm::vec3f const& rotation);
+// updates the corners of the view frustum from the given view matrix. nearPlane and farPlane should be the values
+// used when creating the projection matrix (clip / render distance). This will transform all corners with given
+// matrix which is useful if youre not working in world space (i.e. shadow box)
+extern HE_API void heD3FrustumUpdateWithMatrix(HeD3Frustum* frustum, HeWindow* window, hm::vec3f const& position, hm::vec3f const& rotation, hm::mat4f const& matrix);
+
+
+// -- camera
+
+// loops the yaw of the camera to be in between 0 and 360 (degrees) and the pitch to not go over 90 (or -90)
+extern HE_API void heD3CameraClampRotation(HeD3Camera* camera);
+
+
+// -- light
+
 // sets all important information for a directional light for a new light source in level.
 // direction should be normalized and in world space
 extern HE_API HeD3LightSource* heD3LightSourceCreateDirectional(HeD3Level* level, hm::vec3f const& direction, hm::colour const& colour);
@@ -158,6 +237,12 @@ extern HE_API HeD3LightSource* heD3LightSourceCreateSpot(HeD3Level* level, hm::v
 // the linear value controls the normal decay, can be around 0.045
 // the quadratic value controls the light in far distance, can be around 0.0075
 extern HE_API HeD3LightSource* heD3LightSourceCreatePoint(HeD3Level* level, hm::vec3f const& position, float const constLightValue, float const linearLightValue, float const quadraticLightValue, hm::colour const& colour);
+// sets up a shadow map. The resolution must already be set before this call
+extern HE_API void heD3ShadowMapCreate(HeD3ShadowMap* shadowMap, HeD3LightSource* source);
+
+
+// -- level
+
 // removes the HeD3Instance that instance points to from the level, if it does exist there and instance is a
 // valid pointer.
 extern HE_API void heD3LevelRemoveInstance(HeD3Level* level, HeD3Instance* instance);
@@ -171,11 +256,8 @@ extern HE_API inline HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16
 // returns the light source with given index from the list of lights in the level
 extern HE_API inline HeD3LightSource* heD3LevelGetLightSource(HeD3Level* level, uint16_t const index);
 
-// updates all components of this instance
-extern HE_API void heD3InstanceUpdate(HeD3Instance* instance);
-// sets the new position of the entity. This should always be used over directly setting the instances position
-// as this will also update the components
-extern HE_API void heD3InstanceSetPosition(HeD3Instance* instance, hm::vec3f const& position);
+
+// -- skybox
 
 // loads a skybox from given hdr image. This will unmap the equirectangular image onto a cube map and also create
 // a blurred irradiance map. This will load, run and destroy a compute shader and also create the cube maps
@@ -183,6 +265,9 @@ extern HE_API void heD3SkyboxCreate(HeD3Skybox* skybox, std::string const& hdrFi
 // loads the precomputed specular and diffuse textures for that skybox. The files must be in binres/textures/skybox
 // and be named fileName_specular and fileName_irradiance respectively. 
 extern HE_API void heD3SkyboxLoad(HeD3Skybox* skybox, std::string const& fileName);
+
+
+// -- particles
 
 // sets up a new particle source. The transformation is the sources location, the particles will be relative around
 // that. The atlasIndex is the index of the sprite in the given atlas. particleCount is the size of the array
@@ -195,6 +280,6 @@ extern HE_API void heParticleSourceDestroy(HeParticleSource* source);
 extern HE_API void heParticleSourceSpawnParticle(HeParticleEmitter* source, HeParticle* particle);
 // updates the particle source by updating the position of the particles (velocity, gravity) and spawning new
 // particles for the dead ones
-extern HE_API void heParticleSourceUpdate(HeParticleSource* source, float const delta);
+extern HE_API void heParticleSourceUpdate(HeParticleSource* source, float const delta, HeD3Level* level);
 
 #endif
