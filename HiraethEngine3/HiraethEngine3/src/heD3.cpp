@@ -1,3 +1,4 @@
+#include "hepch.h"
 #include "heD3.h"
 #include "heCore.h"
 #include "heWin32Layer.h"
@@ -346,7 +347,7 @@ void heParticleSourceCreate(HeParticleSource* source, HeD3Transformation const& 
     source->particleCount = particleCount;
     source->atlasIndex    = atlasIndex;
     source->particles     = (HeParticle*) malloc(particleCount * sizeof(HeParticle));
-    source->dataBuffer    = (float*) malloc(particleCount * source->FLOATS_PER_PARTICLE * sizeof(float));
+    source->dataBuffer    = (float*) malloc((size_t) particleCount * source->FLOATS_PER_PARTICLE * sizeof(float));
     source->emitter.transformation = transformation;
     heRandomCreate(&source->emitter.random, 0);
     memset(source->particles,  0, sizeof(source->particles));

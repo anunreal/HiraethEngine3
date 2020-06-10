@@ -1,3 +1,4 @@
+#include "hepch.h"
 #include "heGlLayer.h"
 #include "heAssets.h"
 #include "GLEW/glew.h"
@@ -8,8 +9,6 @@
 #include "heDebugUtils.h"
 #include "heBinary.h"
 #include "heUtils.h"
-#include <fstream>
-#include <algorithm>
 
 #define GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX 0x9048
 #define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049

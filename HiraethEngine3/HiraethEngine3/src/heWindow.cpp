@@ -1,12 +1,8 @@
+#include "hepch.h"
 #include "heWindow.h"
 #include "heWin32Layer.h"
 #include "heGlLayer.h"
 #include "heCore.h"
-#include <map>
-#include <iostream>
-#include <string>
-#include <chrono>
-#include <thread>
 
 #ifdef HE_USE_WIN32
 #include "heWin32Layer.h"

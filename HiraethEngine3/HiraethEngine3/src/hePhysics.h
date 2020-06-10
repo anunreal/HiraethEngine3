@@ -3,8 +3,6 @@
 
 #include "heTypes.h"
 #include "hm/hm.hpp"
-#include <vector>
-#include <list>
 
 // forward declare all necessary bullet classes to avoid including the files in this header
 class btCollisionShape;

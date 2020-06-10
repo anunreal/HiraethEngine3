@@ -2,9 +2,6 @@
 #define HE_BINARY_H
 
 #include "heTypes.h"
-#include <string>
-#include <fstream>
-#include <vector>
 
 struct HeBinaryBuffer {
     char*           ptr       = nullptr;

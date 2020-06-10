@@ -1,5 +1,5 @@
+#include "hepch.h"
 #include "heUtils.h"
-#include <fstream>
 
 std::string SPACE_CHARS = "\t\n\v\f\r";
 

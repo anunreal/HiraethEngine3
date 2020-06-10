@@ -3,9 +3,6 @@
 
 #include "heTypes.h"
 #include "heWindow.h"
-#include <string>
-#include <vector>
-#include <fstream>
 
 /* NOTE: ALL THESE FUNCTIONS ARE ONLY DEFINED IF HE_USE_WIN32 IS DEFINED */
 

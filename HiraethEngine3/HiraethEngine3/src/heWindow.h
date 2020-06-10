@@ -3,8 +3,6 @@
 
 #include "hm/hm.hpp"
 #include "heTypes.h"
-#include <map>
-#include <vector>
 
 struct HeWindow;
 

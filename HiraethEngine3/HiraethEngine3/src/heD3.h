@@ -4,7 +4,6 @@
 #include "heAssets.h"
 #include "hePhysics.h"
 #include "heUtils.h"
-#include <list>
 
 struct HeWindow; // forward declare to avoid include
 

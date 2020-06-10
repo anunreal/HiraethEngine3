@@ -2,7 +2,6 @@
 #define HE_ASSETS_H
 
 #include "heGlLayer.h"
-#include <fstream>
 
 // This struct is used for reading plain ascii files.
 struct HeTextFile {

@@ -1,9 +1,6 @@
 #ifndef HE_GL_LAYER_H
 #define HE_GL_LAYER_H
 
-#include <unordered_map>
-#include <vector>
-#include <string>
 #include "hm/hm.hpp"
 #include "heTypes.h"
 

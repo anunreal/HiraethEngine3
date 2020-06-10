@@ -1,10 +1,10 @@
+#include "hepch.h"
 #include "heAssets.h"
 #include "heLoader.h"
 #include "heWindow.h"
 #include "heUtils.h"
 #include "heCore.h"
 #include "heWin32Layer.h"
-#include <fstream>
 
 HeAssetPool heAssetPool;
 HeThreadLoader heThreadLoader;

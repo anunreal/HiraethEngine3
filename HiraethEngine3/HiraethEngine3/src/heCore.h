@@ -1,7 +1,6 @@
 #ifndef HE_CORE_H
 #define HE_CORE_H
 
-#include <string>
 #include "heTypes.h"
 
 // writes given message with the prefix into cout (thread safe) with the prefix before the message and a time stamp

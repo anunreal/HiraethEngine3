@@ -1,3 +1,4 @@
+#include "hepch.h"
 #include "heConsole.h"
 #include "heRenderer.h"
 #include "heWindow.h"

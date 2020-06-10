@@ -1,3 +1,4 @@
+#include "hepch.h"
 #include "heWin32Layer.h"
 #include "heCore.h"
 #include "heGlLayer.h"
@@ -5,9 +6,6 @@
 #include "glew/glew.h"
 #include "glew/wglew.h"
 #include "heAssets.h"
-#include <map>
-#include <iostream>
-#include <filesystem>
 
 #define WIN32_LEAN_AND_MEAN
 

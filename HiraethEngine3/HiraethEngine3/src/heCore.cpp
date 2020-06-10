@@ -1,8 +1,6 @@
+#include "hepch.h"
 #include "heCore.h"
 #include "heConsole.h"
-#include <ctime>
-#include <iostream>
-#include <vector>
 
 void heLogCout(std::string const& message, std::string const& prefix) { 
     // get time

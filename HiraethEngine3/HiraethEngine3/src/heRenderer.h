@@ -1,8 +1,6 @@
 #ifndef HE_RENDERER_H
 #define HE_RENDERER_H
 
-#include <string>
-#include <unordered_map>
 #include "heGlLayer.h"
 
 struct HeD3Level;

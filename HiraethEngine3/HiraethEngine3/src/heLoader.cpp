@@ -1,3 +1,4 @@
+#include "hepch.h"
 #include "heLoader.h"
 #include "heAssets.h"
 #include "heUtils.h"
@@ -5,7 +6,6 @@
 #include "heCore.h"
 #include "heBinary.h"
 #include "heWin32Layer.h"
-#include <fstream>
 #include <limits>
 
 void parseObjVertex(const int ids[3], HeD3MeshBuilder& mesh) {

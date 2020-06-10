@@ -5,7 +5,6 @@
 #include "src/heD3.h"
 #include "src/heWindow.h"
 #include "src/heRenderer.h"
-#include <map>
 
 #define USE_PHYSICS 1
 #define USE_NETWORKING 0

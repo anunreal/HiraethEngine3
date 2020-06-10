@@ -1,7 +1,6 @@
 #ifndef HE_CONVERTER_H
 #define HE_CONVERTER_H
 
-#include <string>
 #include "heTypes.h"
 
 struct HeTexture;

@@ -9,6 +9,8 @@
 #define HE_API __declspec(dllimport)
 #endif
 
+#include "hepch.h"
+
 // possible macro definitions:
 // HE_USE_WIN32
 // HE_USE_STBI

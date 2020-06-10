@@ -2,7 +2,6 @@
 #define HE_DEBUG_UTILS_H
 
 #include "heTypes.h"
-#include <string>
 #include "hm/colour.hpp"
 #include "heAssets.h"
 

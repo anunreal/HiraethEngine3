@@ -1,3 +1,5 @@
+#include "hepch.h"
+
 #ifdef HE_ENABLE_MEMORY_CHECK
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>

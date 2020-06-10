@@ -1,3 +1,4 @@
+#include "hepch.h"
 #include "heBinary.h"
 #include "heCore.h"
 #include "heLoader.h"

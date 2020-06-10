@@ -4,8 +4,6 @@
 #include "heTypes.h"
 #include "heAssets.h"
 #include "hm/hm.hpp"
-#include <string>
-#include <vector>
 
 struct HeRenderEngine; // avoid include
 struct HeWindow;
