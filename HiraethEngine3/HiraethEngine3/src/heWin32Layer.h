@@ -15,14 +15,23 @@ struct HeFileDescriptor {
     std::string type;
 };
 
+
+// registers a file monitor and returns the id of that monitor. This only has to be used when the same file has
+// multiple references (for example shader headers). When checking for file modification, use the index returned
+// as parameter so that every file reference receives the update at some point
+extern HE_API uint32_t heWin32RegisterFileMonitor(std::string const& file);
+// unregisters a file monitor by setting the entry to be free. Note that this will in fact not free any memory
+// (unless this is the last monitor in the list) but it will just mark the file monitor to be reusable for when
+// we next register one
+extern HE_API void heWin32FreeFileMonitor(std::string const& file, uint32_t const index);
 // returns true if the file was modified since the last time it was checked (with this function). If this is
 // the first time this file is checked, it is assumed to not have changed. From then on the last access time will
 // be stored
-extern HE_API b8 heWin32FileModified(std::string const& file);
+extern HE_API b8 heWin32FileModified(std::string const& file, uint32_t const index = 0);
 // returns true if the given file exists (relative or absolute path)
 extern HE_API b8 heWin32FileExists(std::string const& file);
-// adds the (relative) paths of all the files in given folder to the vector. If the given path does not exist or is not a folder,
-// the vector will not be modified. If recursive is true, all subfolders will be searched too
+// adds the (relative) paths of all the files in given folder to the vector. If the given path does not exist or
+// is not a folder, the vector will not be modified. If recursive is true, all subfolders will be searched too
 extern HE_API void heWin32FolderGetFiles(std::string const& folder, std::vector<HeFileDescriptor>& files, b8 const recursive);
 // creates a folder with given relative or absolute path if it doesnt exist
 extern HE_API void heWin32FolderCreate(std::string const& path);

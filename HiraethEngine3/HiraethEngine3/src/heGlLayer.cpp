@@ -74,10 +74,10 @@ void heUboDestroy(HeUbo* ubo) {
 
 // --- Shaders
 
-std::string heShaderLoadSource(std::string const& file, std::vector<std::string>& includeFiles);
+std::string heShaderLoadSource(std::string const& file, std::unordered_map<std::string, uint32_t>& includeFiles);
 
 // loads the source code of all include files specified in source and replaces the #include line with that code
-void heShaderLoadIncludeFiles(std::string& source, std::vector<std::string>& includeFiles) {
+void heShaderLoadIncludeFiles(std::string& source, std::unordered_map<std::string, uint32_t>& includeFiles) {
     size_t index = source.find('#');
     while(index != std::string::npos) {
         std::string line = source.substr(index);
@@ -91,14 +91,15 @@ void heShaderLoadIncludeFiles(std::string& source, std::vector<std::string>& inc
             file = file.substr(1, file.size() - 2);
             source.erase(index, line.size());
             source.insert(index, heShaderLoadSource(file, includeFiles));
-            includeFiles.emplace_back(file);
+
+            includeFiles[file] = heWin32RegisterFileMonitor(file);
         }
         
         index = source.find('#', index + 1);
     }
 };
 
-std::string heShaderLoadSource(std::string const& file, std::vector<std::string>& includeFiles) {
+std::string heShaderLoadSource(std::string const& file, std::unordered_map<std::string, uint32_t>& includeFiles) {
     HE_LOG("Loading shader file [" + file + "]");
     HeTextFile stream;
     stream.skipEmptyLines = false;
@@ -116,7 +117,7 @@ std::string heShaderLoadSource(std::string const& file, std::vector<std::string>
     return source;
 };
 
-std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string const& file, std::vector<std::string>& includeFiles) {
+std::unordered_map<HeShaderType, std::string> heShaderLoadSourceAll(std::string const& file, std::unordered_map<std::string, uint32_t>& includeFiles) {
     HE_LOG("Loading shader [" + file + "]");
     HeTextFile stream;
     stream.skipEmptyLines = false;
@@ -176,7 +177,7 @@ uint32_t heShaderLoadFromSource(std::string const& source, uint32_t type, std::s
         return id;
 };
 
-uint32_t heShaderLoadFromFile(std::string const& file, uint32_t type, std::vector<std::string>& includeFiles) {
+uint32_t heShaderLoadFromFile(std::string const& file, uint32_t type, std::unordered_map<std::string, uint32_t>& includeFiles) {
     std::string source = heShaderLoadSource(file, includeFiles);
     if(source.empty())
         return 0;
@@ -398,6 +399,9 @@ void heShaderReload(HeShaderProgram* program) {
     
     
     // reload shader
+    for(auto const& all : program->includeFiles)
+        heWin32FreeFileMonitor(all.first, all.second);
+
     program->includeFiles.clear();
     heShaderDestroy(program);
     
@@ -445,8 +449,8 @@ void heShaderCheckReload(HeShaderProgram* program) {
     }
     
 
-    for(std::string const& files : program->includeFiles) {
-        if(heWin32FileModified(files)) { // TODO(Victor): Add Platform abstraction!
+    for(auto const& files : program->includeFiles) {
+        if(heWin32FileModified(files.first, files.second)) { // TODO(Victor): Add Platform abstraction!
             needsReloading = true;
             break;
         }

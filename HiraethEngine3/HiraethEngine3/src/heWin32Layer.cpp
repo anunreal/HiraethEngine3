@@ -19,6 +19,11 @@ struct HeTimer {
     LARGE_INTEGER entries[maxScopes] = { 0 };
 } heTimer;
 
+struct HeFileTime {
+    FILETIME time;
+    b8 used = false;
+};
+
 struct HeWin32Window {
     // opengl stuff
     HGLRC context = nullptr;
@@ -28,9 +33,9 @@ struct HeWin32Window {
 
 
 // stores the last modification time of a file path
-typedef std::map<std::string, FILETIME> HeFileTimeMap;
+typedef std::unordered_map<std::string, std::vector<HeFileTime>> HeFileTimeMap;
 // stores a file handle to any possible file in this map for faster lookups
-typedef std::map<std::string, HANDLE>   HeFileHandleMap;
+typedef std::unordered_map<std::string, HANDLE>   HeFileHandleMap;
 
 HeFileTimeMap   timeMap;
 HeFileHandleMap handleMap;
@@ -56,9 +61,37 @@ std::map<HeWindow*, HeWin32Window> win32map;
 HeWindow*     heWindow = nullptr;
 HeWin32Window heWin32Window;
 #endif
+
+
+
 // --- File System
 
-b8 heWin32FileModified(const std::string& file) {
+uint32_t heWin32RegisterFileMonitor(std::string const& file) {
+    int32_t index = -1;
+    std::vector<HeFileTime>& vec = timeMap[file];
+
+    // search the list for reuasble indices
+    for(size_t i = 0; i < vec.size(); ++i) {
+        if(!vec[i].used) {
+            index = i;
+            break;
+        }
+    }
+    
+    if(index == -1) {
+        index = (uint32_t) vec.size(); 
+        vec.emplace_back();
+    }
+    
+    vec[index].used = true;
+    return (uint32_t) index;
+};
+
+void heWin32FreeFileMonitor(std::string const& file, uint32_t const index) {
+    timeMap[file][index].used = false;
+};
+
+b8 heWin32FileModified(const std::string& file, uint32_t const index) {
     auto it = handleMap.find(file);
     if(it == handleMap.end()) {
         // file was never requested before, load now
@@ -69,22 +102,28 @@ b8 heWin32FileModified(const std::string& file) {
                                    OPEN_EXISTING,
                                    FILE_ATTRIBUTE_NORMAL,
                                    NULL);
-        
+
         if(handle == INVALID_HANDLE_VALUE)
             HE_ERROR("Could not open file handle for time checking (" + file + ")");
         else {
             handleMap[file] = handle;
             FILETIME time;
             GetFileTime(handle, nullptr, nullptr, &time);
-            timeMap[file] = time;
+            if(timeMap[file].size() <= index)
+                timeMap[file].resize(index + 1);
+            timeMap[file][index].time = time;
+            timeMap[file][index].used = true;
         }
         return false;
     } else {
         FILETIME time;
         GetFileTime(handleMap[file], nullptr, nullptr, &time);
-        const FILETIME& last = timeMap[file];
+        FILETIME const& last = timeMap[file][index].time;
         b8 wasModified = (last.dwLowDateTime != time.dwLowDateTime || last.dwHighDateTime != time.dwHighDateTime);
-        timeMap[file] = time;
+        timeMap[file][index].time = time;
+        if(wasModified)
+            HE_LOG("File [" + file + "] modified for index [" + std::to_string(index) + "]");
+            
         return wasModified;
     }
 };
@@ -122,6 +161,7 @@ void heWin32FolderCreate(std::string const& folder) {
         index = next;
     }
 };
+
 
 // --- window stuff
 

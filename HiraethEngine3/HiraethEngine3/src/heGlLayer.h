@@ -34,8 +34,9 @@ struct HeShaderProgram {
     // all shader files will be checked for modification and then the shader might be reloaded
     std::vector<std::string> files;
     // work just like the normal files, except they get cleared everytime the shader gets loaded and filled at load
-    // time by parsing all the #include statements in the shader source
-    std::vector<std::string> includeFiles;
+    // time by parsing all the #include statements in the shader source. The index the files are mapped to are the
+    // index of the file monitor
+    std::unordered_map<std::string, uint32_t> includeFiles;
     // maps uniforms to the locations returned by gl. Every uniform has to be loaded once, then they will
     // be stored in the map for faster lookup.
     std::unordered_map<std::string, int32_t> uniforms;
