@@ -173,7 +173,7 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
 void heRenderEngineResize(HeRenderEngine* engine) {
     // resize only if the size has changed and its not 0 (minimized window)
     if(engine->window->resized && engine->window->windowInfo.size != hm::vec2i(0)) {
-        HE_DEBUG("Resizing...");
+        HE_DEBUG("Resizing to [" + hm::to_string(engine->window->windowInfo.size) + "]");
         heFboResize(&engine->hdrFbo, engine->window->windowInfo.size);
 
         if(engine->renderMode == HE_RENDER_MODE_DEFERRED)

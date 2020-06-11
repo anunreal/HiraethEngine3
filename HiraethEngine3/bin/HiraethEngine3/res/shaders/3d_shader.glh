@@ -71,7 +71,6 @@ float calculateShadows(vec3 normal, vec3 lightDirection) {
 	}
 	
 	return 1.0 - (shadowFactor / ((SIZE * 2 + 1) * (SIZE * 2 + 1))) * 0.7;
-	//return 0;
 }
 
 // for particles

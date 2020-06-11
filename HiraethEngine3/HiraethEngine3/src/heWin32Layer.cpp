@@ -71,7 +71,7 @@ uint32_t heWin32RegisterFileMonitor(std::string const& file) {
     std::vector<HeFileTime>& vec = timeMap[file];
 
     // search the list for reuasble indices
-    for(size_t i = 0; i < vec.size(); ++i) {
+    for(int32_t i = 0; i < (int32_t) vec.size(); ++i) {
         if(!vec[i].used) {
             index = i;
             break;
@@ -83,6 +83,29 @@ uint32_t heWin32RegisterFileMonitor(std::string const& file) {
         vec.emplace_back();
     }
     
+    HANDLE handle;
+    if(handleMap.find(file) == handleMap.end()) {
+        // file was never requested before, load now
+        handle = CreateFile(std::wstring(file.begin(), file.end()).c_str(),
+                            GENERIC_READ,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+
+        if(handle == INVALID_HANDLE_VALUE)
+            HE_ERROR("Could not open file handle for time checking (" + file + ")");
+        else {
+            handleMap[file] = handle;
+        }
+    } else
+        handle = handleMap[file];
+
+    FILETIME time;
+    GetFileTime(handle, nullptr, nullptr, &time);
+    vec[index].time = time;
+
     vec[index].used = true;
     return (uint32_t) index;
 };
@@ -245,6 +268,33 @@ LRESULT CALLBACK heWin32WindowCallback(HWND hwnd, UINT msg, WPARAM wparam, LPARA
             window->resized = true;
             break;
         };
+
+        case WM_ACTIVATEAPP: {
+            // called when this window is now activated or was actived and now a different window is about to be actived. When this happens (and we are in fullscreen), reset the display settings            
+            if(window->windowInfo.mode == HE_WINDOW_MODE_FULLSCREEN) {
+                DEVMODE fullscreenSettings;
+
+                EnumDisplaySettings(NULL, ENUM_REGISTRY_SETTINGS, &fullscreenSettings);
+
+                if(wparam) {
+                    fullscreenSettings.dmPelsHeight = window->windowInfo.size.y;
+                    fullscreenSettings.dmPelsWidth  = window->windowInfo.size.x;
+                    fullscreenSettings.dmBitsPerPel = 32;
+                    fullscreenSettings.dmSize       = sizeof(fullscreenSettings);
+                    fullscreenSettings.dmFields           = DM_PELSWIDTH |
+                        DM_PELSHEIGHT |
+                        DM_BITSPERPEL;
+                }
+                
+                SetWindowLongPtr(hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST);
+                SetWindowLongPtr(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+                SetWindowPos(hwnd, HWND_TOP, 0, 0, window->windowInfo.size.x, window->windowInfo.size.y, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+                int32_t error = ChangeDisplaySettings(&fullscreenSettings, CDS_FULLSCREEN);
+                if(error  != DISP_CHANGE_SUCCESSFUL) {
+                    //HE_ERROR("Could set display settings [" + std::to_string(error) + "]");
+                }
+            }
+        };
             
 #if HE_RAW_INPUT
         case WM_INPUT: {
@@ -365,7 +415,7 @@ b8 heWin32SetupClassInstance() {
         wex.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
         wex.hCursor = LoadCursor(NULL, IDC_ARROW);
         wex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-        wex.lpszClassName = L"Hiraeth2D";
+        wex.lpszClassName = L"HiraethEngine3";
         if (!RegisterClassEx(&wex)) {
             HE_ERROR("Win32: Could not setup windows class (" + std::to_string(GetLastError()) + ")");
             return false;
@@ -379,7 +429,7 @@ b8 heWin32SetupClassInstance() {
 
 void heWin32CreateDummyContext() {
     HWND dummy_window = CreateWindowExA(0,
-                                        "Hiraeth2D",
+                                        "HiraethEngine3",
                                         "Dummy OpenGL Window",
                                         0,
                                         CW_USEDEFAULT,
@@ -452,13 +502,22 @@ void heWin32CreateDummyContext() {
 
 
 b8 heWin32WindowCreateHandle(HeWindow* window, HeWin32Window* win32) {
-    DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME | WS_MAXIMIZEBOX;
-    
-    win32->handle = CreateWindowEx(
-                                   WS_EX_CLIENTEDGE,
-                                   L"Hiraeth2D", // class name
+    // caption: title bar
+    // sysmenu: window menu on the title bar
+
+    DWORD dwStyle = 0;
+    DWORD dwExStyle = 0;
+    if(window->windowInfo.mode == HE_WINDOW_MODE_WINDOWED) {
+        dwStyle = WS_OVERLAPPEDWINDOW;
+        dwExStyle = WS_EX_CLIENTEDGE;
+    } else if(window->windowInfo.mode == HE_WINDOW_MODE_BORDERLESS || window->windowInfo.mode == HE_WINDOW_MODE_FULLSCREEN) {
+        dwStyle = WS_POPUP;
+    }
+        
+    win32->handle = CreateWindowEx(dwExStyle,
+                                   L"HiraethEngine3", // class name
                                    (LPCWSTR)window->windowInfo.title.c_str(), // window name
-                                   CS_OWNDC | dwStyle,
+                                   CS_OWNDC | WS_VISIBLE | dwStyle,
                                    CW_USEDEFAULT,
                                    CW_USEDEFAULT,
                                    window->windowInfo.size.x,
@@ -538,7 +597,7 @@ b8 heWin32IsMainThread() {
 
 b8 heWin32WindowCreate(HeWindow* window) {
     HeWin32Window* win32;
-    
+
 #ifdef HE_ENABLE_MULTIPLE_WINDOWS
     win32 = &win32map[window];
     windowHandleMap[win32->handle] = window;
@@ -546,6 +605,14 @@ b8 heWin32WindowCreate(HeWindow* window) {
     win32 = &heWin32Window;
     heWindow = window;
 #endif
+    
+    if(window->windowInfo.size.x == 0 || window->windowInfo.mode == HE_WINDOW_MODE_BORDERLESS)
+        window->windowInfo.size.x = GetSystemMetrics(SM_CXSCREEN);
+
+    if(window->windowInfo.size.y == 0 || window->windowInfo.mode == HE_WINDOW_MODE_BORDERLESS)
+        window->windowInfo.size.y = GetSystemMetrics(SM_CYSCREEN);
+
+    hm::vec2i origSize = window->windowInfo.size;
     
     if (!heWin32SetupClassInstance())
         return false;
@@ -560,6 +627,9 @@ b8 heWin32WindowCreate(HeWindow* window) {
         heWindowEnableVsync(1);
     else
         heWindowEnableVsync(0);
+
+    if(window->windowInfo.mode == HE_WINDOW_MODE_FULLSCREEN)
+        heWin32WindowToggleFullscreen(window, origSize, true);
     
 #ifdef HE_RAW_INPUT
     heWin32registerMouseInput(win32);
@@ -683,6 +753,31 @@ hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window) {
         return hm::vec2i(0);
 };
 
+void heWin32WindowToggleFullscreen(HeWindow* window, hm::vec2i const& size, b8 const fullscreen, uint32_t const monitor) {
+    HeWin32Window* win32 = heWin32GetWindow(window);
+
+    DEVMODE fullscreenSettings;
+
+    EnumDisplaySettings(NULL, 0, &fullscreenSettings);
+    fullscreenSettings.dmPelsHeight = size.y;
+    fullscreenSettings.dmPelsWidth  = size.x;
+    fullscreenSettings.dmBitsPerPel = 32;
+    fullscreenSettings.dmSize       = sizeof(fullscreenSettings);
+    fullscreenSettings.dmFields     = DM_PELSWIDTH |
+        DM_PELSHEIGHT |
+        DM_BITSPERPEL;
+
+    SetWindowLongPtr(win32->handle, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST);
+    SetWindowLongPtr(win32->handle, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+    SetWindowPos(win32->handle, HWND_TOP, 0, 0, size.x, size.y, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    int32_t error = ChangeDisplaySettings(&fullscreenSettings, CDS_FULLSCREEN);
+    if(error != DISP_CHANGE_SUCCESSFUL)
+        HE_DEBUG("Could not enable fullscreen [" + std::to_string(error) + "] (requested size: " + hm::to_string(size) + ")");
+    ShowWindow(win32->handle, SW_MAXIMIZE);
+};
+
+
+// -- timer
 
 void heWin32TimerStart() {
     if(heTimer.frequency.QuadPart == 0)
@@ -713,6 +808,8 @@ double heWin32TimeCalculateMs(__int64 duration) {
     return duration * 1000.0 / heTimer.frequency.QuadPart;
 };
 
+
+// -- utils
 
 std::string heWin32ClipboardGet() {
     if(!OpenClipboard(NULL))

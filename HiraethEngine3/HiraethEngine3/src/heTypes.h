@@ -252,6 +252,12 @@ typedef enum HeParticleEmitterType {
     HE_PARTICLE_EMITTER_TYPE_POINT,
 } HeParticleEmitterType;
 
+typedef enum HeWindowMode {
+    HE_WINDOW_MODE_WINDOWED,
+    HE_WINDOW_MODE_BORDERLESS,
+    HE_WINDOW_MODE_FULLSCREEN
+} HeWindowMode;
+
 // a small macro to enable bitwise operations on enums
 #define HE_ENABLE_BIT(T) inline T operator| (T a, T b) { return (T)((int) a | (int) b); }; \
     inline T operator& (T a, T b) { return (T)((int) a & (int) b); };   \

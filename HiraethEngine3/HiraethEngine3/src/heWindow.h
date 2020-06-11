@@ -18,18 +18,17 @@ typedef b8(*HeWindowKeyPressCallback)   (HeWindow*, HeKeyCode const);
 typedef b8(*HeWindowMouseScrollCallback)(HeWindow*, int8_t const, hm::vec2i const&);
 
 struct HeWindowInfo {
-    // the background colour of the window
+    HeWindowMode mode;
     hm::colour   backgroundColour;
     // the size of the window, in pixels
-    hm::vec2i    size;
-    // the name of the window
+    hm::vec2i    size = hm::vec2i(0);
+    // the title of the window
     std::wstring title   = L"";
     // maximum fps allowed. If this is set to 0, the framerate is not limited (high cpu usage!)
     uint16_t fpsCap  = 0;
     // samples used for one pixel. If this is left at 1, no multisampling will be used. The higher this value,
     // the smoother the result will be at a higher performance and memory cost
     uint8_t samples = 1;
-    // if this is true, vsync is enabled and the fps cap is ignored
     b8 vsync = false;
     // width : height. Updated everytime the window gets resized
     float aspectRatio = 0;

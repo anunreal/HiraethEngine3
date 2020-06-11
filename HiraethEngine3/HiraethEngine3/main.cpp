@@ -26,6 +26,7 @@ void toggleMenuMode(b8 const menuOpen) {
         app.state = GAME_STATE_PAUSED;
     } else {
         heWindowToggleCursor(false);
+        heWindowSetCursorPosition(&app.window, hm::vec2f(-.5f));
         app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
         app.state = GAME_STATE_INGAME;
     }
@@ -188,8 +189,9 @@ int main() {
     HeWindowInfo windowInfo;
 	windowInfo.title			= L"He3 Test";
 	windowInfo.backgroundColour = hm::colour(135, 206, 235);
-	windowInfo.fpsCap			= 62;
-	windowInfo.size				= hm::vec2i(1366, 768);
+	windowInfo.fpsCap			= 70;
+	windowInfo.size				= hm::vec2i(0);
+    windowInfo.mode             = HE_WINDOW_MODE_BORDERLESS;
 	app.window.windowInfo		= windowInfo;	
     heWindowCreate(&app.window);
     

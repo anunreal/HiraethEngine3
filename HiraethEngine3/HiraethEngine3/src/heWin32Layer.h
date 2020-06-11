@@ -44,6 +44,7 @@ extern HE_API b8 heWin32SetupClassInstance();
 // creates a dummy context needed for retrieving function pointers (context creation with attributes...)
 extern HE_API void heWin32CreateDummyContext();
 
+// returns true if the thread that calls this method is the thread that the window was created in
 extern HE_API b8 heWin32IsMainThread();
 extern HE_API b8 heWin32WindowCreate(HeWindow* window);
 extern HE_API void heWin32WindowUpdate(HeWindow* window);
@@ -53,9 +54,10 @@ extern HE_API void heWin32WindowSwapBuffers(HeWindow const* window);
 extern HE_API void heWin32WindowToggleCursor(b8 const visible);
 extern HE_API void heWin32WindowSetCursorPosition(HeWindow* window, hm::vec2f const& position);
 extern HE_API hm::vec2i heWin32WindowCalculateBorderSize(HeWindow const* window);
+extern HE_API void heWin32WindowToggleFullscreen(HeWindow* window, hm::vec2i const& size, b8 const fullScreen, uint32_t const monitor = 0);
 
 
-// -- basic profiler
+// -- basic timer
 
 // starts a new time entry
 extern HE_API void heWin32TimerStart();
@@ -68,6 +70,7 @@ extern HE_API inline __int64 heWin32TimeGet();
 // calculates the given duration in cycles into milliseconds. The duration should be calculated using two different
 // heWin32TimeGet() calls
 extern HE_API inline double heWin32TimeCalculateMs(__int64 duration);
+
 
 // -- utils
 
