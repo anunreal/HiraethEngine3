@@ -344,6 +344,9 @@ void heShaderUnbind() {
 };
 
 void heShaderDestroy(HeShaderProgram* program) {
+    if(program == nullptr)
+        return;
+
     glDeleteProgram(program->programId);
     program->programId = 0;
     program->uniforms.clear();
@@ -711,6 +714,7 @@ void heVaoCreate(HeVao* vao, HeVaoType const type) {
     glGenVertexArrays(1, &vao->vaoId);
     vao->type = type;
     vao->attributeCount = 0;
+    //vao->vbos.clear();
     
 #ifdef HE_ENABLE_NAMES
     glBindVertexArray(vao->vaoId); // we have to bind it so that its valid for naming
@@ -1551,7 +1555,7 @@ void heTextureUnbind(int8_t const slot, b8 const cubeMap) {
 
 void heTextureDestroy(HeTexture* texture) {
     HE_CRASH_LOG();
-    if(--texture->referenceCount == 0) {
+    if(texture && --texture->referenceCount == 0) {
         heMemoryTracker[HE_MEMORY_TYPE_TEXTURE] -= texture->memory;
         glDeleteTextures(1, &texture->textureId);
         texture->textureId = 0;

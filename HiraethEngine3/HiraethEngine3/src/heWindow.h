@@ -26,9 +26,6 @@ struct HeWindowInfo {
     std::wstring title   = L"";
     // maximum fps allowed. If this is set to 0, the framerate is not limited (high cpu usage!)
     uint16_t fpsCap  = 0;
-    // samples used for one pixel. If this is left at 1, no multisampling will be used. The higher this value,
-    // the smoother the result will be at a higher performance and memory cost
-    uint8_t samples = 1;
     b8 vsync = false;
     // width : height. Updated everytime the window gets resized
     float aspectRatio = 0;

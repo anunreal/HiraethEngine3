@@ -1,6 +1,6 @@
 #include "hepch.h"
 
-#ifdef HE_ENABLE_MEMORY_CHECK
+#ifdef HE_ENABLE_MEMORY_CHECKING
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
@@ -122,17 +122,16 @@ void enterGameState() {
     heD3LevelLoad("res/level/level0.h3level", &app.level, USE_PHYSICS, true);
     heD3LevelGetInstance(&app.level, 13)->material->emission = hm::colour(255, 0, 0, 255, 10); // suzanne
     app.level.camera.frustum.viewInfo.fov = 90;
-    heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png", 2, 2, 4); // load and set up once so we can use it later
-    
+    /*
     HeParticleSource* lampParticles = &app.level.particles.emplace_back();
     lampParticles->maxNewParticlesPerUpdate = 10;
-    lampParticles->gravity = 0.f;
-    lampParticles->additive = false;
-    lampParticles->emitter.type = HE_PARTICLE_EMITTER_TYPE_BOX;
-    lampParticles->emitter.box = hm::vec3f(0.6f);
-    lampParticles->emitter.maxSpeed = lampParticles->emitter.minSpeed = 0.f;
+    lampParticles->gravity           = 0.f;
+    lampParticles->additive          = false;
+    lampParticles->emitter.type      = HE_PARTICLE_EMITTER_TYPE_BOX;
+    lampParticles->emitter.box       = hm::vec3f(0.6f);
+    lampParticles->emitter.maxSpeed  = lampParticles->emitter.minSpeed = 0.f;
     lampParticles->emitter.maxColour = lampParticles->emitter.minColour = hm::colour(255, 7.f);
-    lampParticles->enableShadows = false;
+    lampParticles->enableShadows     = false;
     heParticleSourceCreate(lampParticles, HeD3Transformation(hm::vec3f(-3.07f, 4.07f, -2.03f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 3, 200);
 
     HeParticleSource* dustParticles = &app.level.particles.emplace_back();
@@ -149,7 +148,7 @@ void enterGameState() {
     dustParticles->emitter.minColour = hm::colour(20, 3.f);
     dustParticles->emitter.maxColour = hm::colour(100, 3.f);
     heParticleSourceCreate(dustParticles, HeD3Transformation(hm::vec3f(0.f, .75f, 0.f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 0, 200);
-
+    */
 #if USE_PHYSICS == 1
 	HePhysicsShapeInfo actorShape;
 	actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
@@ -159,7 +158,7 @@ void enterGameState() {
 	actorInfo.eyeOffset = 1.6f;
 	
 	hePhysicsActorCreate(&app.actor, actorShape, actorInfo);
-	hePhysicsLevelSetActor(&app.level.physics, &app.actor);
+    hePhysicsLevelSetActor(&app.level.physics, &app.actor);
 	hePhysicsActorSetEyePosition(&app.actor, hm::vec3f(-5.f, 0.1f, 5.f));
 #endif
 
@@ -178,36 +177,35 @@ void enterGameState() {
 };
 
 int main() {
-#ifdef HE_ENABLE_MEMORY_CHECK
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+#ifdef HE_ENABLE_MEMORY_CHECKING
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
 #endif
 
-    // create engine
-    heWin32TimerStart(); // total
-    heWin32TimerStart(); // engine
-    HeWindowInfo windowInfo;
-	windowInfo.title			= L"He3 Test";
+	// create engine
+	heWin32TimerStart(); // total
+	heWin32TimerStart(); // engine
+	HeWindowInfo windowInfo;
+	windowInfo.title = L"He3 Test";
 	windowInfo.backgroundColour = hm::colour(135, 206, 235);
-	windowInfo.fpsCap			= 70;
-	windowInfo.size				= hm::vec2i(0);
-    windowInfo.mode             = HE_WINDOW_MODE_BORDERLESS;
-	app.window.windowInfo		= windowInfo;	
-    heWindowCreate(&app.window);
-    
+	windowInfo.fpsCap = 70;
+	windowInfo.size = hm::vec2i(1280, 720);
+	windowInfo.mode = HE_WINDOW_MODE_WINDOWED;
+	app.window.windowInfo = windowInfo;
+	heWindowCreate(&app.window);
 	heGlPrintInfo();
-	
-    app.engine.renderMode = HE_RENDER_MODE_FORWARD;
+
+	app.engine.renderMode = HE_RENDER_MODE_FORWARD;
 	heRenderEngineCreate(&app.engine, &app.window);
 	hePostProcessEngineCreate(&app.engine.postProcess, &app.window);
-	heRenderEngine = &app.engine;
-    
+	heUiCreate(&app.engine);
+
     // set shit up
     HeScaledFont font;
     heFontCreateScaled(heAssetPoolGetFont("inconsolata"), &font, 13);
-    heConsoleCreate(heAssetPoolGetFont("inconsolata"));
+    heConsoleCreate(&app.engine, heAssetPoolGetFont("inconsolata"));
 	heProfilerCreate(heAssetPoolGetFont("inconsolata"));
-    heUiCreate();
+    heUiCreate(&app.engine);
     heWin32TimerPrint("ENGINE STARTUP");    
     
     enterGameState();

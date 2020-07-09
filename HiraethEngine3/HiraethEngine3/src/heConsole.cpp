@@ -29,6 +29,7 @@ struct HeConsole {
     std::vector<HeConsoleCommand> commands;
     int32_t backlogIndex = 0; // the index of the message that should be drawn first (lowest on screen)
 
+    HeRenderEngine* engine = nullptr;
     HeTextInput input;
 };
 
@@ -52,11 +53,12 @@ b8 heConsoleScrollCallback(HeWindow* window, int8_t const direction, hm::vec2i c
 };
 
 
-void heConsoleCreate(HeFont* backlogFont) {
+void heConsoleCreate(HeRenderEngine* engine, HeFont* backlogFont) {
     heFontCreateScaled(backlogFont, &heConsole.input.font, BACK_LOG_FONT_SIZE);
-    heRenderEngine->window->mouseInfo.scrollCallbacks.emplace_back(&heConsoleScrollCallback);
+    engine->window->mouseInfo.scrollCallbacks.emplace_back(&heConsoleScrollCallback);
     heRegisterCommands();
 
+    heConsole.engine = engine;
     heConsole.input.description = "command";
     
     // set auto complete options
@@ -94,7 +96,7 @@ void heConsoleOpen(HeConsoleState const state) {
     }
 
     heConsole.state = state;
-    heConsoleUpdateSize((float) heRenderEngine->window->frameTime);
+    heConsoleUpdateSize((float) heConsole.engine->window->frameTime);
 };
 
 void heConsoleToggleOpen(HeConsoleState const state) {

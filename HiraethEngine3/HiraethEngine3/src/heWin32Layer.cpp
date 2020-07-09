@@ -20,7 +20,7 @@ struct HeTimer {
 } heTimer;
 
 struct HeFileTime {
-    FILETIME time;
+    FILETIME time = FILETIME();
     b8 used = false;
 };
 
@@ -133,7 +133,7 @@ b8 heWin32FileModified(const std::string& file, uint32_t const index) {
             FILETIME time;
             GetFileTime(handle, nullptr, nullptr, &time);
             if(timeMap[file].size() <= index)
-                timeMap[file].resize(index + 1);
+                timeMap[file].resize((size_t) (index + 1));
             timeMap[file][index].time = time;
             timeMap[file][index].used = true;
         }

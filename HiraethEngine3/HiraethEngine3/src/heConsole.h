@@ -7,7 +7,7 @@
 struct HeRenderEngine; // avoid include
 
 // sets up the ingame console with the given font
-extern HE_API void heConsoleCreate(HeFont* backlogFont);
+extern HE_API void heConsoleCreate(HeRenderEngine* engine, HeFont* backlogFont);
 // sets the next state of the console. The console will interpolate to that state now
 extern HE_API void heConsoleOpen(HeConsoleState const state);
 // if the current state of the console is already state, this will close the console. Else this will set the new

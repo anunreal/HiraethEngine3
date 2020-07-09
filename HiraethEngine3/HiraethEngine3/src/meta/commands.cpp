@@ -65,20 +65,6 @@ void front_command_set_gamma(std::vector<std::string> const& args) {
 };
 
 
-void command_set_name(std::string const& name) {
-	 strcpy_s(app.ownName, name.c_str());
-};
-
-void front_command_set_name(std::vector<std::string> const& args) {
-	if(args.size() != 1) {
-		heConsolePrint("Error: set_name requires 1 arguments");
-		return;
-	};
-	std::string i0 = args[0];
-	command_set_name(i0);
-};
-
-
 void command_teleport(hm::vec3f const& position) {
 	 if(heD3Level->physics.actor) {
 		  hePhysicsActorSetPosition(heD3Level->physics.actor, position);
@@ -100,8 +86,9 @@ void front_command_teleport(std::vector<std::string> const& args) {
 void command_toggle_physics_debug() {
 	if(heD3Level->physics.enableDebugDraw)
 		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
-	else
-		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
+	/*else
+		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, render_engine);
+    */
 };
 
 void front_command_toggle_physics_debug(std::vector<std::string> const& args) {
@@ -297,7 +284,6 @@ void command_help() {
 	heConsolePrint("> set_jumpheight float: height");
 	heConsolePrint("> set_exposure float: f");
 	heConsolePrint("> set_gamma float: g");
-	heConsolePrint("> set_name string: name");
 	heConsolePrint("> teleport vec3: position");
 	heConsolePrint("> toggle_physics_debug ");
 	heConsolePrint("> toggle_profiler ");
@@ -327,7 +313,6 @@ void heRegisterCommands() {
 	heConsoleRegisterCommand("set_jumpheight", &front_command_set_jumpheight);
 	heConsoleRegisterCommand("set_exposure", &front_command_set_exposure);
 	heConsoleRegisterCommand("set_gamma", &front_command_set_gamma);
-	heConsoleRegisterCommand("set_name", &front_command_set_name);
 	heConsoleRegisterCommand("teleport", &front_command_teleport);
 	heConsoleRegisterCommand("toggle_physics_debug", &front_command_toggle_physics_debug);
 	heConsoleRegisterCommand("toggle_profiler", &front_command_toggle_profiler);

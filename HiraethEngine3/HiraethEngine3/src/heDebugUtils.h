@@ -126,17 +126,4 @@ extern HE_API void heProfilerRender(HeRenderEngine* engine);
 // toggles whether the profiler is visible
 extern HE_API inline void heProfilerToggleDisplay();
 
-
-// -- commands
-
-// tries to run a command. These commands are mainly for dynamic debugging (print debug info, set variables...).
-// If this is no valid command, false is returned
-extern HE_API b8 heCommandRun(std::string const& command);
-// runs a thread that checks the console for input and then runs commands. This must be run in a seperate thread as
-// it will block io. The function will run as long as running is true. If running is a nullptr, the function will
-// run until the application closes
-extern HE_API void heCommandThread(b8* running);
-// print all errors in the queue (see heErrorSaveAll())
-extern HE_API void heErrorsPrint();
-
 #endif //HE_DEBUG_UTILS_H

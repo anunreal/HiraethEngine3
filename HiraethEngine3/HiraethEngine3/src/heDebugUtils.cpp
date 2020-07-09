@@ -53,7 +53,8 @@ void heDebugRequestInfo(const HeDebugInfoFlags flags) {
         heDebugPrint(string);
         heDebugPrint("=== CAMERA ===");
     }
-    
+
+    /*
     if(flags & HE_DEBUG_INFO_ENGINE) {
         heDebugPrint("=== ENGINE ===\n");
         if(heRenderEngine->renderMode == HE_RENDER_MODE_DEFERRED) {
@@ -63,6 +64,7 @@ void heDebugRequestInfo(const HeDebugInfoFlags flags) {
         }
         heDebugPrint("=== ENGINE ===");
     }
+    */
 
     if(flags & HE_DEBUG_INFO_MEMORY) {
         heDebugPrint("=== MEMORY ===");

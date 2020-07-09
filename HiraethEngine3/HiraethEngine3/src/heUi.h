@@ -49,7 +49,7 @@ struct HeUiPanel {
 };
 
 // sets up the ui system. This will hook up the input callbacks
-extern HE_API void heUiCreate();
+extern HE_API void heUiCreate(HeRenderEngine* engine);
 // sets the active text input. Only one text input can be typed in at a time. If no text input should be active,
 // pass a nullptr as input
 extern HE_API void heUiSetActiveInput(HeTextInput* input);

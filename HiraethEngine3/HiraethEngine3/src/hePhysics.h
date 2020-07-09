@@ -18,6 +18,7 @@ class btBroadphaseInterface;
 class btSequentialImpulseConstraintSolver;
 class btDiscreteDynamicsWorld;
 class btTriangleMesh;
+class btGhostPairCallback;
 
 struct HeD3Transformation;
 struct HeRenderEngine;
@@ -91,6 +92,7 @@ struct HePhysicsLevel {
     btBroadphaseInterface*               broadphase = nullptr;
     btSequentialImpulseConstraintSolver* solver     = nullptr;
     btDiscreteDynamicsWorld*             world      = nullptr;
+    btGhostPairCallback*                 ghostPair  = nullptr;
     b8 ghostPairCallbackSet = false;
     b8 enableDebugDraw      = false;    
     b8 setup                = false;

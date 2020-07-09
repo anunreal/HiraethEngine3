@@ -318,6 +318,9 @@ void heFontLoad(HeFont* font, std::string const& name) {
     HE_LOG("Loading font [" + name + "]");
     HeTextFile file;
     heTextFileOpen(&file, "res/fonts/" + name + ".fnt", 0);
+
+    if(!file.open)
+        return;
     
 #ifdef HE_ENABLE_NAMES
     font->name = name;

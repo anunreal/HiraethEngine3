@@ -19,9 +19,6 @@ void command_set_gamma(float g) {
 	 heD3Level->camera.gamma = g;
 };
 
-void command_set_name(std::string const& name) {
-	 strcpy_s(app.ownName, name.c_str());
-};
 
 void command_teleport(hm::vec3f const& position) {
 	 if(heD3Level->physics.actor) {
@@ -34,8 +31,9 @@ void command_teleport(hm::vec3f const& position) {
 void command_toggle_physics_debug() {
 	if(heD3Level->physics.enableDebugDraw)
 		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
-	else
-		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, heRenderEngine);
+	/*else
+		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, render_engine);
+    */
 };
 
 void command_toggle_profiler() {

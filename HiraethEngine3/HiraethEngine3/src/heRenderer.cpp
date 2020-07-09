@@ -13,7 +13,6 @@ struct HeD3RenderInfo {
 
 HeUiTextManager heTextManager;
 HeD3RenderInfo heD3RenderInfo; // info for the current frame, set when rendering i.e. a d3 level, used in the final pass
-HeRenderEngine* heRenderEngine = nullptr;
 
 void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window) {
 #ifdef HE_ENABLE_NAMES
@@ -55,17 +54,18 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     engine->shapes.cubeVao->name     = "cubeVao";
     engine->shapes.sphereVao->name   = "sphereVao";
     engine->shapes.particleVao->name = "particleVao";
-    engine->deferred.gBufferFbo.name = "gbufferFbo";
-    engine->forward.forwardFbo.name  = "forwardFbo";
+    if(engine->renderMode == HE_RENDER_MODE_DEFERRED)
+        engine->deferred.gBufferFbo.name = "gbufferFbo";
+    else if(engine->renderMode == HE_RENDER_MODE_FORWARD)
+        engine->forward.forwardFbo.name  = "forwardFbo";
 #endif
 
     // common
-    engine->window = window;
+    engine->window        = window;
     engine->textureShader = heAssetPoolGetShader("gui_texture");
     // load samplers
     heShaderGetSamplerLocation(engine->textureShader, "t_d2Tex", 0);
     heShaderGetSamplerLocation(engine->textureShader, "t_cubeTex", 1);
-
     engine->rgbaShader    = heAssetPoolGetShader("gui_rgba");
     
     // quad vao
@@ -132,9 +132,8 @@ void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
     heVaoAllocateInstancedAttribute(engine->shapes.particleVao, 6, 4, HeParticleSource::FLOATS_PER_PARTICLE, 20); // uvs
     engine->particleShader = heAssetPoolGetShader("3d_particles");
     
-    // ui
     heUiQueueCreate(&engine->uiQueue);
-    
+
     // d3       
     engine->shadowShader    = heAssetPoolGetShader("3d_shadow");
     engine->skyboxShader    = heAssetPoolGetShader("3d_skybox");
@@ -213,9 +212,11 @@ void heRenderEngineDestroy(HeRenderEngine* engine) {
     }   
 
     heUboDestroy(&engine->forward.lightsUbo);
-    heUiQueueDestroy(&engine->uiQueue);
-    
+
     // destroy ui and post process
+    if (engine->uiQueue.initialized)
+        heUiQueueDestroy(&engine->uiQueue);
+    
     if(engine->postProcess.initialized)
         hePostProcessEngineDestroy(&engine->postProcess);
 };
@@ -240,7 +241,7 @@ void heShaderLoadMaterial(HeRenderEngine* engine, HeShaderProgram* shader, HeMat
         heShaderLoadUniform(shader, "u_" + uniforms.first, &uniforms.second);
 
     heShaderLoadUniform(shader, "u_emission", material->emission);
-    if(heRenderEngine->renderMode == HE_RENDER_MODE_DEFERRED)
+    if(engine->renderMode == HE_RENDER_MODE_DEFERRED)
         heShaderLoadUniform(shader, "u_materialType", material->type);
 };
 
@@ -546,8 +547,20 @@ void heD3LevelRenderForward(HeRenderEngine* engine, HeD3Level* level) {
         heShaderBind(engine->particleShader);
         heShaderLoadUniform(engine->particleShader, "u_projMat", level->camera.projectionMatrix);
         heShaderLoadUniform(engine->particleShader, "u_viewMat", level->camera.viewMatrix);
-        heShaderLoadUniform(engine->particleShader, "u_shadowSpace", level->lights.begin()->shadows.shadowSpaceMatrix);
-        heTextureBind(level->lights.begin()->shadows.depthFbo.depthAttachment.id, heShaderGetSamplerLocation(engine->particleShader, "t_shadowMap"));
+
+        HeD3ShadowMap* map = nullptr;
+        for (auto lights = level->lights.begin(); lights != level->lights.end(); ++lights) {
+            if (lights->castShadows) {
+                map = &lights->shadows;
+                break;
+            }
+        }
+
+        if (map) {
+            heShaderLoadUniform(engine->particleShader, "u_shadowSpace", map->shadowSpaceMatrix);
+            heTextureBind(map->depthFbo.depthAttachment.id, heShaderGetSamplerLocation(engine->particleShader, "t_shadowMap"));
+        }
+
         for (auto const& all : level->particles)
             heParticleSourceRenderForward(engine, &all, level);    
     }
@@ -655,7 +668,6 @@ void hePostProcessBloomPass(HeRenderEngine* engine) {
 };
 
 
-
 void heUiQueueCreate(HeUiQueue* queue) {
     // lines
 #ifdef HE_ENABLE_NAMES
@@ -666,7 +678,6 @@ void heUiQueueCreate(HeUiQueue* queue) {
     
     heVaoCreate(&queue->linesVao, HE_VAO_TYPE_LINES);
     heVaoBind(&queue->linesVao);
-    HeVbo vbo;
     heVaoAllocate(&queue->linesVao, 0, 4, HE_VBO_USAGE_DYNAMIC); // coordinates (2 or 3), w component indicates 2d (0) or 3d (1)
     heVaoAllocate(&queue->linesVao, 0, 1, HE_VBO_USAGE_DYNAMIC, HE_DATA_TYPE_UINT); // colour
     heVaoAllocate(&queue->linesVao, 0, 1, HE_VBO_USAGE_DYNAMIC); // width
@@ -689,6 +700,8 @@ void heUiQueueCreate(HeUiQueue* queue) {
     heVaoAllocate(&queue->quadsVao, 0, 2, HE_VBO_USAGE_DYNAMIC);
     heVaoAllocate(&queue->quadsVao, 0, 1, HE_VBO_USAGE_DYNAMIC, HE_DATA_TYPE_UINT);
     heVaoUnbind(&queue->quadsVao);
+
+    queue->initialized = true;
 };
 
 void heUiQueueDestroy(HeUiQueue* queue) {

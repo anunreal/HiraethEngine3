@@ -61,6 +61,8 @@ struct HeUiColouredQuad {
 };
 
 struct HeUiQueue {
+    b8 initialized = false;
+
     HeVao linesVao;
     HeShaderProgram* linesShader = nullptr;
     std::vector<HeUiLine> lines;
@@ -138,9 +140,6 @@ struct HeRenderEngine {
     HeRenderMode renderMode = HE_RENDER_MODE_FORWARD;
     HePostProcessEngine postProcess;
 };
-
-// the current active render engine. Can be set and (then) used at any time
-extern HeRenderEngine* heRenderEngine;
 
 
 // -- render engine

@@ -1,7 +1,5 @@
 #include "hepch.h"
 #include "hePhysics.h"
-#include "GLEW/glew.h"
-#include "GLEW/wglew.h"
 #include "heD3.h"
 #include "heCore.h"
 #include "heRenderer.h"
@@ -55,7 +53,6 @@ btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
             s->addPoint(btVector3(v.x, v.y, v.z), true);
         }
         
-        //s->addPoint(btVector3((shape->mesh.end() - 1)->x, (shape->mesh.end() - 1)->y, (shape->mesh.end() - 1)->z), true);
         bt = s;        
         break;
     }
@@ -144,6 +141,8 @@ void hePhysicsLevelDestroy(HePhysicsLevel* level) {
         level->world->removeCollisionObject(level->actor->ghost);
         level->world->removeAction(level->actor->controller);
         hePhysicsActorDestroy(level->actor);
+        delete level->ghostPair;
+        level->ghostPair = nullptr;
     }
     
     delete level->world;
@@ -173,9 +172,9 @@ void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor* actor) {
         level->world->removeAction(level->actor->controller);
         level->actor = nullptr;
     } else {
-        if(!level->ghostPairCallbackSet) {
-            level->broadphase->getOverlappingPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
-            level->ghostPairCallbackSet = true;
+        if(!level->ghostPair) {
+            level->ghostPair = new btGhostPairCallback();
+            level->broadphase->getOverlappingPairCache()->setInternalGhostPairCallback(level->ghostPair);
         }
         
         level->world->addCollisionObject(actor->ghost, btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);

@@ -253,6 +253,10 @@ void heD3LevelUpdate(HeD3Level* level, float const delta) {
 
 void heD3LevelDestroy(HeD3Level* level) {
     hePhysicsLevelDestroy(&level->physics);
+
+    level->instances.clear();
+    level->lights.clear();
+    level->particles.clear();
 };
 
 HeD3Instance* heD3LevelGetInstance(HeD3Level* level, uint16_t const index) {
@@ -395,7 +399,6 @@ void heParticleSourceUpdate(HeParticleSource* source, float const delta, HeD3Lev
         if(particle->remaining > 0.f) {
             particle->velocity.y -= source->gravity * delta;
             particle->transformation.position += particle->velocity * delta;
-
         } else {
             heParticleSourceSpawnParticle(&source->emitter, particle);
             created++;

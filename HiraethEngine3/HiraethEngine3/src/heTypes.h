@@ -3,10 +3,14 @@
 
 #pragma warning( disable : 26812 ) // use enum classes over enum typedefs
 
+#ifdef HE_DYNAMIC_LINKING
 #ifdef HE_EXPORTS
 #define HE_API __declspec(dllexport)
 #else
 #define HE_API __declspec(dllimport)
+#endif
+#else
+#define HE_API
 #endif
 
 #include "hepch.h"
@@ -173,7 +177,6 @@ typedef enum HeFrameBufferBits {
     HE_FRAME_BUFFER_BIT_STENCIL = 0x0400
 } HeFrameBufferBits;
 
-// functions for depth and stencil tests
 typedef enum HeFragmentTestFunction {
     // always passes
     HE_FRAGMENT_TEST_ALWAYS = 0x0207,

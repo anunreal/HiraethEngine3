@@ -151,9 +151,9 @@ b8 heKeyPressCallback(HeWindow* window, HeKeyCode const input) {
 };
 
 
-void heUiCreate() {
-    heRenderEngine->window->keyboardInfo.textInputCallbacks.emplace_back(&heTextInputCallback);
-    heRenderEngine->window->keyboardInfo.keyPressCallbacks.emplace_back(&heKeyPressCallback);   
+void heUiCreate(HeRenderEngine* engine) {
+    engine->window->keyboardInfo.textInputCallbacks.emplace_back(&heTextInputCallback);
+    engine->window->keyboardInfo.keyPressCallbacks.emplace_back(&heKeyPressCallback);
 };
 
 void heUiSetActiveInput(HeTextInput* input) {
@@ -188,14 +188,14 @@ void heUiRenderTextInput(HeRenderEngine* engine, HeTextInput* input, hm::vec2f c
         alpha = 0;
 
     if(alpha > 0)
-        heUiPushQuad(heRenderEngine, offset, hm::vec2f(offset.x, offset.y + size.y), hm::vec2f(offset.x + size.x, offset.y), offset + size, hm::colour(100, 100, 100, alpha));
+        heUiPushQuad(engine, offset, hm::vec2f(offset.x, offset.y + size.y), hm::vec2f(offset.x + size.x, offset.y), offset + size, hm::colour(100, 100, 100, alpha));
     input->timeSinceLastInput += (float) engine->window->frameTime;
 
     // input string
     if(input->string.size() > 0)
-        heUiPushText(heRenderEngine, &input->font, input->string, position, hm::colour(255, 255, 255, 255));
+        heUiPushText(engine, &input->font, input->string, position, hm::colour(255, 255, 255, 255));
     else if(!input->active && input->description.size() > 0)
-        heUiPushText(heRenderEngine, &input->font, input->description, position, hm::colour(190, 190, 190, 255));
+        heUiPushText(engine, &input->font, input->description, position, hm::colour(190, 190, 190, 255));
 };
 
 void heUiRenderTextField(HeRenderEngine* engine, HeUiTextField* field) {

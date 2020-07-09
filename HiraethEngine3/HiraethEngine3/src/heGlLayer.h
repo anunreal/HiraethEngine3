@@ -521,4 +521,3 @@ extern HE_API void heGlErrorPrint(std::string const& location = "");
 #define GL_CALL(func) func; heGlErrorPrint(__FILE__ ":" + std::to_string(__LINE__) + " in " + __func__)
 
 #endif
-
