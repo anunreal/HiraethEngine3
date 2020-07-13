@@ -191,12 +191,10 @@ int main() {
 	windowInfo.fpsCap = 70;
 	windowInfo.size = hm::vec2i(1280, 720);
 	windowInfo.mode = HE_WINDOW_MODE_WINDOWED;
-	app.window.windowInfo = windowInfo;
-	heWindowCreate(&app.window);
+	heWindowCreate(&app.window, windowInfo);
 	heGlPrintInfo();
 
-	app.engine.renderMode = HE_RENDER_MODE_FORWARD;
-	heRenderEngineCreate(&app.engine, &app.window);
+	heRenderEngineCreate(&app.engine, &app.window, HE_RENDER_MODE_FORWARD);
 	hePostProcessEngineCreate(&app.engine.postProcess, &app.window);
 	heUiCreate(&app.engine);
 
@@ -205,7 +203,6 @@ int main() {
     heFontCreateScaled(heAssetPoolGetFont("inconsolata"), &font, 13);
     heConsoleCreate(&app.engine, heAssetPoolGetFont("inconsolata"));
 	heProfilerCreate(heAssetPoolGetFont("inconsolata"));
-    heUiCreate(&app.engine);
     heWin32TimerPrint("ENGINE STARTUP");    
     
     enterGameState();

@@ -146,10 +146,10 @@ struct HeRenderEngine {
 
 // creates the post process engine
 extern HE_API void hePostProcessEngineCreate(HePostProcessEngine* engine, HeWindow* window);
-// destroys the post process engine. This is called when the render engine gets destroyed
+// destroys the post process engine. Must be called if the post process engine was created
 extern HE_API void hePostProcessEngineDestroy(HePostProcessEngine* engine);
 // loads all important data for the render engine
-extern HE_API void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window);
+extern HE_API void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window, HeRenderMode const renderMode);
 // checks if the fbos of the engine are the size of the window, and (if not so) resizes them
 extern HE_API void heRenderEngineResize(HeRenderEngine* engine);
 // destroys all the data of the render engine

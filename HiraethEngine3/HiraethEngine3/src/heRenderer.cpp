@@ -42,7 +42,9 @@ void hePostProcessEngineDestroy(HePostProcessEngine* engine) {
     heShaderDestroy(engine->combineShader);
 };
 
-void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window) {
+void heRenderEngineCreate(HeRenderEngine* engine, HeWindow* window, HeRenderMode const renderMode) {
+    engine->renderMode = renderMode;
+    
     engine->shapes.quadVao      = &heAssetPool.meshPool["quad_vao"];
     engine->shapes.cubeVao      = &heAssetPool.meshPool["cube_vao"];
     engine->shapes.sphereVao    = &heAssetPool.meshPool["sphere_vao"];
@@ -216,9 +218,6 @@ void heRenderEngineDestroy(HeRenderEngine* engine) {
     // destroy ui and post process
     if (engine->uiQueue.initialized)
         heUiQueueDestroy(&engine->uiQueue);
-    
-    if(engine->postProcess.initialized)
-        hePostProcessEngineDestroy(&engine->postProcess);
 };
 
 void heRenderEnginePrepare(HeRenderEngine* engine) {

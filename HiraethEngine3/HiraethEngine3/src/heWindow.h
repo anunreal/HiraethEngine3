@@ -18,7 +18,9 @@ typedef b8(*HeWindowKeyPressCallback)   (HeWindow*, HeKeyCode const);
 typedef b8(*HeWindowMouseScrollCallback)(HeWindow*, int8_t const, hm::vec2i const&);
 
 struct HeWindowInfo {
+    // the mode of the window
     HeWindowMode mode;
+    // the colour that the window is cleared. Every pixel that is not rendered to has this colour (sky?)
     hm::colour   backgroundColour;
     // the size of the window, in pixels
     hm::vec2i    size = hm::vec2i(0);
@@ -26,7 +28,9 @@ struct HeWindowInfo {
     std::wstring title   = L"";
     // maximum fps allowed. If this is set to 0, the framerate is not limited (high cpu usage!)
     uint16_t fpsCap  = 0;
+    // whether to enable vsync. Avoids tearing, but limits the frame rate to the monitors rate and might add input delay
     b8 vsync = false;
+
     // width : height. Updated everytime the window gets resized
     float aspectRatio = 0;
 };
@@ -84,7 +88,7 @@ struct HeWindow {
 // returns true if there is a valid rendering context in the current thread
 extern HE_API b8 heIsMainThread();
 // creates the window
-extern HE_API b8 heWindowCreate(HeWindow* window);
+extern HE_API b8 heWindowCreate(HeWindow* window, HeWindowInfo const& info);
 // updates the input of the window and clears the buffer
 extern HE_API void heWindowUpdate(HeWindow* window);
 // destroys the window and its context
@@ -93,20 +97,20 @@ extern HE_API void heWindowDestroy(HeWindow* window);
 extern HE_API void heWindowSyncToFps(HeWindow* window);
 // enables vsync. Should only be called once. Timestamp is the number of frames to wait before doing the next
 // one. Should always be one. Called when the window is created and fpsCap is 0
-extern HE_API void heWindowEnableVsync(const int8_t timestamp);
+extern HE_API void heWindowEnableVsync(int8_t const timestamp);
 // swaps the buffers of the given window. Should be called after rendering the frame
-extern HE_API void heWindowSwapBuffers(const HeWindow* window);
+extern HE_API void heWindowSwapBuffers(HeWindow const* window);
 // switches the state of the cursor between visible and hidden
-extern HE_API void heWindowToggleCursor(const b8 visible);
+extern HE_API void heWindowToggleCursor(b8 const visible);
 // sets the mouse to the given position relative to the window.
 // The position can either be in pixels (positive), or as a percentage (negative) meaning
 // that -0.5 will be have the current window size
-extern HE_API void heWindowSetCursorPosition(HeWindow* window, const hm::vec2f& position);
+extern HE_API void heWindowSetCursorPosition(HeWindow* window, hm::vec2f const& position);
 // calculates the window border sizes (caption bar...) 
-extern HE_API hm::vec2i heWindowCalculateBorderSize(const HeWindow* window);
+extern HE_API hm::vec2i heWindowCalculateBorderSize(HeWindow const* window);
 
 // returns true if given key was pressed during the last frame on given window.
 // This simply searches the vector of keys pressed of the window's keyboardInfo for key
-extern inline HE_API b8 heWindowKeyWasPressed(const HeWindow* window, const HeKeyCode key);
+extern inline HE_API b8 heWindowKeyWasPressed(HeWindow const* window, HeKeyCode const key);
 
 #endif

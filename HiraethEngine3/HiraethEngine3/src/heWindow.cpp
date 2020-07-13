@@ -16,8 +16,10 @@ b8 heIsMainThread() {
 #endif
 };
 
-b8 heWindowCreate(HeWindow* window) {
+b8 heWindowCreate(HeWindow* window, HeWindowInfo const& windowInfo) {
 #ifdef HE_USE_WIN32
+    window->windowInfo = windowInfo;
+    heWin32TimerStart();
     return heWin32WindowCreate(window);
 #endif
 };
@@ -68,38 +70,38 @@ void heWindowSyncToFps(HeWindow* window) {
     window->lastFrame  = nowTime;
 };
 
-void heWindowEnableVsync(const int8_t timestamp) {
+void heWindowEnableVsync(int8_t const timestamp) {
 #ifdef HE_USE_WIN32
     heWin32WindowEnableVsync(timestamp);
 #endif
 };
 
-void heWindowSwapBuffers(const HeWindow* window) {
+void heWindowSwapBuffers(HeWindow const* window) {
 #ifdef HE_USE_WIN32
     heWin32WindowSwapBuffers(window);
 #endif
 };
 
-hm::vec2i heWindowCalculateBorderSize(const HeWindow* window) {
+hm::vec2i heWindowCalculateBorderSize(HeWindow const* window) {
 #ifdef HE_USE_WIN32
     return heWin32WindowCalculateBorderSize(window);
 #endif
 };
 
-void heWindowToggleCursor(const b8 visible) {
+void heWindowToggleCursor(b8 const visible) {
 #ifdef HE_USE_WIN32
     heWin32WindowToggleCursor(visible);
 #endif
 };
 
-void heWindowSetCursorPosition(HeWindow* window, const hm::vec2f& position) {
+void heWindowSetCursorPosition(HeWindow* window, hm::vec2f const& position) {
 #ifdef HE_USE_WIN32
     heWin32WindowSetCursorPosition(window, position);
 #endif
 };
 
 
-b8 heWindowKeyWasPressed(const HeWindow* window, const HeKeyCode key) {
+b8 heWindowKeyWasPressed(HeWindow const* window, HeKeyCode const key) {
     return std::find(window->keyboardInfo.keysPressed.begin(), window->keyboardInfo.keysPressed.end(), key)
         != window->keyboardInfo.keysPressed.end();    
 };

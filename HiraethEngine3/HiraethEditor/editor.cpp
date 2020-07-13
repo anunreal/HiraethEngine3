@@ -192,8 +192,7 @@ int main() {
     windowInfo.fpsCap = 70;
     windowInfo.size = hm::vec2i(1280, 720);
     windowInfo.mode = HE_WINDOW_MODE_WINDOWED;
-    app.window.windowInfo = windowInfo;
-    heWindowCreate(&app.window);
+    heWindowCreate(&app.window, windowInfo);
     heGlPrintInfo();
 
     hePostProcessEngineCreate(&app.engine.postProcess, &app.window);
