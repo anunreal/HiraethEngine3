@@ -21,12 +21,18 @@
     <ClCompile Include="src\world.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\generator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\minecraft.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\world.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\generator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -234,7 +234,7 @@ int main() {
             heD3LevelRender(&app.engine, &app.level);
             heRenderEngineFinishD3(&app.engine);
         }
-        heProfilerFrameMark("render d3", hm::colour(0, 255, 0));
+        heProfilerFrameMark("render d3", hm::colour(0, 255, 0))
 
         // post process
         {

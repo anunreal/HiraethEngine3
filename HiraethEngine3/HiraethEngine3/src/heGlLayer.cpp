@@ -443,7 +443,7 @@ void heShaderReload(HeShaderProgram* program) {
 void heShaderCheckReload(HeShaderProgram* program) {
 #ifdef HE_ENABLE_HOTSWAP_SHADER
     b8 needsReloading = false;
-    
+
     for(std::string const& files : program->files) {
         if(heWin32FileModified(files)) { // TODO(Victor): Add Platform abstraction!
             needsReloading = true;
@@ -451,14 +451,15 @@ void heShaderCheckReload(HeShaderProgram* program) {
         }
     }
     
-
-    for(auto const& files : program->includeFiles) {
-        if(heWin32FileModified(files.first, files.second)) { // TODO(Victor): Add Platform abstraction!
-            needsReloading = true;
-            break;
+    if(!needsReloading) {
+        for(auto const& files : program->includeFiles) {
+            if(heWin32FileModified(files.first, files.second)) { // TODO(Victor): Add Platform abstraction!
+                needsReloading = true;
+                break;
+            }
         }
     }
-
+    
     if(needsReloading)
         heShaderReload(program);
 #endif
@@ -714,7 +715,7 @@ void heVaoCreate(HeVao* vao, HeVaoType const type) {
     glGenVertexArrays(1, &vao->vaoId);
     vao->type = type;
     vao->attributeCount = 0;
-    //vao->vbos.clear();
+    vao->vbos.clear();
     
 #ifdef HE_ENABLE_NAMES
     glBindVertexArray(vao->vaoId); // we have to bind it so that its valid for naming

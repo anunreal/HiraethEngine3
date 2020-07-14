@@ -116,7 +116,6 @@ void heConsolePrint(std::string const& message) {
 };
 
 void heConsoleRender(HeRenderEngine* engine) {
-    HE_LOG("Frame: " + std::to_string(engine->window->frameTime));
     heConsoleUpdateSize((float) engine->window->frameTime);
 
     if(heConsole.currentY == 0.f)
@@ -135,11 +134,9 @@ void heConsoleRender(HeRenderEngine* engine) {
         heConsole.input.autoCompleteCycle =  0;
         heConsole.backlogIndex            =  0;
     }
-
     
     HeWindow* window = engine->window;
     uint32_t sizeY = (uint32_t) (heConsole.currentY * window->windowInfo.size.y);
-    HE_LOG("Size: " + std::to_string(sizeY) + ", " + std::to_string(window->windowInfo.size.y) + ", " + std::to_string(heConsole.currentY));
     
     { // render background
         heUiPushQuad(engine, hm::vec2i(0, 0), hm::vec2i(0, sizeY), hm::vec2i(window->windowInfo.size.x, 0), hm::vec2i(window->windowInfo.size.x, sizeY), hm::colour(40, 40, 40, 200));

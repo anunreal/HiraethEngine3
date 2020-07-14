@@ -32,8 +32,86 @@ void updateInput() {
         else
             toggleMenuMode(true);
     }
+
+    if(heWindowKeyWasPressed(&app.window, HE_KEY_ESCAPE)) {
+        if(app.state == GAME_STATE_PAUSED && heConsoleGetState() == HE_CONSOLE_STATE_CLOSED) {
+            toggleMenuMode(false);
+        } else if(app.state == GAME_STATE_INGAME) {
+            toggleMenuMode(true);
+        }
+    }
+
+    // game input
+    if(app.window.active && app.state == GAME_STATE_INGAME) {
+        if(app.window.mouseInfo.rightButtonPressed)
+            app.freeCamera = !app.freeCamera;
+
+        // rotation
+		app.world.camera.rotation.x += app.window.mouseInfo.deltaMousePosition.y * 0.05f;
+		app.world.camera.rotation.y += app.window.mouseInfo.deltaMousePosition.x * 0.05f;
+        
+        // movement
+        hm::vec3f velocity = hm::vec3f(0.f);
+        double angle = hm::to_radians(app.world.camera.rotation.y);
+        float speed = 4.0f * (float) app.window.frameTime;
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_W]) {
+            // move forward
+            velocity.x = (float)std::sin(angle) * speed;
+            velocity.z = (float)-std::cos(angle) * speed;
+        }
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_A]) {
+            // move left
+            velocity.x -= (float)std::cos(angle) * (speed);
+            velocity.z -= (float)std::sin(angle) * (speed);
+        }
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_D]) {
+            // move right
+            velocity.x += (float)std::cos(angle) * (speed);
+            velocity.z += (float)std::sin(angle) * (speed);
+        }
+	
+        if (app.window.keyboardInfo.keyStatus[HE_KEY_S]) {
+            // move backwards
+            velocity.x += (float)-std::sin(angle) * speed;
+            velocity.z += (float)std::cos(angle) * speed;
+        }
+	
+        if (app.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_E])
+            velocity.y = speed;
+	
+        if (app.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_Q])
+            velocity.y = -speed;
+
+        velocity *= 30.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+
+        if(app.freeCamera) {
+            hePhysicsActorSetVelocity(&app.actor, hm::vec3f(0.f));
+            app.world.camera.position += velocity * (float) app.window.frameTime;
+        } else {
+            hePhysicsActorSetVelocity(&app.actor, velocity * 0.016f);
+            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.actor))
+                hePhysicsActorJump(&app.actor);
+        }
+    }
 };
+
+void enterGameState() {
+    app.state = GAME_STATE_INGAME;
+    createWorld(&app.world);
+    app.world.camera.position.z = 10;
+    app.world.camera.position.x = 1;
+    app.world.camera.position.y = 2;
+    app.world.camera.rotation.x = 4;
     
+    if(app.window.active) {
+        app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
+        heWindowToggleCursor(false);
+    }
+};
+
 int main() {
     HeWindowInfo windowInfo;
     windowInfo.mode             = HE_WINDOW_MODE_WINDOWED;
@@ -46,8 +124,11 @@ int main() {
     hePostProcessEngineCreate(&app.engine.postProcess, &app.window);
     heUiCreate(&app.engine);
     
+    HeScaledFont font;
+    heFontCreateScaled(heAssetPoolGetFont("inconsolata"), &font, 13);
     heConsoleCreate(&app.engine, heAssetPoolGetFont("inconsolata"));
-	
+    enterGameState();
+        
     // main loop
     while(!app.window.shouldClose) {
         { // prepare frame
@@ -60,7 +141,13 @@ int main() {
         }
 
         { // render
+            if(app.state == GAME_STATE_INGAME || app.state == GAME_STATE_PAUSED)
+                renderWorld(&app.engine, &app.world);
+            
             heRenderEnginePrepareUi(&app.engine);
+heUiPushText(&app.engine, &font, "FPS: " + std::to_string(app.window.fps), hm::vec2f(10, 10), hm::colour(255));
+            heUiPushText(&app.engine, &font, "Position: " + hm::to_string(app.world.camera.position), hm::vec2f(10, 25), hm::colour(255));
+            heUiPushText(&app.engine, &font, "Rotation: " + hm::to_string(app.world.camera.rotation), hm::vec2f(10, 40), hm::colour(255));
             heConsoleRender(&app.engine);
             heUiQueueRender(&app.engine);
             heRenderEngineFinishUi(&app.engine);
