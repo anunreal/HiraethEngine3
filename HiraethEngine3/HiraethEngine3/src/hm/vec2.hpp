@@ -74,6 +74,11 @@ namespace hm {
         inline bool operator!=(vec const& v) const {
             return !operator==(v);
         };
+
+        inline bool operator<(vec const& v) const {
+            return x < v.x || (v.x == v.x && y < v.y);
+        };
+
     };
 
     typedef vec<2, float> vec2f;
@@ -92,9 +97,9 @@ namespace hm {
     };
     
     
-    // decodes a vec2 from a int32_t (which should be previosuly recieved by encoding a vec2). Note that we can return
-    // any vec2 type here, but the x and y coordinates will always be rounded (integers), because we cant store
-    // floating point numbers in the int32_t
+    // decodes a vec2 from a int32_t (which should be previosuly recieved by encoding a vec2). Note that we can
+    // return any vec2 type here, but the x and y coordinates will always be rounded (integers), because we cant
+    // store floating point numbers in the int32_t
     template<typename T>
     static inline vec<2, T> decodeVec2(int32_t const val) {
         vec<2, T> v;
@@ -103,8 +108,8 @@ namespace hm {
         return v;
     };
     
-    // Encodes an integer vec2 to an int32_t. Only int vec2 can be encoded because floats / double have commas (duh),
-    // so we'd have to calculate and store a precision, which would just be dumb
+    // Encodes an integer vec2 to an int32_t. Only int vec2 can be encoded because floats / double have commas
+    // (duh), so we'd have to calculate and store a precision, which would just be dumb
     static inline int32_t encodeVec2(vec2i const& vec) {
         return vec.x | (vec.y * (1 << 16));
     };
@@ -115,8 +120,8 @@ namespace hm {
         return ((p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y));
     };
     
-    // returns true if point is inside the rectangle defined by r0-r3. These points may be defined in any space and can
-    // be rotated, however they must be defined in clockwise order
+    // returns true if point is inside the rectangle defined by r0-r3. These points may be defined in any space
+    // and can be rotated, however they must be defined in clockwise order
     template<typename T>
     static bool pointInRectangle(vec<2, T> const& r0, vec<2, T> const& r1, vec<2, T> const& r2, vec<2, T> const& r3, vec<2, T> const& point) {
         return isLeft(r0, r1, point) > 0 &&

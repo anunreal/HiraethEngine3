@@ -3,7 +3,9 @@
 
 void generateChunk(World* world, Chunk* chunk) {
     chunk->blockCount = 0;
-    for(uint8_t y = 0; y < 10; ++y) {
+    memset(chunk->layers, 0, sizeof(chunk->layers));
+    
+    for(uint8_t y = 0; y < CHUNK_SIZE; ++y) {
         for(uint8_t x = 0; x < CHUNK_SIZE; ++x) {
             for(uint8_t z = 0; z < CHUNK_SIZE; ++z) {
                 BlockType type;
@@ -16,9 +18,10 @@ void generateChunk(World* world, Chunk* chunk) {
                     type = BLOCK_TYPE_GRASS;
 
                 chunk->layers[y].blocks[x * CHUNK_SIZE + z].type = type;
-                //chunk->layers[y].blocks[x * CHUNK_SIZE + z].position = BlockPosition(x, y, z);
                 chunk->blockCount++;
             }
         }
     }
+
+    chunk->state = CHUNK_STATE_GENERATED;
 };

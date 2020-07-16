@@ -42,14 +42,19 @@ public:
 
 HePhysicsDebugDrawer hePhysicsDebugDrawer;
 
-btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
+btCollisionShape* heCreateShape(HePhysicsShapeInfo& shape) {
     btCollisionShape* bt = nullptr;
+
+    if(shape.meshVertices.size()) {
+        shape.mesh = &shape.meshVertices.data()[0].x;
+        shape.floatCount = (uint32_t) shape.meshVertices.size() * 3;
+    }
     
     switch(shape.type) {
     case HE_PHYSICS_SHAPE_CONVEX_MESH: {        
         btConvexHullShape* s = new btConvexHullShape();
-        for(size_t i = 0; i < shape.mesh.size(); ++i) {
-            hm::vec3f const& v = shape.mesh[i];
+        for(size_t i = 0; i < shape.floatCount; i += 3) {
+            hm::vec3f const v = hm::vec3f(shape.mesh[i], shape.mesh[i + 1], shape.mesh[i + 2]);
             s->addPoint(btVector3(v.x, v.y, v.z), true);
         }
         
@@ -59,10 +64,10 @@ btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
         
     case HE_PHYSICS_SHAPE_CONCAVE_MESH: {
         btTriangleMesh* mesh = new btTriangleMesh();
-        for(size_t i = 0; i < shape.mesh.size(); i += 3) {
-            hm::vec3f const& v0 = shape.mesh[i];
-            hm::vec3f const& v1 = shape.mesh[i + 1];
-            hm::vec3f const& v2 = shape.mesh[i + 2];
+        for(size_t i = 0; i < shape.floatCount; i += 9) {
+            hm::vec3f const v0 = hm::vec3f(shape.mesh[i + 0], shape.mesh[i + 1], shape.mesh[i + 2]);
+            hm::vec3f const v1 = hm::vec3f(shape.mesh[i + 3], shape.mesh[i + 4], shape.mesh[i + 5]);
+            hm::vec3f const v2 = hm::vec3f(shape.mesh[i + 6], shape.mesh[i + 7], shape.mesh[i + 8]);
             mesh->addTriangle(btVector3(v0.x, v0.y, v0.z), btVector3(v1.x, v1.y, v1.z), btVector3(v2.x, v2.y, v2.z));
         }
         
@@ -90,6 +95,11 @@ btCollisionShape* heCreateShape(HePhysicsShapeInfo const& shape) {
         HE_WARNING("Unknown physics shape type: " + std::to_string(shape.type));
         break;
     }
+    }
+
+    if(shape.meshVertices.size()) {
+        shape.meshVertices.clear(); // save memory
+        std::vector<hm::vec3f>().swap(shape.meshVertices); // save memory
     }
     
     return bt;
@@ -197,26 +207,34 @@ void hePhysicsLevelUpdate(HePhysicsLevel* level, float const delta) {
     }
 };
 
-void hePhysicsLevelEnableDebugDraw(HePhysicsLevel* level, HeRenderEngine* engine) {
+void hePhysicsEnableDebugDraw(HeRenderEngine* engine) {
     hePhysicsDebugDrawer.setDebugMode(btIDebugDraw::DBG_DrawAabb | btIDebugDraw::DBG_DrawWireframe);
     hePhysicsDebugDrawer.engine = engine;
-    level->world->setDebugDrawer(&hePhysicsDebugDrawer);
-    level->enableDebugDraw = true;
 };
 
-void hePhysicsLevelDisableDebugDraw(HePhysicsLevel* level) {
+void hePhysicsDisableDebugDraw() {
     hePhysicsDebugDrawer.setDebugMode(0);
-    level->world->setDebugDrawer(nullptr);
-    level->enableDebugDraw = false;
 };
 
-void hePhysicsLevelDebugDraw(HePhysicsLevel const* level) {
+b8 hePhysicsDebugDrawingEnabled() {
+    return hePhysicsDebugDrawer.debugMode != 0;
+};
+
+void hePhysicsLevelDebugDraw(HePhysicsLevel* level) {
+    if(hePhysicsDebugDrawer.debugMode != 0) {
+        level->world->setDebugDrawer(&hePhysicsDebugDrawer);
+        level->enableDebugDraw = true;
+    } else {
+        level->world->setDebugDrawer(nullptr);
+        level->enableDebugDraw = false;
+    }
+
     if(level->enableDebugDraw)
         level->world->debugDrawWorld();
 };
 
 
-void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& info) {
+void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo& info) {
     component->shape = heCreateShape(info);
     
     // create rigid body
@@ -232,7 +250,7 @@ void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo 
     rbInfo.m_restitution = info.restitution;
     component->body      = new btRigidBody(rbInfo);
     component->shapeInfo = info;
-    component->shapeInfo.mesh.clear(); // save memory
+    component->shapeInfo.mesh = nullptr;
 };
 
 void hePhysicsComponentDestroy(HePhysicsComponent* component) {
@@ -279,7 +297,7 @@ hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component) {
 };
 
 
-void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shapeInfo, HePhysicsActorInfo const& actorInfo) {
+void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo& shapeInfo, HePhysicsActorInfo const& actorInfo) {
     actor->ghost      = new btPairCachingGhostObject();
     actor->ghost->setWorldTransform(btTransform::getIdentity());
     actor->shape      = (btConvexShape*) heCreateShape(shapeInfo);
@@ -288,7 +306,6 @@ void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shape
     actor->controller = new btKinematicCharacterController(actor->ghost, actor->shape, btScalar(actorInfo.stepHeight), btVector3(0, 1, 0));
     actor->controller->setJumpSpeed(actorInfo.jumpHeight);
     actor->shapeInfo  = shapeInfo;
-    actor->shapeInfo.mesh.clear(); // save memory
     actor->actorInfo  = actorInfo;
 };
 
@@ -315,7 +332,7 @@ void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm::vec3f const& eyePos
     if(!actor->controller)
         return;
     hm::vec3f realPosition = eyePosition;
-    realPosition.y -= eyePosition.y - (actor->shapeInfo.capsule.y / 2.f);
+    realPosition.y = eyePosition.y - (actor->shapeInfo.capsule.y / 2.f);
     hePhysicsActorSetPosition(actor, realPosition);
 };
 

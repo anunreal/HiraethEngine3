@@ -1,4 +1,3 @@
-#include "..\..\main.h"
 #include "..\heConverter.h"
 
 void command_set_position(int index, hm::vec3f const& position) {
@@ -29,11 +28,10 @@ void command_teleport(hm::vec3f const& position) {
 };
 
 void command_toggle_physics_debug() {
-	if(heD3Level->physics.enableDebugDraw)
-		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
-	/*else
-		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, render_engine);
-    */
+	if(hePhysicsDebugDrawingEnabled())
+		hePhysicsDisableDebugDraw();
+	else
+		hePhysicsEnableDebugDraw(heConsole.engine);
 };
 
 void command_toggle_profiler() {

@@ -5,10 +5,13 @@
 #include "heRenderer.h"
 #include "world.h"
 
+#define USE_PHYSICS 1
+
 enum GameState {
     GAME_STATE_MAIN_MENU,
     GAME_STATE_INGAME,
-    GAME_STATE_PAUSED
+    GAME_STATE_PAUSED,
+    GAME_STATE_DONE
 };
 
 struct Minecraft {
@@ -16,10 +19,8 @@ struct Minecraft {
     HeRenderEngine engine;
     GameState state;    
     World world;
-
-    HePhysicsActor actor;
     
-    b8 freeCamera = true;
+    b8 freeCamera = false;
 };
 
 extern Minecraft app;

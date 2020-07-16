@@ -235,7 +235,7 @@ void heD3InstanceLoad(std::string const& fileName, HeD3Instance* instance, HePhy
             case HE_PHYSICS_SHAPE_CONVEX_MESH: {
                 hm::vec3f vec;
                 while(heTextFileGetFloats(&file, 3, &vec))
-                    physics->mesh.emplace_back(vec);
+                    physics->meshVertices.emplace_back(vec);
                 break;
             };
             
@@ -351,7 +351,7 @@ void heD3InstanceLoadBinary(std::string const& fileName, HeD3Instance* instance,
             case HE_PHYSICS_SHAPE_CONCAVE_MESH:
             case HE_PHYSICS_SHAPE_CONVEX_MESH: {
                 for(uint16_t i = 0; i < (uint16_t) data.size(); i+=3)
-                    physics->mesh.emplace_back(hm::vec3f(data[(size_t) i], data[(size_t) (i + 1)], data[(size_t) (i + 2)]));
+                    physics->meshVertices.emplace_back(hm::vec3f(data[(size_t) i], data[(size_t) (i + 1)], data[(size_t) (i + 2)]));
                 break;
             }
             

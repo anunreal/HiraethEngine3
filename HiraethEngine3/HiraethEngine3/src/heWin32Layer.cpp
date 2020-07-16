@@ -823,3 +823,8 @@ std::string heWin32ClipboardGet() {
     char* s = (char*) glb;
     return std::string(s);
 };
+
+void heThreadSleep(__int64 ms) {
+    std::chrono::milliseconds duration(ms);
+    std::this_thread::sleep_for(duration);    
+};

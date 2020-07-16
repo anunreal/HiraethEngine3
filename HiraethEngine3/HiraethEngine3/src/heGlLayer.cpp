@@ -731,14 +731,17 @@ void heVaoAddVboData(HeVao* vao, HeVbo* vbo, int8_t const attributeIndex) {
         heVboCreate(vbo, vbo->dataf, vbo->dimensions, vbo->usage);
         glVertexAttribPointer(attributeIndex, vbo->dimensions, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
         vbo->dataf.clear();
+        std::vector<float>().swap(vbo->dataf);
     } else if(vbo->type == HE_DATA_TYPE_INT) {
         heVboCreateInt(vbo, vbo->datai, vbo->dimensions, vbo->usage);
         glVertexAttribIPointer(attributeIndex, vbo->dimensions, vbo->type, 0, (GLvoid*)0);
         vbo->datai.clear();
+        std::vector<int32_t>().swap(vbo->datai);
     } else if(vbo->type == HE_DATA_TYPE_UINT) {
         heVboCreateUint(vbo, vbo->dataui, vbo->dimensions, vbo->usage);
         glVertexAttribIPointer(attributeIndex, vbo->dimensions, vbo->type, 0, (GLvoid*)0);
         vbo->dataui.clear();
+        std::vector<uint32_t>().swap(vbo->dataui);
     }
 
     ++vao->attributeCount;
@@ -944,6 +947,7 @@ void heVaoDestroy(HeVao* vao) {
     vao->vaoId = 0;
     vao->verticesCount = 0;
     vao->vbos.clear();
+    std::vector<HeVbo>().swap(vao->vbos);
     vao->type = HE_VAO_TYPE_NONE;
     
 #ifdef HE_ENABLE_NAMES
@@ -1175,6 +1179,7 @@ void heFboResize(HeFbo* fbo, hm::vec2i const& newSize) {
     fbo->size = newSize;
     std::vector<HeFboAttachment> attachments = fbo->colourAttachments;
     fbo->colourAttachments.clear();
+    std::vector<HeFboAttachment>().swap(fbo->colourAttachments);
     
     heFboCreate(fbo);
     for(HeFboAttachment& all : attachments) {

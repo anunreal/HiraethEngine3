@@ -76,6 +76,7 @@ extern HE_API inline double heWin32TimeCalculateMs(__int64 duration);
 
 // returns a string from the clipboard (if available) or an empty string if no text is in the clipboard
 extern HE_API std::string heWin32ClipboardGet();
-
+// sleeps the active thread for that amount of ms
+extern HE_API void heThreadSleep(__int64 ms);
 
 #endif

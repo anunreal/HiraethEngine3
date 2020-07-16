@@ -122,7 +122,8 @@ void enterGameState() {
     heD3LevelLoad("res/level/level0.h3level", &app.level, USE_PHYSICS, true);
     heD3LevelGetInstance(&app.level, 13)->material->emission = hm::colour(255, 0, 0, 255, 10); // suzanne
     app.level.camera.frustum.viewInfo.fov = 90;
-    /*
+
+    heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png", 2, 2, 4); // load and set up once so we can use it later
     HeParticleSource* lampParticles = &app.level.particles.emplace_back();
     lampParticles->maxNewParticlesPerUpdate = 10;
     lampParticles->gravity           = 0.f;
@@ -148,7 +149,7 @@ void enterGameState() {
     dustParticles->emitter.minColour = hm::colour(20, 3.f);
     dustParticles->emitter.maxColour = hm::colour(100, 3.f);
     heParticleSourceCreate(dustParticles, HeD3Transformation(hm::vec3f(0.f, .75f, 0.f)), heAssetPoolGetSpriteAtlas("res/textures/particleAtlas.png"), 0, 200);
-    */
+
 #if USE_PHYSICS == 1
 	HePhysicsShapeInfo actorShape;
 	actorShape.type = HE_PHYSICS_SHAPE_CAPSULE;
@@ -159,7 +160,7 @@ void enterGameState() {
 	
 	hePhysicsActorCreate(&app.actor, actorShape, actorInfo);
     hePhysicsLevelSetActor(&app.level.physics, &app.actor);
-	hePhysicsActorSetEyePosition(&app.actor, hm::vec3f(-5.f, 0.1f, 5.f));
+	hePhysicsActorSetEyePosition(&app.actor, hm::vec3f(-5.f, 1.7f, 5.f));
 #endif
 
     heWin32TimerPrint("LEVEL LOAD");
@@ -234,7 +235,7 @@ int main() {
             heD3LevelRender(&app.engine, &app.level);
             heRenderEngineFinishD3(&app.engine);
         }
-        heProfilerFrameMark("render d3", hm::colour(0, 255, 0))
+        heProfilerFrameMark("render d3", hm::colour(0, 255, 0));
 
         // post process
         {
@@ -249,7 +250,7 @@ int main() {
             heUiPushText(&app.engine, &font, "Position: " + hm::to_string(app.level.camera.position), hm::vec2f(10, 25), hm::colour(255));
             heUiPushText(&app.engine, &font, "Rotation: " + hm::to_string(app.level.camera.rotation), hm::vec2f(10, 40), hm::colour(255));
             heConsoleRender(&app.engine);
-            heUiQueueRender(&app.engine);
+            heUiQueueRender(&app.engine, &app.level.camera);
             heRenderEngineFinishUi(&app.engine);
         }
         heProfilerFrameMark("ui render", hm::colour(0, 0, 255));

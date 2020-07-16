@@ -148,6 +148,9 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>call $(SolutionDir)meta\commands\commands_meta.exe $(SolutionDir)HiraethEngine3\src\meta\commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugEngine|Win32'">
     <ClCompile>
@@ -159,7 +162,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>hepch.h</PrecompiledHeaderFile>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -167,6 +170,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)out\bin_lib\HiraethEngine3;$(SolutionDir)out\bin_lib\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-Debug-$(Platform).lib;Bullet3Collision_Debug.lib;Bullet3Dynamics_Debug.lib;BulletCollision_Debug.lib;BulletDynamics_Debug.lib;LinearMath_Debug.lib;glew_$(Platform).lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>call $(SolutionDir)meta\commands\commands_meta.exe $(SolutionDir)HiraethEngine3\src\meta\commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -186,6 +192,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>call $(SolutionDir)meta\commands\commands_meta.exe $(SolutionDir)HiraethEngine3\src\meta\commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -203,6 +212,9 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>call $(SolutionDir)meta\commands\commands_meta.exe $(SolutionDir)HiraethEngine3\src\meta\commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugEngine|x64'">
     <ClCompile>
@@ -214,7 +226,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>hepch.h</PrecompiledHeaderFile>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -222,6 +234,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\GLEW\lib;$(SolutionDir)out\bin_lib\HiraethEngine3;$(SolutionDir)out\bin_lib\HiraethNetwork;$(SolutionDir)Dependencies\bullet\lib\$(Platform)</AdditionalLibraryDirectories>
       <AdditionalDependencies>HiraethNetwork-Debug-$(Platform).lib;Bullet3Collision_Debug.lib;Bullet3Dynamics_Debug.lib;BulletCollision_Debug.lib;BulletDynamics_Debug.lib;LinearMath_Debug.lib;glew_$(Platform).lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>call $(SolutionDir)meta\commands\commands_meta.exe $(SolutionDir)HiraethEngine3\src\meta\commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -241,6 +256,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>call $(SolutionDir)meta\commands\commands_meta.exe $(SolutionDir)HiraethEngine3\src\meta\commands.meta</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="main.h">

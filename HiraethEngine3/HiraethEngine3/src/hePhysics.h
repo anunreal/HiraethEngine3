@@ -44,8 +44,14 @@ struct HePhysicsShapeInfo {
     // if type is convex, all the points will be connected to a surface. That surface will be wrapped over the
     // given points if type is concave, the points will be connected to triangles. This is slower but useful if
     // there is a "hole" in the mesh that objects should be able to go through
-    std::vector<hm::vec3f> mesh;
-HePhysicsShapeInfo() : box(0.f), type(HE_PHYSICS_SHAPE_NONE) {};
+    float* mesh = nullptr;
+    // the number of floats that represent the mesh (only used if mesh is set, convex or concave mesh)
+    uint32_t floatCount = 0;
+
+    // this can be used instead of the float pointer, if we want to store the vertices here.
+    std::vector<hm::vec3f> meshVertices;
+    
+    HePhysicsShapeInfo() : box(0.f), type(HE_PHYSICS_SHAPE_NONE) {};
 };
 
 struct HePhysicsActorInfo {
@@ -60,8 +66,8 @@ struct HePhysicsActorInfo {
 struct HePhysicsLevelInfo {
     hm::vec3f gravity;
     
-HePhysicsLevelInfo() : gravity(0, -10, 0) {};
-HePhysicsLevelInfo(hm::vec3f const& gravity) : gravity(gravity) {};
+    HePhysicsLevelInfo() : gravity(0, -10, 0) {};
+    HePhysicsLevelInfo(hm::vec3f const& gravity) : gravity(gravity) {};
 };
 
 struct HePhysicsComponent {
@@ -125,17 +131,20 @@ extern HE_API void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor*
 // updates given level. Delta is the time passed since the last update in seconds
 extern HE_API void hePhysicsLevelUpdate(HePhysicsLevel* level, float const delta);
 // enables a debug drawer for the collision shapes
-extern HE_API void hePhysicsLevelEnableDebugDraw(HePhysicsLevel* level, HeRenderEngine* engine);
-extern HE_API void hePhysicsLevelDisableDebugDraw(HePhysicsLevel* level);
+extern HE_API void hePhysicsEnableDebugDraw(HeRenderEngine* engine);
+// disables debug drawing for all levels
+extern HE_API void hePhysicsDisableDebugDraw();
+// returns true if debug drawing is currently enabled
+extern HE_API b8 hePhysicsDebugDrawingEnabled();
 // renders the debug information of this physics level if debug drawing is enabled. Should be called after the d3
 // render
-extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel const* level);
+extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel* level);
 
 
 // -- component
 
 // creates a new physics component from a shape
-extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo const& shape);
+extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo& shape);
 // destroys given physics component. The component should be removed from all levels before this. This function
 // simply deletes all pointers and other data allocated
 extern HE_API void hePhysicsComponentDestroy(HePhysicsComponent* component);
@@ -152,7 +161,7 @@ extern HE_API hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* 
 // -- actor
 
 // creates a new physics component from given shape
-extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo const& shape, HePhysicsActorInfo const& actorInfo);
+extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo& shape, HePhysicsActorInfo const& actorInfo);
 // destroys given actor. The actor should be removed from all levels before this. This function simply deletes
 // all pointers and other data allocated
 extern HE_API void hePhysicsActorDestroy(HePhysicsActor* actor);

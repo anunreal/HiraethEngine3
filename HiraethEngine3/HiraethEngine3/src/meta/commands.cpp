@@ -3,7 +3,6 @@
 #include "..\heConsole.h"
 #include "..\heD3.h"
 #include "..\heDebugUtils.h"
-#include "..\..\main.h"
 #include "..\heConverter.h"
 
 void command_set_position(int index, hm::vec3f const& position) {
@@ -84,11 +83,10 @@ void front_command_teleport(std::vector<std::string> const& args) {
 
 
 void command_toggle_physics_debug() {
-	if(heD3Level->physics.enableDebugDraw)
-		hePhysicsLevelDisableDebugDraw(&heD3Level->physics);
-	/*else
-		hePhysicsLevelEnableDebugDraw(&heD3Level->physics, render_engine);
-    */
+	if(hePhysicsDebugDrawingEnabled())
+		hePhysicsDisableDebugDraw();
+	else
+		hePhysicsEnableDebugDraw(heConsole.engine);
 };
 
 void front_command_toggle_physics_debug(std::vector<std::string> const& args) {

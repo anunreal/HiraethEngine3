@@ -229,14 +229,15 @@ extern HE_API void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* fo
 
 // -- batch rendering
 
-// renders all lines batched together
-extern HE_API void heUiQueueRenderLines(HeRenderEngine* engine);
+// renders all lines batched together (camera used for 3d rendering)
+extern HE_API void heUiQueueRenderLines(HeRenderEngine* engine, HeD3Camera const* camera);
 // renders all texts batched by their font
 extern HE_API void heUiQueueRenderTexts(HeRenderEngine* engine);
 // renders all texts batched by their font
 extern HE_API void heUiQueueRenderQuads(HeRenderEngine* engine);
 // renders all ui elements pushed
-extern HE_API void heUiQueueRender(HeRenderEngine* engine);
+extern HE_API void heUiQueueRender(HeRenderEngine* engine, HeD3Camera const* camera);
+
 // pushes a new line to the render queue. The line will go from p0 to p1 (in pixels), width is in pixels
 extern HE_API inline void heUiPushLineD2(HeRenderEngine* engine, hm::vec2f const& p0, hm::vec2f const& p1, hm::colour const& colour, float const width);
 // pushes a new line to the render queue. The line will be projected onto the screen using the camera of the

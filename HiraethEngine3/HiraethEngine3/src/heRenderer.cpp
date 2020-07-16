@@ -923,7 +923,7 @@ void heUiRenderText(HeRenderEngine* engine, HeScaledFont const* font, std::strin
 };
 
 
-void heUiQueueRenderLines(HeRenderEngine* engine) {
+void heUiQueueRenderLines(HeRenderEngine* engine, HeD3Camera const* camera) {
     size_t size = engine->uiQueue.lines.size();
     if(size == 0)
         return;
@@ -968,10 +968,13 @@ void heUiQueueRenderLines(HeRenderEngine* engine) {
         width.emplace_back(widthScreenSpace);
     }
     
-    HeD3Camera* cam = &heD3Level->camera;
     heShaderBind(engine->uiQueue.linesShader);
-    heShaderLoadUniform(engine->uiQueue.linesShader, "u_projMat", cam->projectionMatrix);
-    heShaderLoadUniform(engine->uiQueue.linesShader, "u_viewMat", cam->viewMatrix);
+
+    if(camera) {
+        heShaderLoadUniform(engine->uiQueue.linesShader, "u_projMat", camera->projectionMatrix);
+        heShaderLoadUniform(engine->uiQueue.linesShader, "u_viewMat", camera->viewMatrix);
+    }
+    
     heVaoBind(&engine->uiQueue.linesVao);
     heVaoUpdateData(&engine->uiQueue.linesVao, data, 0);
     heVaoUpdateDataUint(&engine->uiQueue.linesVao, colour, 1);
@@ -1061,11 +1064,11 @@ void heUiQueueRenderQuads(HeRenderEngine* engine) {
     engine->uiQueue.quads.clear();
 };
 
-void heUiQueueRender(HeRenderEngine* engine) {
+void heUiQueueRender(HeRenderEngine* engine, HeD3Camera const* camera) {
     heBlendMode(0);
     heDepthEnable(false);
     if(engine->uiQueue.lines.size())
-        heUiQueueRenderLines(engine);
+        heUiQueueRenderLines(engine, camera);
     
     if(engine->uiQueue.quads.size())
         heUiQueueRenderQuads(engine);

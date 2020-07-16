@@ -5,6 +5,7 @@
 #include "heWin32Layer.h"
 
 Minecraft app;
+std::thread worldCreateThread;
 
 void toggleMenuMode(b8 const menuOpen) {
     if(menuOpen) {
@@ -85,15 +86,15 @@ void updateInput() {
         if (app.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_Q])
             velocity.y = -speed;
 
-        velocity *= 30.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+        velocity *= 50.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
 
         if(app.freeCamera) {
-            hePhysicsActorSetVelocity(&app.actor, hm::vec3f(0.f));
+            hePhysicsActorSetVelocity(&app.world.actor, hm::vec3f(0.f));
             app.world.camera.position += velocity * (float) app.window.frameTime;
         } else {
-            hePhysicsActorSetVelocity(&app.actor, velocity * 0.016f);
-            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.actor))
-                hePhysicsActorJump(&app.actor);
+            hePhysicsActorSetVelocity(&app.world.actor, velocity * 0.016f);
+            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.world.actor))
+                hePhysicsActorJump(&app.world.actor);
         }
     }
 };
@@ -101,10 +102,7 @@ void updateInput() {
 void enterGameState() {
     app.state = GAME_STATE_INGAME;
     createWorld(&app.world);
-    app.world.camera.position.z = 10;
-    app.world.camera.position.x = 1;
-    app.world.camera.position.y = 2;
-    app.world.camera.rotation.x = 4;
+    worldCreateThread = std::thread(worldCreationThread, &app.world);
     
     if(app.window.active) {
         app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
@@ -128,6 +126,8 @@ int main() {
     heFontCreateScaled(heAssetPoolGetFont("inconsolata"), &font, 13);
     heConsoleCreate(&app.engine, heAssetPoolGetFont("inconsolata"));
     enterGameState();
+    
+    heWindowUpdate(&app.window);
         
     // main loop
     while(!app.window.shouldClose) {
@@ -138,18 +138,19 @@ int main() {
 
         { // game logic
             updateInput();
+            updateWorld(&app.world);
         }
 
         { // render
             if(app.state == GAME_STATE_INGAME || app.state == GAME_STATE_PAUSED)
                 renderWorld(&app.engine, &app.world);
-            
+
             heRenderEnginePrepareUi(&app.engine);
-heUiPushText(&app.engine, &font, "FPS: " + std::to_string(app.window.fps), hm::vec2f(10, 10), hm::colour(255));
+            heUiPushText(&app.engine, &font, "FPS: " + std::to_string(app.window.fps), hm::vec2f(10, 10), hm::colour(255));
             heUiPushText(&app.engine, &font, "Position: " + hm::to_string(app.world.camera.position), hm::vec2f(10, 25), hm::colour(255));
             heUiPushText(&app.engine, &font, "Rotation: " + hm::to_string(app.world.camera.rotation), hm::vec2f(10, 40), hm::colour(255));
             heConsoleRender(&app.engine);
-            heUiQueueRender(&app.engine);
+            heUiQueueRender(&app.engine, &app.world.camera);
             heRenderEngineFinishUi(&app.engine);
         }
 
@@ -159,6 +160,9 @@ heUiPushText(&app.engine, &font, "FPS: " + std::to_string(app.window.fps), hm::v
         }
     }
 
+    app.state = GAME_STATE_DONE;
+    worldCreateThread.detach();
+    
     hePostProcessEngineDestroy(&app.engine.postProcess);
     heRenderEngineDestroy(&app.engine);
     heWindowDestroy(&app.window);

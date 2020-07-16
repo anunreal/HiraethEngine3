@@ -6,7 +6,6 @@
 #include "heUtils.h"
 #include "heWin32Layer.h"
 #include "heUi.h"
-#include "meta/commands.cpp"
 
 uint32_t TYPE_BAR_HEIGHT    = 27;
 uint32_t BACK_LOG_FONT_SIZE = 15;
@@ -34,6 +33,8 @@ struct HeConsole {
 };
 
 HeConsole heConsole;
+
+#include "meta/commands.cpp"
 
 b8 heConsoleScrollCallback(HeWindow* window, int8_t const direction, hm::vec2i const& position) {
     int32_t verticalSize = (int32_t) (heConsole.currentY * window->windowInfo.size.y);
