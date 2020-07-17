@@ -315,6 +315,9 @@ extern HE_API void heVaoUpdateData(HeVao* vao, float const* data, uint8_t const 
 extern HE_API void heVaoUpdateDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t const vboIndex);
 // updates the data of given vbo (vboIndex). Make sure the vao is bound before this call.
 extern HE_API void heVaoUpdateDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t const vboIndex);
+// updates the data of given vbo (vboIndex). Make sure the vao is bound before this call. Size is the length
+// of the buffer (in ints)
+extern HE_API void heVaoUpdateDataUint(HeVao* vao, uint32_t const* data, uint8_t const vboIndex, uint32_t const size);
 // binds given vao
 extern HE_API void heVaoBind(HeVao const* vao);
 // unbinds the currently bound vao

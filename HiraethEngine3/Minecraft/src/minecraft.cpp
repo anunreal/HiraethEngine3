@@ -161,7 +161,7 @@ int main() {
     }
 
     app.state = GAME_STATE_DONE;
-    worldCreateThread.detach();
+    worldCreateThread.join();
     
     hePostProcessEngineDestroy(&app.engine.postProcess);
     heRenderEngineDestroy(&app.engine);

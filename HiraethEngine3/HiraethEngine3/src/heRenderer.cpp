@@ -929,6 +929,7 @@ void heUiQueueRenderLines(HeRenderEngine* engine, HeD3Camera const* camera) {
         return;
     
     // build lines mesh
+    /*
     std::vector<float> data;
     data.reserve(size * 8);
     std::vector<uint32_t> colour;
@@ -967,7 +968,48 @@ void heUiQueueRenderLines(HeRenderEngine* engine, HeD3Camera const* camera) {
         width.emplace_back(widthScreenSpace);
         width.emplace_back(widthScreenSpace);
     }
+    */
+
+    float* data = (float*) malloc(size * 8 * sizeof(float));
+    float* width = (float*) malloc(size * 2 * sizeof(float));
+    uint32_t* colour = (uint32_t*) malloc(size * 2 * sizeof(uint32_t));
+
+    uint32_t index = 0;
     
+    for(auto const& lines : engine->uiQueue.lines) {
+        if(lines.d3) {
+            data[index * 8 + 0] = lines.p0.x;
+            data[index * 8 + 1] = lines.p0.y;
+            data[index * 8 + 2] = lines.p0.z;
+            data[index * 8 + 3] = 1.f;
+            
+            data[index * 8 + 4] = lines.p1.x;
+            data[index * 8 + 5] = lines.p1.y;
+            data[index * 8 + 6] = lines.p1.z;
+            data[index * 8 + 7] = 1.f;
+        } else {
+            data[index * 8 + 0] = lines.p0.x / engine->window->windowInfo.size.x * 2.f - 1.f;
+            data[index * 8 + 1] = 1.f - lines.p0.y / engine->window->windowInfo.size.y * 2.f;
+            data[index * 8 + 2] = 0.f;
+            data[index * 8 + 3] = 0.f;
+            
+            data[index * 8 + 4] = lines.p1.x / engine->window->windowInfo.size.x * 2.f - 1.f;
+            data[index * 8 + 5] = 1.f - lines.p1.y / engine->window->windowInfo.size.y * 2.f;
+            data[index * 8 + 6] = 0.f;
+            data[index * 8 + 7] = 0.f;
+        }
+        
+        uint32_t c = hm::encodeColour(lines.colour);
+        colour[index * 2 + 0] = c;
+        colour[index * 2 + 1] = c;
+        
+        float widthScreenSpace = lines.width / engine->window->windowInfo.size.x;
+        width[index * 2 + 0] = widthScreenSpace;
+        width[index * 2 + 1] = widthScreenSpace;
+
+        ++index;
+    }
+        
     heShaderBind(engine->uiQueue.linesShader);
 
     if(camera) {
@@ -976,11 +1018,15 @@ void heUiQueueRenderLines(HeRenderEngine* engine, HeD3Camera const* camera) {
     }
     
     heVaoBind(&engine->uiQueue.linesVao);
-    heVaoUpdateData(&engine->uiQueue.linesVao, data, 0);
-    heVaoUpdateDataUint(&engine->uiQueue.linesVao, colour, 1);
-    heVaoUpdateData(&engine->uiQueue.linesVao, width, 2);
+    heVaoUpdateData(&engine->uiQueue.linesVao, data, 0, index * 8);
+    heVaoUpdateDataUint(&engine->uiQueue.linesVao, colour, 1, index * 2);
+    heVaoUpdateData(&engine->uiQueue.linesVao, width, 2, index * 2);
     heVaoRender(&engine->uiQueue.linesVao);
 
+    free(data);
+    free(colour);
+    free(width);
+    
     engine->uiQueue.lines.clear();
 };
 

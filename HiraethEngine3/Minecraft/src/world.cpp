@@ -106,8 +106,8 @@ void buildChunk(World* world, Chunk* chunk) {
         return;
 
     // blocks a 6 faces a 6 positions a 3 floats
-    chunk->meshInfo.vertices.reserve(chunk->blockCount * 6 * 6 * 3);
-    chunk->meshInfo.uvs.reserve(chunk->blockCount * 6 * 6 * 2);
+    chunk->meshInfo.vertices.reserve((size_t) (chunk->blockCount) * 6 * 6 * 3);
+    chunk->meshInfo.uvs.reserve((size_t) (chunk->blockCount) * 6 * 6 * 2);
     
     for(uint32_t z = 0; z < CHUNK_SIZE; ++z) {
         for(uint32_t x = 0; x < CHUNK_SIZE; ++x) {
@@ -401,47 +401,20 @@ void buildChunk(World* world, Chunk* chunk) {
     info.type = HE_PHYSICS_SHAPE_CONCAVE_MESH;
     info.mass = 0.f;
     info.mesh = chunk->meshInfo.vertices.data();
-    info.floatCount = chunk->meshInfo.vertices.size();
+    info.floatCount = (uint32_t) chunk->meshInfo.vertices.size();
     hePhysicsComponentCreate(&chunk->physics, info);
-    hePhysicsComponentSetPosition(&chunk->physics, hm::vec3f(chunk->position.x * 16, 0, chunk->position.y * 16));
+    hePhysicsComponentSetPosition(&chunk->physics, hm::vec3f(chunk->position.x * 16.f, 0.f, chunk->position.y * 16.f));
 #endif
     chunk->state = CHUNK_STATE_BUILT;
 };
 
 void generateChunkNeighbours(World* world, Chunk* chunk) {
-    /*
-    Chunk* c0 = getChunkAt(world, chunk->position + ChunkPosition( 1,  0));
-    if(c0->blockCount == 0) {
-        generateChunk(world, c0);
-        c0->position = chunk->position + ChunkPosition( 1,  0);
-    }
-    
-    Chunk* c1 = getChunkAt(world, chunk->position + ChunkPosition(-1,  0));
-    if(c1->blockCount == 0) {
-        generateChunk(world, c1);
-        c1->position = chunk->position + ChunkPosition(-1,  0);
-    }
-        
-    Chunk* c2 = getChunkAt(world, chunk->position + ChunkPosition( 0,  1));
-    if(c2->blockCount == 0) {
-        generateChunk(world, c2);
-        c2->position = chunk->position + ChunkPosition( 0,  1);
-    }
-        
-    Chunk* c3 = getChunkAt(world, chunk->position + ChunkPosition( 0, -1));
-    if(c3->blockCount == 0) {
-        generateChunk(world, c3);
-        c3->position = chunk->position + ChunkPosition( 0,  -1);
-    }
-    */
-
     for(int8_t x = -1; x <= 1; ++x) {
         for(int8_t z = -1; z <= 1; ++z) {
             if(x != 0 || z != 0) {
                 Chunk* c0 = getChunkAt(world, chunk->position + ChunkPosition(x, z));
                 if(c0->blockCount == 0) {
                     generateChunk(world, c0);
-                    c0->position = chunk->position + ChunkPosition(x, z);
                 }
             }
         }
@@ -464,18 +437,57 @@ void loadChunk(World* world, Chunk* chunk) {
 };
 
 void unloadChunk(World* world, Chunk* chunk) {
-    heVaoDestroy(&chunk->vao);
-    hePhysicsLevelRemoveComponent(&world->physics, &chunk->physics);
-    hePhysicsComponentDestroy(&chunk->physics);
+    if(chunk->state == CHUNK_STATE_LOADED) {
+        heVaoDestroy(&chunk->vao);
+        hePhysicsLevelRemoveComponent(&world->physics, &chunk->physics);
+        hePhysicsComponentDestroy(&chunk->physics);
+    }
+    
+    chunk->meshInfo.vertices.clear();
+    chunk->meshInfo.uvs.clear();
+    std::vector<float>().swap(chunk->meshInfo.vertices);
+    std::vector<float>().swap(chunk->meshInfo.uvs);
+    memset(chunk->layers, 0, sizeof(chunk->layers));
     chunk->state = CHUNK_STATE_UNLOADED;
     world->chunks.erase(chunk->position);
-    HE_LOG("Unloaded chunk");
 };
 
 void renderChunk(HeRenderEngine* engine, World* world, Chunk* chunk) {
-    heShaderLoadUniform(&world->blockShader, "u_transMat", hm::createTransformationMatrix(hm::vec3f(chunk->position.x * 16, 0, chunk->position.y * 16), hm::vec3f(), hm::vec3f(1.f)));
+    heShaderLoadUniform(&world->blockShader, "u_transMat", hm::createTransformationMatrix(hm::vec3f(chunk->position.x * 16.f, 0.f, chunk->position.y * 16.f), hm::vec3f(), hm::vec3f(1.f)));
     heVaoBind(&chunk->vao);
     heVaoRender(&chunk->vao);
+};
+
+void renderChunkBox(HeRenderEngine* engine, Chunk* chunk) {
+    hm::colour col;
+    switch(chunk->state) {
+    case CHUNK_STATE_UNLOADED:
+        col = hm::colour(20, 20, 20);
+        break;
+
+    case CHUNK_STATE_GENERATED:
+        col = hm::colour(255, 0, 0);
+        break;
+
+    case CHUNK_STATE_BUILT:
+        col = hm::colour(0, 0, 255);
+        break;
+
+    case CHUNK_STATE_LOADED:
+        col = hm::colour(0, 255, 0);
+        break;
+    } 
+    
+    if(chunk->requestBuild)
+        col = hm::colour(255);
+    
+    heUiPushLineD3(engine, hm::vec3f(chunk->position.x * CHUNK_SIZE + 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + 1.f), hm::vec3f(chunk->position.x * CHUNK_SIZE + 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + CHUNK_SIZE - 1.f), col, 2);
+                
+    heUiPushLineD3(engine, hm::vec3f(chunk->position.x * CHUNK_SIZE + 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + CHUNK_SIZE - 1.f), hm::vec3f(chunk->position.x * CHUNK_SIZE + CHUNK_SIZE - 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + CHUNK_SIZE - 1.f), col, 2);
+
+    heUiPushLineD3(engine, hm::vec3f(chunk->position.x * CHUNK_SIZE + CHUNK_SIZE - 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + CHUNK_SIZE - 1.f), hm::vec3f(chunk->position.x * CHUNK_SIZE + CHUNK_SIZE - 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + 1.f), col, 2);
+
+    heUiPushLineD3(engine, hm::vec3f(chunk->position.x * CHUNK_SIZE + CHUNK_SIZE - 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + 1.f), hm::vec3f(chunk->position.x * CHUNK_SIZE + 1.f, CHUNK_SIZE, chunk->position.y * CHUNK_SIZE + 1.f), col, 2);
 };
 
 
@@ -499,17 +511,12 @@ void createWorld(World* world) {
     hePhysicsLevelSetActor(&world->physics, &world->actor);
 #endif
     
-    heWin32TimerStart();
-    
     Chunk* c = getChunkAt(world, ChunkPosition(0, 0));
-    c->position = ChunkPosition(0, 0);
     generateChunk(world, c);
     generateChunkNeighbours(world, c);    
     buildChunk(world, c);
     loadChunk(world, c);
     
-    heWin32TimerPrint("World creation");    
-
 #if USE_PHYSICS == 1
     Chunk* spawnChunk = getChunkAt(world, ChunkPosition(0, 0));    
     hePhysicsActorSetEyePosition(&app.world.actor, hm::vec3f(8.f, 20.f, 8.f));
@@ -537,22 +544,32 @@ void renderWorld(HeRenderEngine* engine, World* world) {
     for(auto& all : world->chunks) {
         Chunk& chunks = all.second;
 
-        if(chunks.state == CHUNK_STATE_GENERATED) {
-            if(std::abs(chunks.position.x - playerChunk.x) <= world->viewDistance && std::abs(chunks.position.y - playerChunk.y) <= world->viewDistance) {
-                chunks.requestGeneration = true;
-            }
-        }                
+        if(chunks.state == CHUNK_STATE_UNLOADED)
+            chunksToUnload.emplace_back(&chunks);            
+        else {
+            renderChunkBox(engine, &chunks);
+        
+            if(chunks.state == CHUNK_STATE_GENERATED) {
+                if(std::abs(chunks.position.x - playerChunk.x) <= world->viewDistance && std::abs(chunks.position.y - playerChunk.y) <= world->viewDistance) {
+                    chunks.requestBuild = true;
+                } else if(std::abs(chunks.position.x - playerChunk.x) > world->viewDistance + 1 || std::abs(chunks.position.y - playerChunk.y) > world->viewDistance + 1) {
+                    // ungenerate chunk, it is no longer on the edge of the world
+                    chunksToUnload.emplace_back(&chunks);
+                }
+            }                
 
-        if(chunks.state == CHUNK_STATE_BUILT)
-            loadChunk(world, &chunks);
+            if(chunks.state == CHUNK_STATE_BUILT)
+                loadChunk(world, &chunks);
 
-        if(chunks.state == CHUNK_STATE_LOADED) {
-            renderChunk(engine, world, &chunks);
-            if(std::abs(chunks.position.x - playerChunk.x) > world->viewDistance || std::abs(chunks.position.y - playerChunk.y) > world->viewDistance) {
-                chunksToUnload.emplace_back(&chunks);
+            if(chunks.state == CHUNK_STATE_LOADED) {
+                renderChunk(engine, world, &chunks);
+                if(std::abs(chunks.position.x - playerChunk.x) > world->viewDistance || std::abs(chunks.position.y - playerChunk.y) > world->viewDistance) {
+                    chunksToUnload.emplace_back(&chunks);
+                }
             }
         }
     }
+
 
     for(Chunk* all : chunksToUnload) {
         unloadChunk(world, all);
@@ -571,7 +588,13 @@ void updateWorld(World* world) {
 };
 
 Chunk* getChunkAt(World* world, ChunkPosition const& position) {
-    return &world->chunks[position];
+    auto it = world->chunks.find(position);
+    if(it != world->chunks.end())
+        return &it->second;
+    
+    Chunk* c = &world->chunks[position];
+    c->position = position;
+    return c;
 };
 
 Chunk* getChunkAtIfExists(World* world, ChunkPosition const& position) {
@@ -585,15 +608,51 @@ Chunk* getChunkAtIfExists(World* world, ChunkPosition const& position) {
 
 void worldCreationThread(World* world) {
     while(app.state == GAME_STATE_INGAME || app.state == GAME_STATE_PAUSED) {
-        for(auto& all : world->chunks) {
-            Chunk& chunks = all.second;
-            if(chunks.requestGeneration) {
-                generateChunkNeighbours(world, &chunks);
-                buildChunk(world, &chunks);
-                chunks.requestGeneration = false;
+        ChunkPosition playerChunk((int16_t) std::floor(world->camera.position.x / CHUNK_SIZE), (int16_t) std::floor(world->camera.position.z / CHUNK_SIZE));
+        ChunkPosition offset(0, 0);
+        int8_t direction = 3;
+        
+        while(std::abs(offset.x) <= world->viewDistance && std::abs(offset.y) <= world->viewDistance) {
+            if(std::abs(offset.x) == std::abs(offset.y)) {
+                direction++;
+                if(direction == 4) {
+                    direction = 0;
+                    Chunk* c = getChunkAtIfExists(world, playerChunk + offset);
+                    if(c && c->requestBuild) {
+                        generateChunkNeighbours(world, c);
+                        buildChunk(world, c);
+                        c->requestBuild = false;
+                    }
+                    offset.y++;
+                }
+            }
+
+            Chunk* c = getChunkAtIfExists(world, playerChunk + offset);
+            if(c && c->requestBuild) {
+                generateChunkNeighbours(world, c);
+                buildChunk(world, c);
+                c->requestBuild = false;
+            }
+
+            switch(direction) {
+            case 0:
+                offset.x++;
+                break;
+
+            case 1:
+                offset.y--;
+                break;
+
+            case 2:
+                offset.x--;
+                break;
+
+            case 3:
+                offset.y++;
+                break;
             }
         }
-
-        heThreadSleep(1000);
+        
+        heThreadSleep(500);
     }
 };

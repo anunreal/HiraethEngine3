@@ -888,7 +888,7 @@ void heVaoUpdateDataInt(HeVao* vao, std::vector<int32_t> const& data, uint8_t co
     HeVbo* vbo = &vao->vbos[vboIndex];
     glBindBuffer(GL_ARRAY_BUFFER, vbo->vboId);
     
-    if(data.size() > vbo->verticesCount) {
+    if(size > vbo->verticesCount) {
         glBufferData(GL_ARRAY_BUFFER, bytes, data.data(), vbo->usage);
     } else {
         glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, vbo->usage);
@@ -910,11 +910,32 @@ void heVaoUpdateDataUint(HeVao* vao, std::vector<uint32_t> const& data, uint8_t 
     HeVbo* vbo = &vao->vbos[vboIndex];
     glBindBuffer(GL_ARRAY_BUFFER, vbo->vboId);
     
-    if(data.size() > vbo->verticesCount) {
+    if(size > vbo->verticesCount) {
         glBufferData(GL_ARRAY_BUFFER, bytes, data.data(), vbo->usage);
     } else {
         glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, vbo->usage);
         glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, data.data());
+    }
+    
+    vbo->verticesCount = (uint32_t)size / vbo->dimensions;
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    
+    if(vboIndex == 0)
+        vao->verticesCount = vbo->verticesCount;
+};
+
+void heVaoUpdateDataUint(HeVao* vao, uint32_t const* data, uint8_t const vboIndex, uint32_t const size) {
+    HE_CRASH_LOG();
+    
+    size_t bytes = size * sizeof(float);
+    HeVbo* vbo = &vao->vbos[vboIndex];
+    glBindBuffer(GL_ARRAY_BUFFER, vbo->vboId);
+    
+    if(size > vbo->verticesCount) {
+        glBufferData(GL_ARRAY_BUFFER, bytes, data, vbo->usage);
+    } else {
+        glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, vbo->usage);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, data);
     }
     
     vbo->verticesCount = (uint32_t)size / vbo->dimensions;

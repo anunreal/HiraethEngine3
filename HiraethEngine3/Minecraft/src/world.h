@@ -59,7 +59,7 @@ struct Chunk {
     ChunkState state = CHUNK_STATE_UNLOADED;
     ChunkMeshInfo meshInfo;
 
-    b8 requestGeneration = false;
+    b8 requestBuild = false;
 };
 
 struct World {
@@ -72,7 +72,7 @@ struct World {
     std::list<HeD3LightSource> lights;
     std::unordered_map<ChunkPosition, Chunk, ChunkPositionHash> chunks;
 
-    int32_t viewDistance = 3;
+    int32_t viewDistance = 5;
 };
 
 // returns the block (can be air) at given chunk space position
