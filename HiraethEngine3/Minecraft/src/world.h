@@ -4,10 +4,9 @@
 #include "hm/hm.hpp"
 #include "heD3.h"
 #include "heRenderer.h"
-#include <list>
 
 #define CHUNK_SIZE 16
-#define CHUNK_HEIGHT 255
+#define CHUNK_HEIGHT 256
 
 typedef hm::vec<3, int16_t> BlockPosition;
 typedef hm::vec<2, int16_t> ChunkPosition;
@@ -69,7 +68,6 @@ struct World {
     HePhysicsLevel physics;
     HePhysicsActor actor;
     HeD3Camera camera;
-    std::list<HeD3LightSource> lights;
     std::unordered_map<ChunkPosition, Chunk, ChunkPositionHash> chunks;
 
     int32_t viewDistance = 5;

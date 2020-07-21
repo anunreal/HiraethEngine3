@@ -449,7 +449,8 @@ void unloadChunk(World* world, Chunk* chunk) {
     std::vector<float>().swap(chunk->meshInfo.uvs);
     memset(chunk->layers, 0, sizeof(chunk->layers));
     chunk->state = CHUNK_STATE_UNLOADED;
-    world->chunks.erase(chunk->position);
+    ChunkPosition position = chunk->position;
+    world->chunks.erase(position);
 };
 
 void renderChunk(HeRenderEngine* engine, World* world, Chunk* chunk) {
@@ -492,6 +493,7 @@ void renderChunkBox(HeRenderEngine* engine, Chunk* chunk) {
 
 
 void createWorld(World* world) {
+    generatorCreate();
     heShaderCreateProgram(&world->blockShader, "res/shaders/block.glsl");
     heTextureLoadFromImageFile(&world->texturePack, "res/textures/defaultPack.png", true);
     heTextureFilterLinear(&world->texturePack);
@@ -544,29 +546,22 @@ void renderWorld(HeRenderEngine* engine, World* world) {
     for(auto& all : world->chunks) {
         Chunk& chunks = all.second;
 
-        if(chunks.state == CHUNK_STATE_UNLOADED)
-            chunksToUnload.emplace_back(&chunks);            
-        else {
-            renderChunkBox(engine, &chunks);
-        
+        if(std::abs(chunks.position.x - playerChunk.x) > world->viewDistance + 1 || std::abs(chunks.position.y - playerChunk.y) > world->viewDistance + 1) {
+            // ungenerate chunk, it is no longer on the edge of the world
+            chunksToUnload.emplace_back(&chunks);
+        } else {
             if(chunks.state == CHUNK_STATE_GENERATED) {
                 if(std::abs(chunks.position.x - playerChunk.x) <= world->viewDistance && std::abs(chunks.position.y - playerChunk.y) <= world->viewDistance) {
                     chunks.requestBuild = true;
-                } else if(std::abs(chunks.position.x - playerChunk.x) > world->viewDistance + 1 || std::abs(chunks.position.y - playerChunk.y) > world->viewDistance + 1) {
-                    // ungenerate chunk, it is no longer on the edge of the world
-                    chunksToUnload.emplace_back(&chunks);
-                }
-            }                
-
-            if(chunks.state == CHUNK_STATE_BUILT)
-                loadChunk(world, &chunks);
-
-            if(chunks.state == CHUNK_STATE_LOADED) {
-                renderChunk(engine, world, &chunks);
-                if(std::abs(chunks.position.x - playerChunk.x) > world->viewDistance || std::abs(chunks.position.y - playerChunk.y) > world->viewDistance) {
-                    chunksToUnload.emplace_back(&chunks);
                 }
             }
+        }                
+
+        if(chunks.state == CHUNK_STATE_BUILT)
+            loadChunk(world, &chunks);
+
+        if(chunks.state == CHUNK_STATE_LOADED) {
+            renderChunk(engine, world, &chunks);
         }
     }
 

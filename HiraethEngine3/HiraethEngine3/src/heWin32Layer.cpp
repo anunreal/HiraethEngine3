@@ -824,7 +824,7 @@ std::string heWin32ClipboardGet() {
     return std::string(s);
 };
 
-void heThreadSleep(__int64 ms) {
+void heThreadSleep(__int64 const ms) {
     std::chrono::milliseconds duration(ms);
     std::this_thread::sleep_for(duration);    
 };

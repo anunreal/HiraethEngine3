@@ -61,4 +61,9 @@ namespace hm {
         x |= x >> 16;
         return x + 1;
     };
+
+    template<typename T, typename U>
+    constexpr double dmod(T x, U mod) {
+        return !mod ? x : x - mod * static_cast<long long>(x / mod);
+    };
 };

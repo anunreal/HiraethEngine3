@@ -86,7 +86,7 @@ void updateInput() {
         if (app.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_Q])
             velocity.y = -speed;
 
-        velocity *= 50.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+        velocity *= 70.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
 
         if(app.freeCamera) {
             hePhysicsActorSetVelocity(&app.world.actor, hm::vec3f(0.f));
