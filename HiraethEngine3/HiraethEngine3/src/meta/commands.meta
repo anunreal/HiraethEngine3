@@ -6,7 +6,7 @@ void command_set_position(int index, hm::vec3f const& position) {
 };
 
 void command_set_jumpheight(float height) {
-	 HePhysicsActor* actor = heD3Level->physics.actor;
+	 HePhysicsActorSimple* actor = heD3Level->physics.actor;
 	 actor->actorInfo.jumpHeight = height;
 };
 
@@ -21,7 +21,7 @@ void command_set_gamma(float g) {
 
 void command_teleport(hm::vec3f const& position) {
 	 if(heD3Level->physics.actor) {
-		  hePhysicsActorSetPosition(heD3Level->physics.actor, position);
+		  hePhysicsActorSimpleSetPosition(heD3Level->physics.actor, position);
 	 }
 
 	 heD3Level->camera.position = position;

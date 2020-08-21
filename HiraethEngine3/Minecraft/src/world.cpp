@@ -9,6 +9,10 @@ Block* getBlockAt(Chunk* chunk, BlockPosition const& position) {
     return &chunk->layers[position.y].blocks[position.x * CHUNK_SIZE + position.z];
 };
 
+Chunk* getChunkAt(World* world, BlockPosition const& position) {
+    return world->chunks[ChunkPosition((int16_t) std::floor(position.x / 16), (int16_t) std::floor(position.z / 16))];
+};
+
 b8 blockHasNeighbour(World* world, Chunk* chunk, BlockPosition const& position, char const direction) {
     if(chunk->blockCount == 0)
         return false;

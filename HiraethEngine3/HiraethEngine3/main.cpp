@@ -105,12 +105,12 @@ void updateInput() {
         velocity *= 30.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
 
         if(app.level.freeCamera) {
-            hePhysicsActorSetVelocity(&app.actor, hm::vec3f(0.f));
+            hePhysicsActorSimpleSetVelocity(&app.actor, hm::vec3f(0.f));
             app.level.camera.position += velocity * (float) app.window.frameTime;
         } else {
-            hePhysicsActorSetVelocity(&app.actor, velocity * 0.016f);
-            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.actor))
-                hePhysicsActorJump(&app.actor);
+            hePhysicsActorSimpleSetVelocity(&app.actor, velocity * 0.016f);
+            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorSimpleOnGround(&app.actor))
+                hePhysicsActorSimpleJump(&app.actor);
         }
     }
 };
@@ -158,9 +158,9 @@ void enterGameState() {
 	HePhysicsActorInfo actorInfo;
 	actorInfo.eyeOffset = 1.6f;
 	
-	hePhysicsActorCreate(&app.actor, actorShape, actorInfo);
+	hePhysicsActorSimpleCreate(&app.actor, actorShape, actorInfo);
     hePhysicsLevelSetActor(&app.level.physics, &app.actor);
-	hePhysicsActorSetEyePosition(&app.actor, hm::vec3f(-5.f, 1.7f, 5.f));
+	hePhysicsActorSimpleSetEyePosition(&app.actor, hm::vec3f(-5.f, 1.7f, 5.f));
 #endif
 
     heWin32TimerPrint("LEVEL LOAD");

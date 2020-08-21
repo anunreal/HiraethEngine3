@@ -21,6 +21,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Minecraft", "Minecraft\Mine
 		{8EBD9A84-B98A-46A1-9C75-702758F0172F} = {8EBD9A84-B98A-46A1-9C75-702758F0172F}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ballz", "ballz\ballz.vcxproj", "{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{643FA315-9169-43FA-8362-A4D6F9EED1DD} = {643FA315-9169-43FA-8362-A4D6F9EED1DD}
+		{8EBD9A84-B98A-46A1-9C75-702758F0172F} = {8EBD9A84-B98A-46A1-9C75-702758F0172F}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -78,6 +84,18 @@ Global
 		{FD0E2B40-92CD-4195-90AA-39CA70D0A963}.Release|x64.Build.0 = Release|x64
 		{FD0E2B40-92CD-4195-90AA-39CA70D0A963}.Release|x86.ActiveCfg = Release|Win32
 		{FD0E2B40-92CD-4195-90AA-39CA70D0A963}.Release|x86.Build.0 = Release|Win32
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Debug|x64.ActiveCfg = Debug|x64
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Debug|x64.Build.0 = Debug|x64
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Debug|x86.ActiveCfg = Debug|Win32
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Debug|x86.Build.0 = Debug|Win32
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.DebugEngine|x64.ActiveCfg = Debug|x64
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.DebugEngine|x64.Build.0 = Debug|x64
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.DebugEngine|x86.ActiveCfg = Debug|Win32
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.DebugEngine|x86.Build.0 = Debug|Win32
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Release|x64.ActiveCfg = Release|x64
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Release|x64.Build.0 = Release|x64
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Release|x86.ActiveCfg = Release|Win32
+		{EE9DC5CF-CB5F-4BDD-B5F2-A9A8C557D53C}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

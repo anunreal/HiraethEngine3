@@ -239,7 +239,7 @@ void heD3LevelUpdate(HeD3Level* level, float const delta) {
         hePhysicsLevelUpdate(&level->physics, delta);
 
         if(!level->freeCamera)
-            level->camera.position = hePhysicsActorGetEyePosition(level->physics.actor);
+            level->camera.position = hePhysicsActorSimpleGetEyePosition(level->physics.actor);
     }
         
     // update all instances

@@ -91,8 +91,8 @@ extern HE_API void he_to_string(HePhysicsActorInfo const* ptr, std::string& outp
 struct HePhysicsComponent;
 extern HE_API void he_to_string(HePhysicsComponent const* ptr, std::string& output, std::string const& prefix = "");
 
-struct HePhysicsActor;
-extern HE_API void he_to_string(HePhysicsActor const* ptr, std::string& output, std::string const& prefix = "");
+struct HePhysicsActorSimple;
+extern HE_API void he_to_string(HePhysicsActorSimple const* ptr, std::string& output, std::string const& prefix = "");
 
 struct HeMaterial;
 extern HE_API void he_to_string(HeMaterial const* ptr, std::string& output, std::string const& prefix = "");

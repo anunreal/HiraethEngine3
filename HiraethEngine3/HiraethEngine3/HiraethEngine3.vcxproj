@@ -136,7 +136,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;HE_EXPORTS;GLEW_STATIC</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_ENABLE_MEMORY_CHECKING;HE_USE_WIN32;HE_EXPORTS;GLEW_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\bullet\include;$(SolutionDir)Dependencies\glew\include;$(SolutionDir)HiraethNetwork\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -180,7 +180,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;HE_EXPORTS;GLEW_STATIC</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);HE_ENABLE_HOTSWAP_SHADER;HE_ENABLE_LOGGING_ALL;HE_ENABLE_NAMES;HE_ENABLE_ERROR_CHECKING;HE_USE_WIN32;HE_EXPORTS;GLEW_STATIC</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)Dependencies\bullet\include;$(SolutionDir)Dependencies\glew\include;$(SolutionDir)HiraethNetwork\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>

@@ -25,7 +25,7 @@ struct Player {
 struct App {
     HnClient       client;
     HeD3Level      level;
-    HePhysicsActor actor;
+    HePhysicsActorSimple actor;
     HeWindow       window;
     HeRenderEngine engine;
     std::map<unsigned int, Player> players;

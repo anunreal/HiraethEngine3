@@ -423,7 +423,7 @@ void he_to_string(HePhysicsComponent const* ptr, std::string& output, std::strin
     output += prefix + "};\n";
 };
 
-void he_to_string(HePhysicsActor const* ptr, std::string& output, std::string const& prefix) {
+void he_to_string(HePhysicsActorSimple const* ptr, std::string& output, std::string const& prefix) {
     output += prefix + "HePhysicsActor {\n";
     he_to_string(&ptr->shapeInfo, output, prefix + '\t');
     he_to_string(&ptr->actorInfo, output, prefix + '\t');

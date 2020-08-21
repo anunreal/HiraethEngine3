@@ -77,7 +77,7 @@ struct HePhysicsComponent {
     HePhysicsShapeInfo    shapeInfo;
 };
 
-struct HePhysicsActor {
+struct HePhysicsActorSimple {
     btKinematicCharacterController* controller = nullptr;
     btPairCachingGhostObject*       ghost      = nullptr;
     btConvexShape*                  shape      = nullptr;
@@ -92,6 +92,31 @@ struct HePhysicsActor {
     hm::quatf rotation;     // the current rotation of the actor
 };
 
+struct HePhysicsActorCustom {
+	btPairCachingGhostObject* ghostObject = nullptr;
+	btConvexShape* shape = nullptr;  //is also in m_ghostObject, but it needs to be convex, so we store it here to avoid upcast
+    btRigidBody* rigidBody = nullptr;
+    btDefaultMotionState* motion = nullptr;
+    hm::vec3f previousPosition;
+    
+    float verticalVelocity = 0.f;
+    float verticalOffset   = 0.f;
+    float fallSpeed        = 0.f;    
+    float jumpSpeed        = 0.f;
+
+    b8 onGround = false;
+    b8 hittingWall = false;
+    
+    HePhysicsShapeInfo shapeInfo;
+    HePhysicsActorInfo actorInfo;
+
+    // -- read only
+    
+    hm::vec3f position; // position of the shape (center)
+    hm::vec3f velocity; // the current velocity of the actor
+    hm::quatf rotation; // the current rotation of the actor
+};
+
 struct HePhysicsLevel {
     btDefaultCollisionConfiguration*     config     = nullptr;
     btCollisionDispatcher*               dispatcher = nullptr;
@@ -104,15 +129,77 @@ struct HePhysicsLevel {
     b8 setup                = false;
     
     HePhysicsLevelInfo info;
-    HePhysicsActor* actor   = nullptr;
+    HePhysicsActorSimple* actor   = nullptr;
     std::list<HePhysicsComponent> components;
 };
+
 
 // -- shape
 
 // checks the type of the info and tries to figure out the height of that shape. This only works if the shape
 // is of primitive type
 extern HE_API float hePhysicsShapeGetHeight(HePhysicsShapeInfo const* info);
+
+
+// -- component
+
+// creates a new physics component from a shape
+extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo& shape);
+// destroys given physics component. The component should be removed from all levels before this. This function
+// simply deletes all pointers and other data allocated
+extern HE_API void hePhysicsComponentDestroy(HePhysicsComponent* component);
+// enables (simulated) rotation of this component only for the axis that the value is not zero. Rotation can still
+// be set manually for that component, but wont be changed by collision
+extern HE_API void hePhysicsComponentEnableRotation(HePhysicsComponent const* component, hm::vec3f const& axis);
+// updates the position of given component
+extern HE_API void hePhysicsComponentSetPosition(HePhysicsComponent* component, hm::vec3f const& position);
+extern HE_API void hePhysicsComponentSetRotation(HePhysicsComponent* component, hm::vec3f const& rotation);
+// sets the position, rotation and scale for given component
+extern HE_API void hePhysicsComponentSetTransform(HePhysicsComponent* component, HeD3Transformation const& transform);
+// sets the velocity for this physics component
+extern HE_API void hePhysicsComponentSetVelocity(HePhysicsComponent* component, hm::vec3f const& velocity);
+// returns the current position of the component
+extern HE_API hm::vec3f hePhysicsComponentGetPosition(HePhysicsComponent const* component);
+// returns the current rotation of the component
+extern HE_API hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component);
+
+
+// -- actor
+
+// creates a new physics component from given shape
+extern HE_API void hePhysicsActorSimpleCreate(HePhysicsActorSimple* actor, HePhysicsShapeInfo& shape, HePhysicsActorInfo const& actorInfo);
+// destroys given actor. The actor should be removed from all levels before this. This function simply deletes
+// all pointers and other data allocated
+extern HE_API void hePhysicsActorSimpleDestroy(HePhysicsActorSimple* actor);
+// updates the position of given actor
+extern HE_API void hePhysicsActorSimpleSetPosition(HePhysicsActorSimple* actor, hm::vec3f const& position);
+// sets the eye position of this actor. This will simply subtract the eye offset from the position and then set
+// the new position
+extern HE_API inline void hePhysicsActorSimpleSetEyePosition(HePhysicsActorSimple* actor, hm::vec3f const& eyePosition);
+// sets the velocity (walk direction) of this actor
+extern HE_API inline void hePhysicsActorSimpleSetVelocity(HePhysicsActorSimple* actor, hm::vec3f const& velocity);
+// sets the rotation of this actor
+extern HE_API inline void hePhysicsActorSimpleSetRotation(HePhysicsActorSimple* actor, hm::quatf const& rotation);
+// makes the given actor jump. The more force, the higher the actor will jump. If force is -1, the default force
+// will be used
+extern HE_API inline void hePhysicsActorSimpleJump(HePhysicsActorSimple* actor);
+// returns the current position of the actor
+extern HE_API inline hm::vec3f hePhysicsActorSimpleGetPosition(HePhysicsActorSimple const* actor);
+// returns the position of the eyes of this actor. The eye position depends on the eye offset in the actor
+// information. The eye position is usually where the camera should be placed
+extern HE_API inline hm::vec3f hePhysicsActorSimpleGetEyePosition(HePhysicsActorSimple const* actor);
+// returns the rotation of that actor('s shape)1
+extern HE_API inline hm::quatf hePhysicsActorSimpleGetRotation(HePhysicsActorSimple const* actor);
+// returns true if the actor currently stands on solid ground
+extern HE_API inline b8 hePhysicsActorSimpleOnGround(HePhysicsActorSimple const* actor);
+// updates the actors jump height
+extern HE_API inline void hePhysicsActorSimpleSetJumpHeight(HePhysicsActorSimple* actor, float const height);
+
+
+extern HE_API void hePhysicsActorCustomCreate(HePhysicsActorCustom* actor, HePhysicsShapeInfo& shapeInfo, HePhysicsActorInfo const& actorInfo);
+extern HE_API void hePhysicsActorCustomUpdate(HePhysicsActorCustom* actor, HePhysicsLevel* level, float const delta);
+// updates the position of given actor
+extern HE_API void hePhysicsActorCustomSetPosition(HePhysicsActorCustom* actor, hm::vec3f const& position);
 
 
 // -- level
@@ -127,7 +214,8 @@ extern HE_API void hePhysicsLevelAddComponent(HePhysicsLevel* level, HePhysicsCo
 extern HE_API void hePhysicsLevelRemoveComponent(HePhysicsLevel* level, HePhysicsComponent const* component);
 // sets the actor for given level. One level can only have one actor (for now?). If actor is a nullptr, the
 // current actor will be removed from the level
-extern HE_API void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActor* actor);
+extern HE_API void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActorSimple* actor);
+extern HE_API void hePhysicsLevelSetActor(HePhysicsLevel* level, HePhysicsActorCustom* actor);
 // updates given level. Delta is the time passed since the last update in seconds
 extern HE_API void hePhysicsLevelUpdate(HePhysicsLevel* level, float const delta);
 // enables a debug drawer for the collision shapes
@@ -140,56 +228,5 @@ extern HE_API b8 hePhysicsDebugDrawingEnabled();
 // render
 extern HE_API void hePhysicsLevelDebugDraw(HePhysicsLevel* level);
 
-
-// -- component
-
-// creates a new physics component from a shape
-extern HE_API void hePhysicsComponentCreate(HePhysicsComponent* component, HePhysicsShapeInfo& shape);
-// destroys given physics component. The component should be removed from all levels before this. This function
-// simply deletes all pointers and other data allocated
-extern HE_API void hePhysicsComponentDestroy(HePhysicsComponent* component);
-// updates the position of given component
-extern HE_API void hePhysicsComponentSetPosition(HePhysicsComponent* component, hm::vec3f const& position);
-// sets the position, rotation and scale for given component
-extern HE_API void hePhysicsComponentSetTransform(HePhysicsComponent* component, HeD3Transformation const& transform);
-// returns the current position of the component
-extern HE_API hm::vec3f hePhysicsComponentGetPosition(HePhysicsComponent const* component);
-// returns the current rotation of the component
-extern HE_API hm::quatf hePhysicsComponentGetRotation(HePhysicsComponent const* component);
-
-
-// -- actor
-
-// creates a new physics component from given shape
-extern HE_API void hePhysicsActorCreate(HePhysicsActor* actor, HePhysicsShapeInfo& shape, HePhysicsActorInfo const& actorInfo);
-// destroys given actor. The actor should be removed from all levels before this. This function simply deletes
-// all pointers and other data allocated
-extern HE_API void hePhysicsActorDestroy(HePhysicsActor* actor);
-// updates the position of given actor
-extern HE_API void hePhysicsActorSetPosition(HePhysicsActor* actor, hm::vec3f const& position);
-// sets the eye position of this actor. This will simply subtract the eye offset from the position and then set
-// the new position
-extern HE_API inline void hePhysicsActorSetEyePosition(HePhysicsActor* actor, hm::vec3f const& eyePosition);
-// sets the velocity (walk direction) of this actor
-extern HE_API inline void hePhysicsActorSetVelocity(HePhysicsActor* actor, hm::vec3f const& velocity);
-// sets the rotation of this actor
-extern HE_API inline void hePhysicsActorSetRotation(HePhysicsActor* actor, hm::quatf const& rotation);
-// makes the given actor jump. The more force, the higher the actor will jump. If force is -1, the default force
-// will be used
-extern HE_API inline void hePhysicsActorJump(HePhysicsActor* actor);
-// returns the current position of the actor
-extern HE_API inline hm::vec3f hePhysicsActorGetPosition(HePhysicsActor const* actor);
-// returns the position of the eyes of this actor. The eye position depends on the eye offset in the actor
-// information. The eye position is usually where the camera should be placed
-extern HE_API inline hm::vec3f hePhysicsActorGetEyePosition(HePhysicsActor const* actor);
-// returns the rotation of that actor('s shape)1
-extern HE_API inline hm::quatf hePhysicsActorGetRotation(HePhysicsActor const* actor);
-// returns true if the actor currently stands on solid ground
-extern HE_API inline b8 hePhysicsActorOnGround(HePhysicsActor const* actor);
-
-
-// -- these functions simply update the actors settings
-
-extern HE_API inline void hePhysicsActorSetJumpHeight(HePhysicsActor* actor, float const height);
 
 #endif

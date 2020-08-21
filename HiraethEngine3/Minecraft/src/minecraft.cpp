@@ -44,8 +44,6 @@ void updateInput() {
 
     // game input
     if(app.window.active && app.state == GAME_STATE_INGAME) {
-        if(app.window.mouseInfo.rightButtonPressed)
-            app.freeCamera = !app.freeCamera;
 
         // rotation
 		app.world.camera.rotation.x += app.window.mouseInfo.deltaMousePosition.y * 0.05f;
@@ -89,13 +87,25 @@ void updateInput() {
         velocity *= 70.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
 
         if(app.freeCamera) {
-            hePhysicsActorSetVelocity(&app.world.actor, hm::vec3f(0.f));
+            hePhysicsActorSimpleSetVelocity(&app.world.actor, hm::vec3f(0.f));
             app.world.camera.position += velocity * (float) app.window.frameTime;
         } else {
-            hePhysicsActorSetVelocity(&app.world.actor, velocity * 0.016f);
-            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.world.actor))
-                hePhysicsActorJump(&app.world.actor);
+            hePhysicsActorSimpleSetVelocity(&app.world.actor, velocity * 0.016f);
+            if(heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorSimpleOnGround(&app.world.actor))
+                hePhysicsActorSimpleJump(&app.world.actor);
         }
+
+
+        if(app.window.mouseInfo.rightButtonPressed) {
+            // place block
+            hm::vec3f ray;
+        }
+
+        if(app.window.mouseInfo.leftButtonPressed) {
+            // break block
+        }
+
+
     }
 };
 

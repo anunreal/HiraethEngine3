@@ -22,7 +22,7 @@ void front_command_set_position(std::vector<std::string> const& args) {
 
 
 void command_set_jumpheight(float height) {
-	 HePhysicsActor* actor = heD3Level->physics.actor;
+	 HePhysicsActorSimple* actor = heD3Level->physics.actor;
 	 actor->actorInfo.jumpHeight = height;
 };
 
@@ -66,7 +66,7 @@ void front_command_set_gamma(std::vector<std::string> const& args) {
 
 void command_teleport(hm::vec3f const& position) {
 	 if(heD3Level->physics.actor) {
-		  hePhysicsActorSetPosition(heD3Level->physics.actor, position);
+		  hePhysicsActorSimpleSetPosition(heD3Level->physics.actor, position);
 	 }
 
 	 heD3Level->camera.position = position;

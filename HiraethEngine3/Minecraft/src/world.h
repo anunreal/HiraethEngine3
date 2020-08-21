@@ -75,6 +75,9 @@ struct World {
 
 // returns the block (can be air) at given chunk space position
 extern Block* getBlockAt(Chunk* chunk, BlockPosition const& position);
+// returns the chunk at that world space position
+extern Chunk* getChunkAt(World* world, BlockPosition const& position);
+
 // creates the chunk mesh info for that chunk
 extern void buildChunk(World* world, Chunk* chunk);
 // loads the mesh info into the vao of that chunk (must be main thread)
