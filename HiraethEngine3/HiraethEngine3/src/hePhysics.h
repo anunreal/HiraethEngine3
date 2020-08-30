@@ -98,11 +98,13 @@ struct HePhysicsActorCustom {
     btRigidBody* rigidBody = nullptr;
     btDefaultMotionState* motion = nullptr;
     hm::vec3f previousPosition;
+    hm::vec3f manualVelocity;
     
     float verticalVelocity = 0.f;
     float verticalOffset   = 0.f;
     float fallSpeed        = 0.f;    
     float jumpSpeed        = 0.f;
+    float deceleration     = .1f;
 
     b8 onGround = false;
     b8 hittingWall = false;
@@ -196,11 +198,13 @@ extern HE_API inline b8 hePhysicsActorSimpleOnGround(HePhysicsActorSimple const*
 extern HE_API inline void hePhysicsActorSimpleSetJumpHeight(HePhysicsActorSimple* actor, float const height);
 
 
+// sets up this physics actor with given information.
 extern HE_API void hePhysicsActorCustomCreate(HePhysicsActorCustom* actor, HePhysicsShapeInfo& shapeInfo, HePhysicsActorInfo const& actorInfo);
+// updates the velocity and position of this actor. Should be called after the physics level was updated 
 extern HE_API void hePhysicsActorCustomUpdate(HePhysicsActorCustom* actor, HePhysicsLevel* level, float const delta);
 // updates the position of given actor
 extern HE_API void hePhysicsActorCustomSetPosition(HePhysicsActorCustom* actor, hm::vec3f const& position);
-
+extern HE_API void hePhysicsActorCustomSetVelocity(HePhysicsActorCustom* actor, hm::vec3f const& velocity);
 
 // -- level
 

@@ -320,11 +320,14 @@ void hePhysicsActorSimpleSetJumpHeight(HePhysicsActorSimple* actor, float const 
 };
 
 
-void parseGhostContacts(HePhysicsActorCustom* actor, HePhysicsLevel* level, std::vector<hm::vec3f>& surfaceHitNormals) {
+void hePhysicsActorCustomParseGhostContacts(HePhysicsActorCustom* actor, HePhysicsLevel* level, std::vector<hm::vec3f>& surfaceHitNormals) {
     btManifoldArray manifoldArray;
     btBroadphasePairArray& pairArray = actor->ghostObject->getOverlappingPairCache()->getOverlappingPairArray();
     uint32_t numPairs = pairArray.size();
 
+    actor->hittingWall = false;
+    //actor->onGround = false;
+    
     for(uint32_t i = 0; i < numPairs; ++i) {
         manifoldArray.clear();
         btBroadphasePair const& pair = pairArray[i];
@@ -336,15 +339,18 @@ void parseGhostContacts(HePhysicsActorCustom* actor, HePhysicsLevel* level, std:
         if(collisionPair->m_algorithm != nullptr)
             collisionPair->m_algorithm->getAllContactManifolds(manifoldArray);
 
-        for(uint32_t j = 0; j < manifoldArray.size(); ++j) {
+        for(uint32_t j = 0; j < (uint32_t) manifoldArray.size(); ++j) {
             btPersistentManifold* manifold = manifoldArray[j];
 
-            for(uint32_t p = 0; p < manifold->getNumContacts(); ++p) {
+            if(manifold->getBody0() == actor->rigidBody || manifold->getBody1() == actor->rigidBody)
+                continue;
+            
+            for(uint32_t p = 0; p < (uint32_t) manifold->getNumContacts(); ++p) {
                 btManifoldPoint const& point = manifold->getContactPoint(p);
                 if(point.getDistance() < 0.f) {
                     btVector3 const& ptB = point.getPositionWorldOnB();
 
-                    if(ptB.getY() < actor->position.y - actor->verticalOffset)
+                    if(ptB.getY() < actor->position.y - actor->verticalOffset / 2.f)
                         actor->onGround = true;
                     else {
                         actor->hittingWall = true;
@@ -356,7 +362,7 @@ void parseGhostContacts(HePhysicsActorCustom* actor, HePhysicsLevel* level, std:
     }
 };
 
-void updatePosition(HePhysicsActorCustom* actor, HePhysicsLevel* level) {
+void hePhysicsActorCustomUpdatePosition(HePhysicsActorCustom* actor, HePhysicsLevel* level) {
     IgnoreBodyAndGhostCast rayCallbackBottom(actor->rigidBody, actor->ghostObject);
     level->world->rayTest(actor->rigidBody->getWorldTransform().getOrigin(), actor->rigidBody->getWorldTransform().getOrigin() - btVector3(0, actor->verticalOffset + actor->actorInfo.stepHeight, 0), rayCallbackBottom); 
 
@@ -382,9 +388,27 @@ void updatePosition(HePhysicsActorCustom* actor, HePhysicsLevel* level) {
     actor->previousPosition = hm::vec3f(actor->rigidBody->getWorldTransform().getOrigin().getX(), actor->rigidBody->getWorldTransform().getOrigin().getY(), actor->rigidBody->getWorldTransform().getOrigin().getZ());
 };
 
+void hePhysicsActorCustomUpdateVelocity(HePhysicsActorCustom* actor, std::vector<hm::vec3f> const& surfaceHitNormals, float const delta) {
+    // adjust xz velocity
+    actor->manualVelocity.y = actor->rigidBody->getLinearVelocity().getY();
+    actor->rigidBody->setLinearVelocity(btVector3(actor->manualVelocity.x, actor->manualVelocity.y, actor->manualVelocity.z));
+
+    // decelerate
+    actor->manualVelocity -= actor->manualVelocity * actor->deceleration * (delta / 0.016f);
+    
+    if(actor->hittingWall) {
+        for(uint32_t i = 0, size = (uint32_t) surfaceHitNormals.size(); i < size; ++i) {
+            // cancel velocity across normal
+            hm::vec3f velInDir(hm::project(actor->manualVelocity, surfaceHitNormals[i]));
+            actor->manualVelocity -= velInDir * .0f;   
+        }
+    }
+};
+
 void hePhysicsActorCustomCreate(HePhysicsActorCustom* actor, HePhysicsShapeInfo& shapeInfo, HePhysicsActorInfo const& actorInfo) {
     actor->shape = (btConvexShape*) heCreateShape(shapeInfo);
     actor->motion = new btDefaultMotionState(btTransform::getIdentity());
+
     actor->ghostObject = new btPairCachingGhostObject();
     actor->ghostObject->setWorldTransform(btTransform::getIdentity());
     actor->ghostObject->setCollisionShape(actor->shape);
@@ -410,12 +434,16 @@ void hePhysicsActorCustomCreate(HePhysicsActorCustom* actor, HePhysicsShapeInfo&
 void hePhysicsActorCustomUpdate(HePhysicsActorCustom* actor, HePhysicsLevel* level, float const delta) {
     actor->ghostObject->setWorldTransform(actor->rigidBody->getWorldTransform());
 
-    std::vector<hm::vec3f> surfaceHitNormals;
-    parseGhostContacts(actor, level, surfaceHitNormals);
-    updatePosition(actor, level);
-    //updateVelocity(actor);
-    
     btTransform trans = actor->rigidBody->getWorldTransform();
+    actor->position = hm::vec3f(trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ()); 
+    actor->onGround = false;
+    
+    std::vector<hm::vec3f> surfaceHitNormals;
+    hePhysicsActorCustomParseGhostContacts(actor, level, surfaceHitNormals);
+    hePhysicsActorCustomUpdatePosition(actor, level);
+    hePhysicsActorCustomUpdateVelocity(actor, surfaceHitNormals, delta);    
+
+    trans = actor->rigidBody->getWorldTransform();
     actor->position = hm::vec3f(trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ()); 
 };
 
@@ -425,6 +453,12 @@ void hePhysicsActorCustomSetPosition(HePhysicsActorCustom* actor, hm::vec3f cons
     transform.setOrigin(btVector3(position.x, position.y, position.z));
     actor->rigidBody->setWorldTransform(transform);
     actor->ghostObject->setWorldTransform(transform);
+};
+
+void hePhysicsActorCustomSetVelocity(HePhysicsActorCustom* actor, hm::vec3f const& velocity) {
+    hm::vec2f velocityXZ(velocity.x + actor->manualVelocity.x, velocity.z + actor->manualVelocity.z);
+    actor->manualVelocity.x += velocity.x;
+    actor->manualVelocity.z += velocity.z;
 };
 
 

@@ -84,16 +84,16 @@ void updateInput() {
         if (app.freeCamera && app.window.keyboardInfo.keyStatus[HE_KEY_Q])
             velocity.y = -speed;
 
-        velocity *= 30.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
+        velocity *= 2.f * (app.window.keyboardInfo.keyStatus[HE_KEY_LSHIFT] ? 2.f : 1.f);
 
         if (app.freeCamera) {
             //hePhysicsActorSetVelocity(&app.actor, hm::vec3f(0.f));
-            hePhysicsComponentSetRotation(&app.actor, app.level.camera.rotation);
-            hePhysicsComponentSetVelocity(&app.actor, hm::vec3f(0.f));
+            //hePhysicsComponentSetRotation(&app.actor, app.level.camera.rotation);
+            //hePhysicsComponentSetVelocity(&app.actor, hm::vec3f(0.f));
             app.level.camera.position += velocity * (float)app.window.frameTime;
         } else {
-            hePhysicsComponentSetVelocity(&app.actor, velocity);
-            //hePhysicsActorSetVelocity(&app.actor, velocity * 0.016f);
+            //hePhysicsComponentSetVelocity(&app.actor, velocity);
+            hePhysicsActorCustomSetVelocity(&app.actor, velocity);
             //if (heWindowKeyWasPressed(&app.window, HE_KEY_SPACE) && hePhysicsActorOnGround(&app.actor))
                 //hePhysicsActorJump(&app.actor);
         }
@@ -105,7 +105,7 @@ HePhysicsActorCustom actor;
 void enterGameState() {
     app.state = GAME_STATE_INGAME;
 
-    heD3LevelLoad("res/level/spielfeld.h3level", &app.level, true, false);
+    heD3LevelLoad("res/level/spielfeld.h3level", &app.level, true, true);
     heD3SkyboxLoad(&app.level.skybox, "pink_sunrise");
     heD3Level = &app.level;
 
@@ -120,16 +120,18 @@ void enterGameState() {
     actorShape.box = hm::vec3f(0.15f, 0.2f, 0.15f);
     actorShape.mass = 10;
     
+    /*
     hePhysicsComponentCreate(&app.actor, actorShape);
     hePhysicsComponentSetPosition(&app.actor, hm::vec3f(-1.f, 2.f, 1.f));
     hePhysicsComponentEnableRotation(&app.actor, hm::vec3f(0.f, 0.f, 0.f));
     hePhysicsLevelAddComponent(&app.level.physics, &app.actor);
-
+    */
+    
     HePhysicsActorInfo actorInfo = HePhysicsActorInfo();
     actorInfo.stepHeight = 0.001f;
-    hePhysicsActorCustomCreate(&actor, actorShape, actorInfo);
-    hePhysicsActorCustomSetPosition(&actor, hm::vec3f(0.f, 10.f, 0.f));
-    //hePhysicsLevelSetActor(&app.level.physics, &actor);
+    hePhysicsActorCustomCreate(&app.actor, actorShape, actorInfo);
+    hePhysicsActorCustomSetPosition(&app.actor, hm::vec3f(0.f, 10.f, 0.f));
+    hePhysicsLevelSetActor(&app.level.physics, &app.actor);
     
     if (app.window.active) {
         app.window.mouseInfo.cursorLock = hm::vec2f(-.5f);
@@ -168,8 +170,9 @@ int main() {
             
             if (app.state == GAME_STATE_INGAME || app.state == GAME_STATE_PAUSED) {
                 heD3LevelUpdate(&app.level, (float) app.window.frameTime);
-                hePhysicsActorCustomUpdate(&actor, &app.level.physics, (float) app.window.frameTime);
-                app.level.camera.position = hePhysicsComponentGetPosition(&app.actor);
+                hePhysicsActorCustomUpdate(&app.actor, &app.level.physics, (float) app.window.frameTime);
+                //app.level.camera.position = hePhysicsComponentGetPosition(&app.actor);
+                app.level.camera.position = app.actor.position;
             }
         }
 

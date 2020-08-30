@@ -56,57 +56,91 @@ namespace hm {
             assert(index < 3);
             return x;
         };
-        
-        
-        // operators
-        
-        inline vec operator*(vec const& v) const {
-            return vec(x * v.x, y * v.y, z * v.z);
-        };
-        
-        inline vec operator+(vec const& v) const {
-            return vec(x + v.x, y + v.y, z + v.z);
-        };
-        
-        inline vec operator-(vec const& v) const {
-            return vec(x - v.x, y - v.y, z - v.z);
-        };
-        
-        inline vec operator/(vec const& v) const {
-            return vec(x / v.x, y / v.y, z / v.z);
-        };
-        
-        inline vec operator-() const {
-            return vec(-x, -y, -z);
-        };
-        
-        inline vec& operator*=(float const f) {
-            x *= f;
-            y *= f;
-            z *= f;
-            return *this;
-        };
-
-        inline void operator+=(vec const& v) {
-            x += v.x;
-            y += v.y;
-            z += v.z;
-        };
-        
-        inline void operator-=(vec const& v) {
-            x -= v.x;
-            y -= v.y;
-            z -= v.z;
-        };
     };
-    
+
+    // operators
+
+    template<typename T>
+    inline vec<3, T> operator*(vec<3, T> const& l, vec<3, T> const& r) {
+        return vec<3, T>(l.x * r.x, l.y * r.y, l.z * r.z);
+    };
+        
+    template<typename T>
+    inline vec<3, T> operator*(vec<3, T> const& l, T const v) {
+        return vec<3, T>(l.x * v, l.y * v, l.z * v);
+    };
+
+    template<typename T>
+    inline vec<3, T> operator*(T const l, vec<3, T> const& v) {
+        return vec<3, T>(l * v.x, l * v.y, l * v.z);
+    };
+        
+    template<typename T>
+    inline vec<3, T> operator+(vec<3, T> const& l, vec<3, T> const& r) {
+        return vec<3, T>(l.x + r.x, l.y + r.y, l.z + r.z);
+    };
+        
+    template<typename T>
+    inline vec<3, T> operator-(vec<3, T> const& l, vec<3, T> const& r) {
+        return vec<3, T>(l.x - r.x, l.y - r.y, l.z - r.z);
+    };
+        
+    template<typename T>
+    inline vec<3, T> operator/(vec<3, T> const& l, vec<3, T> const& r) {
+        return vec<3, T>(l.x / r.x, l.y / r.y, l.z / r.z);
+    };
+
+    template<typename T>
+    inline vec<3, T> operator/(vec<3, T> const& l, T const v) {
+        return vec<3, T>(l.x / v, l.y / v, l.z / v);
+    };
+
+    template<typename T>
+    inline vec<3, T> operator/(T const l, vec<3, T> const& v) {
+        return vec<3, T>(l / v.x, l / v.y, l / v.z);
+    };
+        
+    template<typename T>
+    inline vec<3, T> operator-(vec<3, T> const& l) {
+        return vec<3, T>(-l.x, -l.y, -l.z);
+    };
+        
+    template<typename T>
+    inline vec<3, T>& operator*=(vec<3, T>& l, T const v) {
+        l.x *= v;
+        l.y *= v;
+        l.z *= v;
+        return l;
+    };
+
+    template<typename T>
+    inline vec<3, T>& operator+=(vec<3, T>& l, vec<3, T> const& r) {
+        l.x += r.x;
+        l.y += r.y;
+        l.z += r.z;
+        return l;
+    };
+        
+    template<typename T>
+    inline vec<3, T>& operator-=(vec<3, T>& l, vec<3, T> const& r) {
+        l.x -= r.x;
+        l.y -= r.y;
+        l.z -= r.z;
+        return l;
+    };
+        
     typedef vec<3, float> vec3f;
     typedef vec<3, double> vec3d;
     typedef vec<3, int32_t> vec3i;
     
     template<typename T>
-    static inline vec<3, T> length(vec<3, T> const& vector) {
+    static inline T length(vec<3, T> const& vector) {
         return std::sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+    };
+
+    template<typename T>
+    static inline T length2(vec<3, T> const& vector) {
+        return vector.x * vector.x + vector.y * vector.y + vector.z * vector.z;
     };
     
     template<typename T>
@@ -124,6 +158,17 @@ namespace hm {
         return vec<3, T>(left.y * right.z - left.z * right.y,
                        left.z * right.x - left.x * right.z,
                        left.x * right.y - left.y * right.x);
+    };
+
+    template<typename T>
+    static inline T dot(vec<3, T> const& left, vec<3, T> const& right) {
+        return left.x * right.x + left.y * right.y + left.z * right.z; 
+    };
+    
+    template<typename T>
+    static inline vec<3, T> project(vec<3, T> const& left, vec<3, T> const& right) {
+        //return dot(left, right) * right * (static_cast<T>(1) / length2(right));
+        return (dot(left, right) / length2(right)) * right;
     };
     
     // parses a vec3 from a string. The coordinates should be split by a single '/' char

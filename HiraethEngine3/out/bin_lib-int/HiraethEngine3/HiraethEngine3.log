@@ -15,22 +15,7 @@
   Registered command: print_instances
   Registered command: print_instance
   Successfully registered 15 commands
-  heAssets.cpp
-  heBinary.cpp
   heConsole.cpp
-  heConverter.cpp
-  heCore.cpp
-  heD3.cpp
-  heDebugUtils.cpp
-  heGlLayer.cpp
-  heLoader.cpp
-  hepch.cpp
   hePhysics.cpp
-D:\Benutzer\Victor\Textdateien\C++\HiraethEngine3\HiraethEngine3\HiraethEngine3\src\hePhysics.cpp(339,31): warning C4018: '<': signed/unsigned mismatch
-D:\Benutzer\Victor\Textdateien\C++\HiraethEngine3\HiraethEngine3\HiraethEngine3\src\hePhysics.cpp(342,35): warning C4018: '<': signed/unsigned mismatch
-  heRenderer.cpp
-  heUi.cpp
-  heUtils.cpp
-  heWin32Layer.cpp
-  heWindow.cpp
-  HiraethEngine3.vcxproj -> D:\Benutzer\Victor\Textdateien\C++\HiraethEngine3\HiraethEngine3\out\bin_lib\HiraethEngine3\HiraethEngine3-Release-x64.lib
+  Generating Code...
+  HiraethEngine3.vcxproj -> D:\Benutzer\Victor\Textdateien\C++\HiraethEngine3\HiraethEngine3\out\bin_lib\HiraethEngine3\HiraethEngine3-Debug-x64.lib

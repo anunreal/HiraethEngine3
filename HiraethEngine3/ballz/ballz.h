@@ -19,8 +19,8 @@ struct Ballz {
     HeRenderEngine engine;
     GameState state = GAME_STATE_MAIN_MENU;
 
-    //HePhysicsActor actor;
-    HePhysicsComponent actor;
+    HePhysicsActorCustom actor;
+    //HePhysicsComponent actor;
     HeD3Level level;
 
     b8 freeCamera = false;

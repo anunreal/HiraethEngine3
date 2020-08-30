@@ -3,4 +3,5 @@
   hnServer.cpp
   hnWinSockLayer.cpp
   test.cpp
-  HiraethNetwork.vcxproj -> D:\Benutzer\Victor\Textdateien\C++\HiraethEngine3\HiraethEngine3\out\bin_lib\HiraethNetwork\HiraethNetwork-Release-x64.lib
+  Generating Code...
+  HiraethNetwork.vcxproj -> D:\Benutzer\Victor\Textdateien\C++\HiraethEngine3\HiraethEngine3\out\bin_lib\HiraethNetwork\HiraethNetwork-Debug-x64.lib
